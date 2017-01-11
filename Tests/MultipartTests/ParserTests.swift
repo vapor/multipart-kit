@@ -150,4 +150,41 @@ class ParserTests: XCTestCase {
         
         waitForExpectations(timeout: 0, handler: nil)
     }
+    
+    func testFormData() throws {
+        let parser = Parser(boundary: "---------------------------9051914041544843365972754266")
+        
+        var message = ""
+        
+        message += "-----------------------------9051914041544843365972754266\n"
+        message += "Content-Disposition: form-data; name=\"text\"\n"
+        message += "\n"
+        message += "text default\n"
+        message += "-----------------------------9051914041544843365972754266\n"
+        message += "Content-Disposition: form-data; name=\"file1\"; filename=\"a.txt\"\n"
+        message += "Content-Type: text/plain\n"
+        message += "\n"
+        message += "Content of a.txt.\n"
+        message += "\n"
+        message += "-----------------------------9051914041544843365972754266\n"
+        message += "Content-Disposition: form-data; name=\"file2\"; filename=\"a.html\"\n"
+        message += "Content-Type: text/html\n"
+        message += "\n"
+        message += "<!DOCTYPE html><title>Content of a.html.</title>\n"
+        message += "\n"
+        message += "-----------------------------9051914041544843365972754266--\n"
+        
+        parser.onPart = { part in
+            print("Headers:")
+            print(part.headers)
+            
+            print("Body:")
+            print(part.body.string)
+            
+            print("End.")
+            print("\n\n\n")
+        }
+        
+        try parser.parse(message)
+    }
 }

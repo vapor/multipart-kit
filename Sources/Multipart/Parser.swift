@@ -149,7 +149,7 @@ public final class Parser {
                     if closing {
                         state = .epilogue
                     } else {
-                        state = .part(state: .body, headers: headers, bodyEndIndex: 0)
+                        state = .part(state: .headers, headers: headers, bodyEndIndex: 0)
                     }
                     
                     let body = Array(buffer[0..<bodyEndIndex])
@@ -226,6 +226,12 @@ final class HeaderParser {
             
             state = .parsingKey(buffer: [byte])
         }
+    }
+}
+
+extension Parser {
+    public func parse(_ bytes: BytesConvertible) throws {
+        try parse(try bytes.makeBytes())
     }
 }
 
