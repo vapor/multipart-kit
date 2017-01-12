@@ -48,7 +48,6 @@ public final class Parser {
         headerParser = HeaderParser()
         
         buffer = []
-        hasFinished = false
 	}
     
     private var buffer: Bytes
@@ -159,7 +158,7 @@ public final class Parser {
         }
     }
     
-    private var hasFinished: Bool
+    private var hasFinished = false
     
     public func finish() throws {
         guard !hasFinished else {
