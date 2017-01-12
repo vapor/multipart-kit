@@ -1,6 +1,12 @@
 import Core
 
+/**
+    Attempts to parse a supplied boundary out of a stream of bytes.
+ 
+    Pass a stream of bytes into to the parser by continually calling `parse()`.
+*/
 final class BoundaryParser {
+    // An enum representing all possible states the parser can be in.
     enum State {
         case none
         case parsing(buffer: Bytes, trailingHyphenCount: Int)
@@ -8,16 +14,28 @@ final class BoundaryParser {
         case finished(boundarySize: Int, closing: Bool)
     }
     
+    // The boundary the parser is looking for.
     let boundary: Bytes
     
+    // The parser must maintain its state in memory.
     var state: State
     
+    // Create a new boundary parser.
     init(boundary: Bytes) {
         self.boundary = boundary
         self.state = .none
     }
     
-    
+    /**
+        Parse a stream of bytes by iterating over each byte
+        and calling `parse()`.
+     
+        After each byte, check the `state` of the boundary parser.
+        - finished: a boundary was found!
+        - parsing: the parser may have found a boundary, do not buffer bytes.
+        - invalid: what looked like a boundary is not. reclaim the skipped bytes.
+        - none: no boundary detected, continue buffering the bytes.
+    */
     func parse(_ byte: Byte) throws {
         main: switch state {
         case .none:

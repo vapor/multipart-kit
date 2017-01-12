@@ -1,27 +1,38 @@
 import Core
 import HTTP
 
+/**
+    Parses preamble, Parts, and epilogue from a Multipart 
+    formatted sequence of bytes likely from an HTTP request or response.
+*/
 public final class Parser {
+    /// The multipart boundary being used.
 	public let boundary: Bytes
     
+    /// A callback type for handling parsed Part structs.
     public typealias PartCallback = (Part) -> ()
+    
+    /// Called whenever a complete Part has been parsed.
     public var onPart: PartCallback?
     
+    /// A callback type for handling the parsed preamble.
     public typealias PreambleCallback = (Bytes) -> ()
+    
+    /// Called once after the preamble has been parsed.
     public var onPreamble: PreambleCallback?
     
+    /// A callback type for handling the parsed epilogue.
     public typealias EpilogueCallback = (Bytes) -> ()
+    
+    /// CAlled once after the epilogue has been parsed.
     public var onEpilogue: EpilogueCallback?
     
-    private enum PartState {
-        case headers
-        case body
-    }
-    
+    /// Possible errors that may be encountered while parsing.
     public enum Error: Swift.Error {
         case hasAlreadyFinished
     }
     
+    /// An enum representing all possible states of the parser.
     private enum State {
         case preamble(
             bodyEndIndex: Int
@@ -34,12 +45,22 @@ public final class Parser {
         case epilogue
     }
     
+    /// An enum representing all possible sub-states State.part
+    private enum PartState {
+        case headers
+        case body
+    }
+    
+    /// The parser must maintain its state in memory.
     private var state: State
     
+    // A specialized parser for finding boundaries.
     private var boundaryParser: BoundaryParser
     
+    // A specialized parser for gathering headers.
     private var headerParser: HeaderParser
 
+    /// Create a new multipart parser.
 	public init(boundary: Bytes) {
 		self.boundary = boundary
         state = .preamble(bodyEndIndex: 0)
@@ -50,8 +71,22 @@ public final class Parser {
         buffer = []
 	}
     
+    // A buffer for the bytes that have been parsed.
+    // This allows for a reduction in the number of copies
+    // needed for each step as only indecies into this array
+    // need to be passed around.
     private var buffer: Bytes
     
+    /**
+        The main method for passing bytes into the parser.
+     
+        A copy is performed to move the bytes passed into
+        the parser's internal memory. The bytes are then
+        iterated over one by one.
+     
+        Callbacks will be made as the preamble, Parts, and
+        epilogue are discovered.
+    */
     public func parse(_ bytes: Bytes) throws {
         buffer += bytes
         
@@ -61,7 +96,27 @@ public final class Parser {
         }
     }
     
-    public func parse(_ byte: Byte) throws {
+    /**
+        Call this method when there are no bytes
+        left to parse.
+     
+        This will trigger any parsed epilogue bytes
+        to be returned.
+    */
+    public func finish() throws {
+        guard !hasFinished else {
+            throw Error.hasAlreadyFinished
+        }
+        
+        hasFinished = true
+        let body = buffer
+        buffer = []
+        onEpilogue?(body)
+    }
+    
+    // Parses an individual byte that is 
+    // known to be in the internal buffer.
+    private func parse(_ byte: Byte) throws {
         guard !hasFinished else {
             throw Error.hasAlreadyFinished
         }
@@ -158,16 +213,7 @@ public final class Parser {
         }
     }
     
+    // Private flag for tracking whether `finish()`
+    // has been called.
     private var hasFinished = false
-    
-    public func finish() throws {
-        guard !hasFinished else {
-            throw Error.hasAlreadyFinished
-        }
-        
-        hasFinished = true
-        let body = buffer
-        buffer = []
-        onEpilogue?(body)
-    }
 }
