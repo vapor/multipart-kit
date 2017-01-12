@@ -9,13 +9,13 @@ class ParserTests: XCTestCase {
         ("testPreambleWithFauxBoundaries", testPreambleWithFauxBoundaries),
     ]
 
-    func testInit() {
-        let parser = Parser(boundary: "foo")
+    func testInit() throws {
+        let parser = try Parser(boundary: "foo")
         XCTAssertEqual(parser.boundary, "foo".bytes)
     }
     
     func testPreamble() throws {
-        let parser = Parser(boundary: "foo")
+        let parser = try Parser(boundary: "foo")
         
         var preamble = ""
         preamble += "This is the preamble.  It is to be ignored, though it\n"
@@ -40,7 +40,7 @@ class ParserTests: XCTestCase {
     }
     
     func testPreambleWithFauxBoundaries() throws {
-        let parser = Parser(boundary: "foo")
+        let parser = try Parser(boundary: "foo")
         
         var preamble = ""
         preamble += "This is the preamble.  It is to be ignored, though it\n"
@@ -65,7 +65,7 @@ class ParserTests: XCTestCase {
     }
     
     func testParts() throws {
-        let parser = Parser(boundary: "foo")
+        let parser = try Parser(boundary: "foo")
         
         var preamble = ""
         preamble += "This is the preamble.  It is to be ignored, though it\n"
@@ -95,7 +95,7 @@ class ParserTests: XCTestCase {
     }
     
     func testHeaders() throws {
-        let parser = Parser(boundary: "foo")
+        let parser = try Parser(boundary: "foo")
         
         let part1 = "testfoobar"
         
@@ -124,7 +124,7 @@ class ParserTests: XCTestCase {
     }
     
     func testEpilogue() throws {
-        let parser = Parser(boundary: "foo")
+        let parser = try Parser(boundary: "foo")
         
         let epilogue = "\nepliogue"
         
@@ -152,7 +152,7 @@ class ParserTests: XCTestCase {
     }
     
     func testFormData() throws {
-        let parser = Parser(boundary: "---------------------------9051914041544843365972754266")
+        let parser = try Parser(boundary: "---------------------------9051914041544843365972754266")
         
         var message = ""
         
@@ -174,17 +174,14 @@ class ParserTests: XCTestCase {
         message += "\n"
         message += "-----------------------------9051914041544843365972754266--\n"
         
+        var parts: [Part] = []
+        
         parser.onPart = { part in
-            print("Headers:")
-            print(part.headers)
-            
-            print("Body:")
-            print(part.body.string)
-            
-            print("End.")
-            print("\n\n\n")
+            parts.append(part)
         }
         
         try parser.parse(message)
+        
+        XCTAssertEqual(parts.count, 3)
     }
 }
