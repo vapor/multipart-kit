@@ -7,6 +7,10 @@ class ParserTests: XCTestCase {
         ("testInit", testInit),
         ("testPreamble", testPreamble),
         ("testPreambleWithFauxBoundaries", testPreambleWithFauxBoundaries),
+        ("testParts", testParts),
+        ("testHeaders", testHeaders),
+        ("testEpilogue", testEpilogue),
+        ("testFormData", testFormData),
     ]
 
     func testInit() throws {

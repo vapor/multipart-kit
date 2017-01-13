@@ -5,7 +5,8 @@ import Core
 
 class SerializerTests: XCTestCase {
     static var allTests = [
-        ("testInit", testInit)
+        ("testInit", testInit),
+        ("testBasic", testBasic),
     ]
     
     func testInit() throws {
