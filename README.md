@@ -1,9 +1,9 @@
 <p align="center">
     <img 
-        src="https://zapier.cachefly.net/storage/photos/8b56f198f157ed67d1f6c4f0b64abb05.png" 
+        src="https://cloud.githubusercontent.com/assets/1342803/21941692/026690de-d998-11e6-9600-4040eeb1b2ee.png" 
         align="center" 
         alt="Form"
-        width="500px"
+        width="349px"
     >
 </p>
 
