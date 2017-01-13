@@ -30,6 +30,7 @@ public final class Parser {
     /// Possible errors that may be encountered while parsing.
     public enum Error: Swift.Error {
         case hasAlreadyFinished
+        case invalidBoundary
     }
     
     /// An enum representing all possible states of the parser.
@@ -70,6 +71,13 @@ public final class Parser {
         
         buffer = []
 	}
+    
+    /// Create a new multipart parser from a 
+    /// Content-Type header value.
+    public convenience init(contentType: BytesConvertible) throws {
+        let boundary = try Parser.extractBoundary(contentType: contentType)
+        self.init(boundary: boundary)
+    }
     
     // A buffer for the bytes that have been parsed.
     // This allows for a reduction in the number of copies
@@ -217,6 +225,14 @@ public final class Parser {
         case .epilogue:
             break
         }
+    }
+    
+    public static func extractBoundary(contentType: BytesConvertible) throws -> Bytes {
+        let boundaryPieces = try contentType.makeBytes().string.components(separatedBy: "boundary=")
+        guard boundaryPieces.count == 2 else {
+            throw Error.invalidBoundary
+        }
+        return boundaryPieces[1].bytes
     }
     
     // Private flag for tracking whether `finish()`
