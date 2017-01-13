@@ -39,4 +39,10 @@ public final class Serializer {
         part.headers["Content-Disposition"] = contentDisposition
         try multipart.serialize(part)
     }
+    
+    /// Generates a Content-Type header value from a boundary
+    public static func generateContentType(boundary: BytesConvertible) throws -> Bytes {
+        let b = try boundary.makeBytes()
+        return  "multipart/form-data; boundary=".bytes + b
+    }
 }

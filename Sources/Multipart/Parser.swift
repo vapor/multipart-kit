@@ -1,5 +1,6 @@
 import Core
 import HTTP
+import Foundation
 
 /**
     Parses preamble, Parts, and epilogue from a Multipart 
@@ -71,6 +72,15 @@ public final class Parser {
         
         buffer = []
 	}
+    
+    /// Extracts the boundary from a multipart Content-Type header
+    public static func extractBoundary(contentType: BytesConvertible) throws -> Bytes {
+        let boundaryPieces = try contentType.makeBytes().string.components(separatedBy: "boundary=")
+        guard boundaryPieces.count == 2 else {
+            throw Error.invalidBoundary
+        }
+        return boundaryPieces[1].bytes
+    }
     
     /// Create a new multipart parser from a 
     /// Content-Type header value.
@@ -225,15 +235,6 @@ public final class Parser {
         case .epilogue:
             break
         }
-    }
-    
-    /// Extracts the boundary from a multipart Content-Type header
-    public static func extractBoundary(contentType: BytesConvertible) throws -> Bytes {
-        let boundaryPieces = try contentType.makeBytes().string.components(separatedBy: "boundary=")
-        guard boundaryPieces.count == 2 else {
-            throw Error.invalidBoundary
-        }
-        return boundaryPieces[1].bytes
     }
     
     // Private flag for tracking whether `finish()`
