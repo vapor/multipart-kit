@@ -1,5 +1,11 @@
 import Multipart
 
+/**
+    A single form-data field with the field name,
+    optional filename, and underlying Multipart.Part.
+ 
+    Headers and body reside in the Part.
+*/
 public struct Field {
     var name: String
     var filename: String?
