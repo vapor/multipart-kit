@@ -227,6 +227,7 @@ public final class Parser {
         }
     }
     
+    /// Extracts the boundary from a multipart Content-Type header
     public static func extractBoundary(contentType: BytesConvertible) throws -> Bytes {
         let boundaryPieces = try contentType.makeBytes().string.components(separatedBy: "boundary=")
         guard boundaryPieces.count == 2 else {
