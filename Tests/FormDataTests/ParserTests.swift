@@ -1,20 +1,17 @@
 import Foundation
 import XCTest
 @testable import FormData
+import Multipart
 
 class ParserTests: XCTestCase {
     static var allTests = [
-        ("testInit", testInit),
         ("testFormData", testFormData),
+        ("testWebkit", testWebkit),
     ]
 
-    func testInit() throws {
-        let parser = try Parser(boundary: "foo")
-        XCTAssertEqual(parser.boundary, "foo".bytes)
-    }
-    
     func testFormData() throws {
-        let parser = try Parser(boundary: "---------------------------9051914041544843365972754266")
+        let multipart = try Multipart.Parser(boundary: "---------------------------9051914041544843365972754266")
+        let parser = FormData.Parser(multipart: multipart)
         
         var message = ""
         
@@ -42,7 +39,7 @@ class ParserTests: XCTestCase {
             fields[field.name] = field
         }
         
-        try parser.parse(message)
+        try parser.multipart.parse(message)
         
         XCTAssertEqual(fields.count, 3)
         
@@ -53,5 +50,31 @@ class ParserTests: XCTestCase {
         XCTAssertEqual(fields["text"]?.filename, nil)
         XCTAssertEqual(fields["file1"]?.filename, "a.txt")
         XCTAssertEqual(fields["file2"]?.filename, "a.html")
+    }
+    
+    func testWebkit() throws {
+        var message = ""
+
+        message += "------WebKitFormBoundaryezkRLRyEVe1aMUVZ\r\n"
+        message += "Content-Disposition: form-data; name=\"file\"; filename=\"Screen Shot 2017-01-13 at 3.05.26 PM.png\"\r\n"
+        message += "Content-Type: image/png\r\n"
+        message += "\r\n"
+        message += "PNG\n"
+        message += "\n"
+        message += "\n"
+        message += "------WebKitFormBoundaryezkRLRyEVe1aMUVZ--\r\n"
+        
+        let multipart = try Multipart.Parser(boundary: "----WebKitFormBoundaryezkRLRyEVe1aMUVZ")
+        let parser = FormData.Parser(multipart: multipart)
+        
+        var fields: [String: Field] = [:]
+        
+        parser.onField = { field in
+            fields[field.name] = field
+        }
+        
+        try parser.multipart.parse(message)
+        
+        XCTAssertEqual(fields["file"]?.filename, "Screen Shot 2017-01-13 at 3.05.26 PM.png")
     }
 }

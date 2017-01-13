@@ -36,15 +36,15 @@ class SerializerTests: XCTestCase {
         
         var expected = ""
         
-        expected += "--boundary42\n"
-        expected += "Content-Type: text/plain; charset=us-ascii\n"
-        expected += "X-Test: 42\n"
-        expected += "\n"
-        expected += "Systems should choose the 'best' type based on the local environment and references, in some cases even through user interaction.\n"
-        expected += "--boundary42\n"
-        expected += "\n"
-        expected += "Test123\n"
-        expected += "--boundary42--\n"
+        expected += "--boundary42\r\n"
+        expected += "Content-Type: text/plain; charset=us-ascii\r\n"
+        expected += "X-Test: 42\r\n"
+        expected += "\r\n"
+        expected += "Systems should choose the 'best' type based on the local environment and references, in some cases even through user interaction.\r\n"
+        expected += "--boundary42\r\n"
+        expected += "\r\n"
+        expected += "Test123\r\n"
+        expected += "--boundary42--\r\n"
         
         XCTAssertEqual(serialized.string, expected)
     }

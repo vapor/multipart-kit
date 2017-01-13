@@ -61,18 +61,18 @@ public final class Serializer {
         
         serialize([.hyphen, .hyphen])
         serialize(boundary)
-        serialize(.newLine)
+        serialize([.carriageReturn, .newLine])
         for (key, value) in part.headers {
             serialize(key.key.bytes)
             serialize(.colon)
             serialize(.space)
             serialize(value.bytes)
-            serialize(.newLine)
+            serialize([.carriageReturn, .newLine])
         }
-        serialize(.newLine)
+        serialize([.carriageReturn, .newLine])
         
         serialize(part.body)
-        serialize(.newLine)
+        serialize([.carriageReturn, .newLine])
         
         partsSerialized = true
     }
@@ -93,7 +93,7 @@ public final class Serializer {
         serialize([.hyphen, .hyphen])
         serialize(boundary)
         serialize([.hyphen, .hyphen])
-        serialize(.newLine)
+        serialize([.carriageReturn, .newLine])
         serialize(epilogue)
         
         epilogueSerialized = true

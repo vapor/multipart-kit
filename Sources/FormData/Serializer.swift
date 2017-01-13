@@ -6,16 +6,13 @@ import Multipart
     suitable for an HTTP response or request body.
  */
 public final class Serializer {
-    /// The multipart boundary being used.
-    public let boundary: Bytes
     
     /// The underlying multipart serializer.
     /// Use to serialize preamble and epilogue.
-    public let multipartSerializer: Multipart.Serializer
+    public let multipart: Multipart.Serializer
     
-    public init(boundary: Bytes) {
-        self.boundary = boundary
-        multipartSerializer = Multipart.Serializer(boundary: boundary)
+    public init(multipart: Multipart.Serializer) {
+        self.multipart = multipart
     }
     
     /**
@@ -40,6 +37,6 @@ public final class Serializer {
         }
         
         part.headers["Content-Disposition"] = contentDisposition
-        try multipartSerializer.serialize(part)
+        try multipart.serialize(part)
     }
 }

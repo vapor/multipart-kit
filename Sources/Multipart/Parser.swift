@@ -121,6 +121,12 @@ public final class Parser {
             throw Error.hasAlreadyFinished
         }
         
+        // we only care about new lines
+        // this requires that all line endings be `\n` or `\r\n`
+        if byte == .carriageReturn {
+            return
+        }
+        
         switch state {
         case .preamble(let bodyEndIndex):
             try boundaryParser.parse(byte)

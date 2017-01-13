@@ -8,12 +8,9 @@ import HTTP
     parser.
 */
 public final class Parser {
-    /// The multipart boundary being used.
-    public let boundary: Bytes
-    
     /// The underlying multipart parser.
     /// Subscribe to preamble and epilogue events.
-    public let multipartParser: Multipart.Parser
+    public let multipart: Multipart.Parser
     
     /// A callback type for handling parsed form-data fields.
     public typealias FieldCallback = (Field) -> ()
@@ -23,11 +20,10 @@ public final class Parser {
     public var onField: FieldCallback?
     
     /// Create a new Form Data parser.
-    public init(boundary: Bytes) {
-        self.boundary = boundary
-        multipartParser = Multipart.Parser(boundary: boundary)
+    public init(multipart: Multipart.Parser) {
+        self.multipart = multipart
         
-        multipartParser.onPart = { part in
+        self.multipart.onPart = { part in
             if let contentDisposition = part.headers[.contentDisposition] {
                 let parser = ContentDispositionParser()
                 
@@ -59,14 +55,5 @@ public final class Parser {
                 
             }
         }
-    }
-    
-    /**
-        The main method for passing bytes into the parser.
-     
-        @see `Multipart.Parser.parse` for performance notes.
-    */
-    public func parse(_ bytes: Bytes) throws {
-        try multipartParser.parse(bytes)
     }
 }

@@ -34,7 +34,7 @@ final class HeaderParser {
     func parse(_ byte: Byte) throws {
         main: switch state {
         case .none:
-            if byte == .newLine {
+            if byte == .newLine  {
                 break main
             }
             
