@@ -127,7 +127,10 @@ public final class Parser {
         }
         
         hasFinished = true
-        let body = buffer
+        
+        let raw = buffer
+        let body = Array(raw.trimmed([.newLine, .carriageReturn]))
+        
         buffer = []
         onEpilogue?(body)
     }
@@ -138,13 +141,7 @@ public final class Parser {
         guard !hasFinished else {
             throw Error.hasAlreadyFinished
         }
-        
-        // we only care about new lines
-        // this requires that all line endings be `\n` or `\r\n`
-        if byte == .carriageReturn {
-            return
-        }
-        
+
         switch state {
         case .preamble(let bodyEndIndex):
             try boundaryParser.parse(byte)
@@ -164,12 +161,18 @@ public final class Parser {
                 
                 let body = Array(buffer[0..<bodyEndIndex])
                 
-                let pos = bodyEndIndex + boundarySize
-                buffer = Array(buffer[pos..<buffer.count])
+                //                                    newline
+                let pos = bodyEndIndex + boundarySize + 1
+                
+                if pos > buffer.count {
+                    buffer = []
+                } else {
+                    buffer = Array(buffer[pos..<buffer.count])
+                }
                 
                 onPreamble?(body)
             }
-        case .part(let partState, var headers, let bodyEndIndex):
+        case .part(let partState, var headers, let bodyEndIndex):            
             switch partState {
             case .headers:
                 try headerParser.parse(byte)
@@ -182,7 +185,9 @@ public final class Parser {
                     let headerKey = HeaderKey(key.trimmed([.space]).string)
                     headers[headerKey] = value.trimmed([.space]).string
                     
-                    let pos = key.count + 1 + value.count + 1
+                    //                  colon              newline
+                    let pos = key.count + 1 + value.count + 2
+                    
                     buffer = Array(buffer[pos..<buffer.count])
                     
                     state = .part(
@@ -191,7 +196,8 @@ public final class Parser {
                         bodyEndIndex: 0
                     )
                 case .none:
-                    buffer = Array(buffer[1..<buffer.count])
+                    //                   crlf
+                    buffer = Array(buffer[2..<buffer.count])
                     
                     state = .part(
                         state: .body,
@@ -223,10 +229,15 @@ public final class Parser {
                         state = .part(state: .headers, headers: headers, bodyEndIndex: 0)
                     }
                     
-                    let body = Array(buffer[0..<bodyEndIndex])
+                    let raw = Array(buffer[0..<bodyEndIndex])
+                    let body = Array(raw.trimmed([.newLine, .carriageReturn]))
                     
                     let pos = bodyEndIndex + boundarySize
-                    buffer = Array(buffer[pos..<buffer.count])
+                    if pos > buffer.count {
+                        buffer = []
+                    } else {
+                        buffer = Array(buffer[pos..<buffer.count])
+                    }
                     
                     let part = Part(headers: headers, body: body)
                     onPart?(part)

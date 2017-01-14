@@ -34,12 +34,13 @@ final class HeaderParser {
     func parse(_ byte: Byte) throws {
         main: switch state {
         case .none:
-            if byte == .newLine  {
+            state = .parsingKey(buffer: [byte])
+        case .parsingKey(var buffer):
+            if (buffer + [byte]) == [.carriageReturn, .newLine] {
+                state = .none
                 break main
             }
             
-            state = .parsingKey(buffer: [byte])
-        case .parsingKey(var buffer):
             if byte == .colon {
                 state = .parsingValue(key: buffer, buffer: [])
                 break main
@@ -48,6 +49,10 @@ final class HeaderParser {
             buffer.append(byte)
             state = .parsingKey(buffer: buffer)
         case .parsingValue(let key, var buffer):
+            if byte == .carriageReturn {
+                break main
+            }
+            
             if byte == .newLine {
                 state = .finished(key: key, value: buffer)
                 break main
@@ -56,11 +61,6 @@ final class HeaderParser {
             buffer.append(byte)
             state = .parsingValue(key: key, buffer: buffer)
         case .finished:
-            if byte == .newLine {
-                state = .none
-                break main
-            }
-            
             state = .parsingKey(buffer: [byte])
         }
     }

@@ -15,23 +15,23 @@ class ParserTests: XCTestCase {
         
         var message = ""
         
-        message += "-----------------------------9051914041544843365972754266\n"
-        message += "Content-Disposition: form-data; name=\"text\"\n"
-        message += "\n"
-        message += "text default\n"
-        message += "-----------------------------9051914041544843365972754266\n"
-        message += "Content-Disposition: form-data; name=\"file1\"; filename=\"a.txt\"\n"
-        message += "Content-Type: text/plain\n"
-        message += "\n"
-        message += "Content of a.txt.\n"
-        message += "\n"
-        message += "-----------------------------9051914041544843365972754266\n"
-        message += "Content-Disposition: form-data; name=\"file2\"; filename=\"a.html\"\n"
-        message += "Content-Type: text/html\n"
-        message += "\n"
-        message += "<!DOCTYPE html><title>Content of a.html.</title>\n"
-        message += "\n"
-        message += "-----------------------------9051914041544843365972754266--\n"
+        message += "-----------------------------9051914041544843365972754266\r\n"
+        message += "Content-Disposition: form-data; name=\"text\"\r\n"
+        message += "\r\n"
+        message += "text default\r\n"
+        message += "-----------------------------9051914041544843365972754266\r\n"
+        message += "Content-Disposition: form-data; name=\"file1\"; filename=\"a.txt\"\r\n"
+        message += "Content-Type: text/plain\r\n"
+        message += "\r\n"
+        message += "Content of a.txt.\r\n"
+        message += "\r\n"
+        message += "-----------------------------9051914041544843365972754266\r\n"
+        message += "Content-Disposition: form-data; name=\"file2\"; filename=\"a.html\"\r\n"
+        message += "Content-Type: text/html\r\n"
+        message += "\r\n"
+        message += "<!DOCTYPE html><title>Content of a.html.</title>\r\n"
+        message += "\r\n"
+        message += "-----------------------------9051914041544843365972754266--\r\n"
         
         var fields: [String: Field] = [:]
         
@@ -76,5 +76,29 @@ class ParserTests: XCTestCase {
         try parser.multipart.parse(message)
         
         XCTAssertEqual(fields["file"]?.filename, "Screen Shot 2017-01-13 at 3.05.26 PM.png")
+    }
+    
+    func testForm() throws {
+        var message = ""
+        
+        message += "--vapor\r\n"
+        message += "Content-Disposition: form-data; name=\"name\"\r\n"
+        message += "Content-Type: text\r\n"
+        message += "\r\n"
+        message += "hi\r\n"
+        message += "--vapor--\r\n"
+        
+        let multipart = try Multipart.Parser(boundary: "vapor")
+        let parser = FormData.Parser(multipart: multipart)
+        
+        var fields: [String: Field] = [:]
+        
+        parser.onField = { field in
+            fields[field.name] = field
+        }
+        
+        try parser.multipart.parse(message)
+        
+        XCTAssertEqual(fields["name"]?.part.body.string, "hi")
     }
 }

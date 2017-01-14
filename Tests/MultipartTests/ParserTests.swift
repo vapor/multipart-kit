@@ -54,7 +54,7 @@ class ParserTests: XCTestCase {
         
         var message = ""
         message += preamble
-        message += "--foo--\n"
+        message += "--foo--\r\n"
         
         let preambleExpectation = expectation(description: "preamble was parsed")
         
@@ -81,10 +81,10 @@ class ParserTests: XCTestCase {
         
         var message = ""
         message += preamble
-        message += "--foo\n"
-        message += "\n"
+        message += "--foo\r\n"
+        message += "\r\n"
         message += part1
-        message += "--foo--\n"
+        message += "--foo--\r\n"
         
         let partExpectation = expectation(description: "part was parsed")
         
@@ -105,12 +105,12 @@ class ParserTests: XCTestCase {
         
         var message = ""
         message += "preamble"
-        message += "--foo\n"
-        message += "key:  value\n"
-        message += "foo:bar\n"
-        message += "\n"
+        message += "--foo\r\n"
+        message += "key:  value\r\n"
+        message += "foo:bar\r\n"
+        message += "\r\n"
         message += part1
-        message += "--foo--\n"
+        message += "--foo--\r\n"
         
         let partExpectation = expectation(description: "part was parsed")
         
@@ -130,14 +130,14 @@ class ParserTests: XCTestCase {
     func testEpilogue() throws {
         let parser = try Parser(boundary: "foo")
         
-        let epilogue = "\nepliogue"
+        let epilogue = "epliogue"
         
         var message = ""
         message += "preamble"
-        message += "--foo\n"
-        message += "\n"
+        message += "--foo\r\n"
+        message += "\r\n"
         message += "part"
-        message += "--foo--\n"
+        message += "--foo--\r\n"
         message += epilogue
         
         let epilogueExpectation = expectation(description: "epilogue was parsed")
@@ -160,23 +160,23 @@ class ParserTests: XCTestCase {
         
         var message = ""
         
-        message += "-----------------------------9051914041544843365972754266\n"
-        message += "Content-Disposition: form-data; name=\"text\"\n"
-        message += "\n"
-        message += "text default\n"
-        message += "-----------------------------9051914041544843365972754266\n"
-        message += "Content-Disposition: form-data; name=\"file1\"; filename=\"a.txt\"\n"
-        message += "Content-Type: text/plain\n"
-        message += "\n"
-        message += "Content of a.txt.\n"
-        message += "\n"
-        message += "-----------------------------9051914041544843365972754266\n"
-        message += "Content-Disposition: form-data; name=\"file2\"; filename=\"a.html\"\n"
-        message += "Content-Type: text/html\n"
-        message += "\n"
-        message += "<!DOCTYPE html><title>Content of a.html.</title>\n"
-        message += "\n"
-        message += "-----------------------------9051914041544843365972754266--\n"
+        message += "-----------------------------9051914041544843365972754266\r\n"
+        message += "Content-Disposition: form-data; name=\"text\"\r\n"
+        message += "\r\n"
+        message += "text default\r\n"
+        message += "-----------------------------9051914041544843365972754266\r\n"
+        message += "Content-Disposition: form-data; name=\"file1\"; filename=\"a.txt\"\r\n"
+        message += "Content-Type: text/plain\r\n"
+        message += "\r\n"
+        message += "Content of a.txt.\r\n"
+        message += "\r\n"
+        message += "-----------------------------9051914041544843365972754266\r\n"
+        message += "Content-Disposition: form-data; name=\"file2\"; filename=\"a.html\"\r\n"
+        message += "Content-Type: text/html\r\n"
+        message += "\r\n"
+        message += "<!DOCTYPE html><title>Content of a.html.</title>\r\n"
+        message += "\r\n"
+        message += "-----------------------------9051914041544843365972754266--\r\n"
         
         var parts: [Part] = []
         

@@ -1,5 +1,7 @@
 import Core
 
+private let crlf: Bytes = [.carriageReturn, .newLine]
+
 /**
     Creates a multipart formatted array of bytes from Parts
     suitable for an HTTP response or request body.
@@ -61,18 +63,18 @@ public final class Serializer {
         
         serialize([.hyphen, .hyphen])
         serialize(boundary)
-        serialize([.carriageReturn, .newLine])
+        serialize(crlf)
         for (key, value) in part.headers {
             serialize(key.key.bytes)
             serialize(.colon)
             serialize(.space)
             serialize(value.bytes)
-            serialize([.carriageReturn, .newLine])
+            serialize(crlf)
         }
-        serialize([.carriageReturn, .newLine])
+        serialize(crlf)
         
         serialize(part.body)
-        serialize([.carriageReturn, .newLine])
+        serialize(crlf)
         
         partsSerialized = true
     }
@@ -93,7 +95,7 @@ public final class Serializer {
         serialize([.hyphen, .hyphen])
         serialize(boundary)
         serialize([.hyphen, .hyphen])
-        serialize([.carriageReturn, .newLine])
+        serialize(crlf)
         serialize(epilogue)
         
         epilogueSerialized = true

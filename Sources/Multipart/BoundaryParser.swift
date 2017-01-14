@@ -54,6 +54,10 @@ final class BoundaryParser {
                 break main
             } else {
                 if buffer == match {
+                    if byte == .carriageReturn {
+                        break main
+                    }
+                    
                     if byte == .newLine {
                         switch trailingHyphenCount {
                         case 0:
