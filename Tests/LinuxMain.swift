@@ -4,9 +4,9 @@ import XCTest
 @testable import MultipartTests
 
 XCTMain([
-    testCase(ParserTests.allTests),
-    testCase(SerializerTests.allTests),
-    testCase(ParserTests.allTests),
-    testCase(SerializerTests.allTests),
+    testCase(FormDataTests.ParserTests.allTests),
+    testCase(FormDataTests.SerializerTests.allTests),
+    testCase(MultipartTests.ParserTests.allTests),
+    testCase(MultipartTests.SerializerTests.allTests),
 ])
 
