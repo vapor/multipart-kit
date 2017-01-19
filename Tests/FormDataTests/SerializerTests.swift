@@ -36,8 +36,13 @@ class SerializerTests: XCTestCase {
         var expected = ""
         
         expected += "--boundary42\r\n"
-        expected += "Content-Disposition: form-data; name=\"title\"\r\n"
-        expected += "Content-Type: text/plain; charset=us-ascii\r\n"
+        #if os(Linux)
+            expected += "Content-Type: text/plain; charset=us-ascii\r\n"
+            expected += "Content-Disposition: form-data; name=\"title\"\r\n"
+        #else
+            expected += "Content-Disposition: form-data; name=\"title\"\r\n"
+            expected += "Content-Type: text/plain; charset=us-ascii\r\n"
+        #endif
         expected += "\r\n"
         expected += "Systems should choose the 'best' type based on the local environment and references, in some cases even through user interaction.\r\n"
         expected += "--boundary42\r\n"
