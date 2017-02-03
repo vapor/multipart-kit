@@ -23,7 +23,7 @@ public final class Parser {
     public init(multipart: Multipart.Parser) {
         self.multipart = multipart
         
-        self.multipart.onPart = { part in
+        self.multipart.onPart = { [weak self] part in
             if let contentDisposition = part.headers[.contentDisposition] {
                 let parser = ContentDispositionParser()
                 
@@ -50,7 +50,7 @@ public final class Parser {
                 
                 if let name = name {
                     let field = Field(name: name, filename: filename, part: part)
-                    self.onField?(field)
+                    self?.onField?(field)
                 }
                 
             }
