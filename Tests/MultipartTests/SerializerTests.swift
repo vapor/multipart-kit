@@ -11,16 +11,16 @@ class SerializerTests: XCTestCase {
     
     func testInit() throws {
         let serializer = try Serializer(boundary: "foo")
-        XCTAssertEqual(serializer.boundary, "foo".bytes)
+        XCTAssertEqual(serializer.boundary, "foo".makeBytes())
     }
     
     public func testBasic() throws {
         let part1 = Part(headers: [
             "Content-Type": "text/plain; charset=us-ascii",
             "X-Test": "42"
-        ], body: "Systems should choose the 'best' type based on the local environment and references, in some cases even through user interaction.".bytes)
+        ], body: "Systems should choose the 'best' type based on the local environment and references, in some cases even through user interaction.".makeBytes())
         
-        let part2 = Part(headers: [:], body: "Test123".bytes)
+        let part2 = Part(headers: [:], body: "Test123".makeBytes())
         
         let serializer = try Serializer(boundary: "boundary42")
         

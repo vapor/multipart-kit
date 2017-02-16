@@ -65,10 +65,10 @@ public final class Serializer {
         serialize(boundary)
         serialize(crlf)
         for (key, value) in part.headers {
-            serialize(key.key.bytes)
+            serialize(key.key.makeBytes())
             serialize(.colon)
             serialize(.space)
-            serialize(value.bytes)
+            serialize(value.makeBytes())
             serialize(crlf)
         }
         serialize(crlf)

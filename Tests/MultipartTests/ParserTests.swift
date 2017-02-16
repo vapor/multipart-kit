@@ -15,7 +15,7 @@ class ParserTests: XCTestCase {
 
     func testInit() throws {
         let parser = try Parser(boundary: "foo")
-        XCTAssertEqual(parser.boundary, "foo".bytes)
+        XCTAssertEqual(parser.boundary, "foo".makeBytes())
     }
     
     func testPreamble() throws {
@@ -38,7 +38,7 @@ class ParserTests: XCTestCase {
             preambleExpectation.fulfill()
         }
         
-        try parser.parse(message.bytes)
+        try parser.parse(message.makeBytes())
         
         waitForExpectations(timeout: 0, handler: nil)
     }
@@ -63,7 +63,7 @@ class ParserTests: XCTestCase {
             preambleExpectation.fulfill()
         }
         
-        try parser.parse(message.bytes)
+        try parser.parse(message.makeBytes())
         
         waitForExpectations(timeout: 0, handler: nil)
     }
@@ -93,7 +93,7 @@ class ParserTests: XCTestCase {
             partExpectation.fulfill()
         }
         
-        try parser.parse(message.bytes)
+        try parser.parse(message.makeBytes())
         
         waitForExpectations(timeout: 0, handler: nil)
     }
@@ -122,7 +122,7 @@ class ParserTests: XCTestCase {
             partExpectation.fulfill()
         }
         
-        try parser.parse(message.bytes)
+        try parser.parse(message.makeBytes())
         
         waitForExpectations(timeout: 0, handler: nil)
     }
@@ -147,7 +147,7 @@ class ParserTests: XCTestCase {
             epilogueExpectation.fulfill()
         }
         
-        try parser.parse(message.bytes)
+        try parser.parse(message.makeBytes())
         
         // must call done since epilogue can go on forever
         try parser.finish()
