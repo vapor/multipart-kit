@@ -43,6 +43,6 @@ public final class Serializer {
     /// Generates a Content-Type header value from a boundary
     public static func generateContentType(boundary: BytesConvertible) throws -> Bytes {
         let b = try boundary.makeBytes()
-        return  "multipart/form-data; boundary=".bytes + b
+        return  "multipart/form-data; boundary=".makeBytes() + b
     }
 }

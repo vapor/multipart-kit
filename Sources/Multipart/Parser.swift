@@ -79,7 +79,7 @@ public final class Parser {
         guard boundaryPieces.count == 2 else {
             throw Error.invalidBoundary
         }
-        return boundaryPieces[1].bytes
+        return boundaryPieces[1].makeBytes()
     }
     
     /// Create a new multipart parser from a 

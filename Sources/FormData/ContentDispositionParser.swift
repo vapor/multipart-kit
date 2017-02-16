@@ -43,7 +43,7 @@ final class ContentDispositionParser {
         case .none:
             state = .parsingPrefix(buffer: [byte])
         case .parsingPrefix(var buffer):
-            if byte == .semicolon && buffer == "form-data".bytes {
+            if byte == .semicolon && buffer == "form-data".makeBytes() {
                 state = .parsingKey(buffer: [])
                 break main
             }
@@ -57,9 +57,9 @@ final class ContentDispositionParser {
             
             if byte == .equals {
                 switch buffer {
-                case "name".bytes:
+                case "name".makeBytes():
                     state = .parsingValue(key: .name, buffer: [])
-                case "filename".bytes:
+                case "filename".makeBytes():
                     state = .parsingValue(key: .filename, buffer: [])
                 default:
                     state = .parsingValue(key: .other(buffer), buffer: [])
