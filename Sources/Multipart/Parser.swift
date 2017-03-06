@@ -231,8 +231,9 @@ public final class Parser {
                     
                     let raw = Array(buffer[0..<bodyEndIndex])
                     let body = Array(raw.trimmed([.newLine, .carriageReturn]))
-                    
-                    let pos = bodyEndIndex + boundarySize
+
+                    //                                    newline
+                    let pos = bodyEndIndex + boundarySize + 1
                     if pos > buffer.count {
                         buffer = []
                     } else {
