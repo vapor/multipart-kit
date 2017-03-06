@@ -2,10 +2,8 @@ import Core
 import HTTP
 import Foundation
 
-/**
-    Parses preamble, Parts, and epilogue from a Multipart 
-    formatted sequence of bytes likely from an HTTP request or response.
-*/
+/// Parses preamble, Parts, and epilogue from a Multipart
+/// formatted sequence of bytes likely from an HTTP request or response.
 public final class Parser {
     /// The multipart boundary being used.
 	public let boundary: Bytes
@@ -95,16 +93,14 @@ public final class Parser {
     // need to be passed around.
     private var buffer: Bytes
     
-    /**
-        The main method for passing bytes into the parser.
-     
-        A copy is performed to move the bytes passed into
-        the parser's internal memory. The bytes are then
-        iterated over one by one.
-     
-        Callbacks will be made as the preamble, Parts, and
-        epilogue are discovered.
-    */
+    /// The main method for passing bytes into the parser.
+    ///
+    /// A copy is performed to move the bytes passed into
+    /// the parser's internal memory. The bytes are then
+    /// iterated over one by one.
+    ///
+    /// Callbacks will be made as the preamble, Parts, and
+    /// epilogue are discovered.
     public func parse(_ bytes: Bytes) throws {
         buffer += bytes
         
@@ -114,13 +110,11 @@ public final class Parser {
         }
     }
     
-    /**
-        Call this method when there are no bytes
-        left to parse.
-     
-        This will trigger any parsed epilogue bytes
-        to be returned.
-    */
+    /// Call this method when there are no bytes
+    /// left to parse.
+    ///
+    /// This will trigger any parsed epilogue bytes
+    /// to be returned.
     public func finish() throws {
         guard !hasFinished else {
             throw Error.hasAlreadyFinished
@@ -231,8 +225,9 @@ public final class Parser {
                     
                     let raw = Array(buffer[0..<bodyEndIndex])
                     let body = Array(raw.trimmed([.newLine, .carriageReturn]))
-                    
-                    let pos = bodyEndIndex + boundarySize
+
+                    //                                    newline
+                    let pos = bodyEndIndex + boundarySize + 1
                     if pos > buffer.count {
                         buffer = []
                     } else {
