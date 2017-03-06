@@ -2,11 +2,9 @@ import Core
 import Multipart
 import HTTP
 
-/**
-    Parses form-data specific elements from
-    multipart data parsed by an underlying multipart
-    parser.
-*/
+/// Parses form-data specific elements from
+/// multipart data parsed by an underlying multipart
+/// parser.
 public final class Parser {
     /// The underlying multipart parser.
     /// Subscribe to preamble and epilogue events.

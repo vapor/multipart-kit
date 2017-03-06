@@ -22,15 +22,13 @@ final class HeaderParser {
         self.state = .none
     }
     
-    /**
-        Parse a stream of bytes by iterating over each byte
-        and calling `parse()`.
-
-        After each byte, check the `state` of the header parser.
-        - finished: a full header has been found, hold onto the key and value.
-        - parsingKey/Value: the parser is currently gathering the header.
-        - none: parser has not yet received bytes.
-    */
+    /// Parse a stream of bytes by iterating over each byte
+    /// and calling `parse()`.
+    ///
+    /// After each byte, check the `state` of the header parser.
+    /// - finished: a full header has been found, hold onto the key and value.
+    /// - parsingKey/Value: the parser is currently gathering the header.
+    /// - none: parser has not yet received bytes.
     func parse(_ byte: Byte) throws {
         main: switch state {
         case .none:
