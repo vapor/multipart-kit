@@ -13,9 +13,9 @@ class SerializerTests: XCTestCase {
     public func testBasic() throws {
         let part1 = Part(headers: [
             "Content-Type": "text/plain; charset=us-ascii",
-        ], body: "Systems should choose the 'best' type based on the local environment and references, in some cases even through user interaction.".bytes)
+        ], body: "Systems should choose the 'best' type based on the local environment and references, in some cases even through user interaction.".makeBytes())
         
-        let part2 = Multipart.Part(headers: [:], body: "Test123".bytes)
+        let part2 = Multipart.Part(headers: [:], body: "Test123".makeBytes())
         
         let field1 = Field(name: "title", filename: nil, part: part1)
         let field2 = Field(name: "image", filename: "image.jpg", part: part2)

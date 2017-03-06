@@ -31,7 +31,7 @@ public final class Parser {
                 var name: String?
                 var filename: String?
                 
-                for byte in contentDisposition.bytes {
+                for byte in contentDisposition.makeBytes() {
                     parser.parse(byte)
                     
                     switch parser.state {
