@@ -1,9 +1,7 @@
 import Core
 
-/**
-    Parses `Content-Disposition` header values for
-    form-data encoded messages.
-*/
+/// Parses `Content-Disposition` header values for
+/// form-data encoded messages.
 final class ContentDispositionParser {
     /// Key types expected in the content disposition.
     enum Key {
@@ -29,15 +27,13 @@ final class ContentDispositionParser {
         self.state = .none
     }
     
-    /**
-        Parse a stream of bytes by iterating over each byte
-        and calling `parse()`.
-
-        After each byte, check the `state` of the header parser.
-        - finished: a full key/value pair has been found.
-        - parsingPrefix/Key/Value: the parser is currently parsing values.
-        - none: parser has not yet received bytes.
-    */
+    /// Parse a stream of bytes by iterating over each byte
+    /// and calling `parse()`.
+    ///
+    /// After each byte, check the `state` of the header parser.
+    /// - finished: a full key/value pair has been found.
+    /// - parsingPrefix/Key/Value: the parser is currently parsing values.
+    /// - none: parser has not yet received bytes.
     func parse(_ byte: Byte) {
         main: switch state {
         case .none:

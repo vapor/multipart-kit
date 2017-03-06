@@ -1,10 +1,8 @@
 import Core
 import Multipart
 
-/**
-    Creates a multipart/form-data formatted array of bytes from Fields
-    suitable for an HTTP response or request body.
- */
+/// Creates a multipart/form-data formatted array of bytes from Fields
+/// suitable for an HTTP response or request body.
 public final class Serializer {
     
     /// The underlying multipart serializer.
@@ -15,18 +13,16 @@ public final class Serializer {
         self.multipart = multipart
     }
     
-    /**
-        This method serializes an entire Field.
-
-        This may be called as many times as needed.
-
-        After all Field have been serialized,
-        `finish()` must be called on the multipart serializer
-        to add the closing boundary.
-
-        Fields can obviously not be serialized after the
-        epilogue has been serialized.
-    */
+    /// This method serializes an entire Field.
+    ///
+    /// This may be called as many times as needed.
+    ///
+    /// After all Field have been serialized,
+    /// `finish()` must be called on the multipart serializer
+    /// to add the closing boundary.
+    ///
+    /// Fields can obviously not be serialized after the
+    /// epilogue has been serialized.
     public func serialize(_ field: Field) throws {
         var part = field.part
         

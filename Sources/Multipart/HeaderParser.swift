@@ -1,10 +1,8 @@
 import Core
 
-/**
-    Parses headers from the top of an HTTP-style message.
- 
-    Pass a stream of bytes into the parser by continually calling `parse()`.
-*/
+/// Parses headers from the top of an HTTP-style message.
+///
+/// Pass a stream of bytes into the parser by continually calling `parse()`.
 final class HeaderParser {
     // An enum representing all possible states the parser can be in.
     enum State {

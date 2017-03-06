@@ -1,10 +1,8 @@
 import Core
 import HTTP
 
-/**
-    A single Multipart part with 0 or more
-    headers and a body.
-*/
+/// A single Multipart part with 0 or more
+/// headers and a body.
 public struct Part {
     public var headers: [HeaderKey: String]
     public var body: Bytes
