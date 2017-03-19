@@ -73,7 +73,7 @@ public final class Parser {
     
     /// Extracts the boundary from a multipart Content-Type header
     public static func extractBoundary(contentType: BytesConvertible) throws -> Bytes {
-        let boundaryPieces = try contentType.makeBytes().string.components(separatedBy: "boundary=")
+        let boundaryPieces = try contentType.makeBytes().makeString().components(separatedBy: "boundary=")
         guard boundaryPieces.count == 2 else {
             throw Error.invalidBoundary
         }
@@ -176,8 +176,8 @@ public final class Parser {
                 case .parsingValue:
                     break
                 case .finished(let key, let value):
-                    let headerKey = HeaderKey(key.trimmed([.space]).string)
-                    headers[headerKey] = value.trimmed([.space]).string
+                    let headerKey = HeaderKey(key.trimmed([.space]).makeString())
+                    headers[headerKey] = value.trimmed([.space]).makeString()
                     
                     //                  colon              newline
                     let pos = key.count + 1 + value.count + 2

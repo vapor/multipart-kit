@@ -38,9 +38,9 @@ public final class Parser {
                     case .finished(let key, let value):
                         switch key {
                         case .name:
-                            name = value.string
+                            name = value.makeString()
                         case .filename:
-                            filename = value.string
+                            filename = value.makeString()
                         case .other:
                             break
                         }

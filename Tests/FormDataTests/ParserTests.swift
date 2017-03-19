@@ -101,7 +101,7 @@ class ParserTests: XCTestCase {
         
         try parser.multipart.parse(message)
         
-        XCTAssertEqual(fields["name"]?.part.body.string, "hi")
+        XCTAssertEqual(fields["name"]?.part.body.makeString(), "hi")
     }
 
     func testFormManyFields() throws {
@@ -136,7 +136,7 @@ class ParserTests: XCTestCase {
         try parser.multipart.parse(message)
         
         for i in 1...5 {
-            XCTAssertEqual(fields["field\(i)"]?.part.body.string, "The Quick Brown Fox Jumps Over The Lazy Dog", "Field 'field\(i)' was parsed incorrectly!")
+            XCTAssertEqual(fields["field\(i)"]?.part.body.makeString(), "The Quick Brown Fox Jumps Over The Lazy Dog", "Field 'field\(i)' was parsed incorrectly!")
         }
     }
 }

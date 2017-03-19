@@ -46,6 +46,6 @@ class SerializerTests: XCTestCase {
         expected += "Test123\r\n"
         expected += "--boundary42--\r\n"
         
-        XCTAssertEqual(serialized.string, expected)
+        XCTAssertEqual(serialized.makeString(), expected)
     }
 }

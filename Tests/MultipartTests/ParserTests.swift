@@ -34,7 +34,7 @@ class ParserTests: XCTestCase {
         let preambleExpectation = expectation(description: "preamble was parsed")
         
         parser.onPreamble = { parsedPreamble in
-            XCTAssertEqual(parsedPreamble.string, preamble)
+            XCTAssertEqual(parsedPreamble.makeString(), preamble)
             preambleExpectation.fulfill()
         }
         
@@ -59,7 +59,7 @@ class ParserTests: XCTestCase {
         let preambleExpectation = expectation(description: "preamble was parsed")
         
         parser.onPreamble = { parsedPreamble in
-            XCTAssertEqual(parsedPreamble.string, preamble)
+            XCTAssertEqual(parsedPreamble.makeString(), preamble)
             preambleExpectation.fulfill()
         }
         
@@ -89,7 +89,7 @@ class ParserTests: XCTestCase {
         let partExpectation = expectation(description: "part was parsed")
         
         parser.onPart = { part in
-            XCTAssertEqual(part.body.string, part1)
+            XCTAssertEqual(part.body.makeString(), part1)
             partExpectation.fulfill()
         }
         
@@ -115,7 +115,7 @@ class ParserTests: XCTestCase {
         let partExpectation = expectation(description: "part was parsed")
         
         parser.onPart = { part in
-            XCTAssertEqual(part.body.string, part1)
+            XCTAssertEqual(part.body.makeString(), part1)
             XCTAssertEqual(part.headers.count, 2)
             XCTAssertEqual(part.headers["key"], "value")
             XCTAssertEqual(part.headers["foo"], "bar")
@@ -143,7 +143,7 @@ class ParserTests: XCTestCase {
         let epilogueExpectation = expectation(description: "epilogue was parsed")
         
         parser.onEpilogue = { e in
-            XCTAssertEqual(e.string, epilogue)
+            XCTAssertEqual(e.makeString(), epilogue)
             epilogueExpectation.fulfill()
         }
         
