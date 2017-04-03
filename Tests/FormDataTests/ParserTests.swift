@@ -163,6 +163,6 @@ class ParserTests: XCTestCase {
         try parser.multipart.parse(message)
         
         XCTAssertEqual(fields["file"]?.filename, "test.txt")
-        XCTAssertEqual("---this is a test", fields["file"]?.part.body.string)
+        XCTAssertEqual("---this is a test", fields["file"]?.part.body.makeString())
     }
 }

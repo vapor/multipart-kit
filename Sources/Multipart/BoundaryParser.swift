@@ -43,8 +43,7 @@ final class BoundaryParser {
             let match = [.hyphen, .hyphen] + boundary
             
             if
-                (buffer.count <= 1 && byte == .hyphen) ||
-                    (buffer.count > 1 && buffer.count < match.count)
+                buffer.count < match.count && match[buffer.count] == byte
             {
                 state = .parsing(buffer: buffer + [byte], trailingHyphenCount: trailingHyphenCount)
                 break main
