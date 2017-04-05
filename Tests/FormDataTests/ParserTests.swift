@@ -7,6 +7,9 @@ class ParserTests: XCTestCase {
     static var allTests = [
         ("testFormData", testFormData),
         ("testWebkit", testWebkit),
+        ("testForm", testForm),
+        ("testFormManyFields", testFormManyFields),
+        ("testBoundaryLikeContent", testBoundaryLikeContent)
     ]
 
     func testFormData() throws {
@@ -100,5 +103,67 @@ class ParserTests: XCTestCase {
         try parser.multipart.parse(message)
         
         XCTAssertEqual(fields["name"]?.part.body.string, "hi")
+    }
+
+    func testFormManyFields() throws {
+        var message = ""
+
+        message += "------WebKitFormBoundaryMFxQS4UblUjPXRXM\r\n"
+        message += "Content-Disposition: form-data; name=\"field1\"\r\n\r\n"
+        message += "The Quick Brown Fox Jumps Over The Lazy Dog\r\n"
+        message += "------WebKitFormBoundaryMFxQS4UblUjPXRXM\r\n"
+        message += "Content-Disposition: form-data; name=\"field2\"\r\n\r\n"
+        message += "The Quick Brown Fox Jumps Over The Lazy Dog\r\n"
+        message += "------WebKitFormBoundaryMFxQS4UblUjPXRXM\r\n"
+        message += "Content-Disposition: form-data; name=\"field3\"\r\n\r\n"
+        message += "The Quick Brown Fox Jumps Over The Lazy Dog\r\n"
+        message += "------WebKitFormBoundaryMFxQS4UblUjPXRXM\r\n"
+        message += "Content-Disposition: form-data; name=\"field4\"\r\n\r\n"
+        message += "The Quick Brown Fox Jumps Over The Lazy Dog\r\n"
+        message += "------WebKitFormBoundaryMFxQS4UblUjPXRXM\r\n"
+        message += "Content-Disposition: form-data; name=\"field5\"\r\n\r\n"
+        message += "The Quick Brown Fox Jumps Over The Lazy Dog\r\n"
+        message += "------WebKitFormBoundaryMFxQS4UblUjPXRXM\r\n"
+
+        let multipart = try Multipart.Parser(boundary: "----WebKitFormBoundaryMFxQS4UblUjPXRXM")
+        let parser = FormData.Parser(multipart: multipart)
+
+        var fields: [String: Field] = [:]
+
+        parser.onField = { field in
+            fields[field.name] = field
+        }
+
+        try parser.multipart.parse(message)
+
+        for i in 1...5 {
+            XCTAssertEqual(fields["field\(i)"]?.part.body.string, "The Quick Brown Fox Jumps Over The Lazy Dog", "Field 'field\(i)' was parsed incorrectly!")
+         }
+    }
+
+    
+    func testBoundaryLikeContent() throws {
+        var message = ""
+        
+        message += "------WebKitFormBoundaryezkRLRyEVe1aMUVZ\r\n"
+        message += "Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
+        message += "Content-Type: text/plain\r\n"
+        message += "\r\n"
+        message += "---this is a test\r\n"
+        message += "------WebKitFormBoundaryezkRLRyEVe1aMUVZ--\r\n"
+        
+        let multipart = try Multipart.Parser(boundary: "----WebKitFormBoundaryezkRLRyEVe1aMUVZ")
+        let parser = FormData.Parser(multipart: multipart)
+        
+        var fields: [String: Field] = [:]
+        
+        parser.onField = { field in
+            fields[field.name] = field
+        }
+        
+        try parser.multipart.parse(message)
+        
+        XCTAssertEqual(fields["file"]?.filename, "test.txt")
+        XCTAssertEqual("---this is a test", fields["file"]?.part.body.string)
     }
 }
