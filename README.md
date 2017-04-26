@@ -1,31 +1,20 @@
 <p align="center">
-    <img 
-        src="https://cloud.githubusercontent.com/assets/1342803/21941692/026690de-d998-11e6-9600-4040eeb1b2ee.png" 
-        align="center" 
-        alt="Form"
-        width="349px"
-    >
-</p>
-
-# Multipart
-
-![Swift](http://img.shields.io/badge/swift-3.0-brightgreen.svg)
-[![Build Status](https://travis-ci.org/vapor/multipart.svg?branch=master)](https://travis-ci.org/vapor/multipart)
-[![CircleCI](https://circleci.com/gh/vapor/multipart.svg?style=shield)](https://circleci.com/gh/vapor/multipart)
-[![Code Coverage](https://codecov.io/gh/vapor/multipart/branch/master/graph/badge.svg)](https://codecov.io/gh/vapor/multipart)
-[![Codebeat](https://codebeat.co/badges/a793ad97-47e3-40d9-82cf-2aafc516ef4e)](https://codebeat.co/projects/github-com-vapor-multipart)
-[![Slack Status](http://vapor.team/badge.svg)](http://vapor.team)
-
-This package includes the module `Multipart` which is capable of parsing `Content-Type: multipart` as defined in RFC 2046. `Multipart` can also process `multipart/form-data`, a content type commonly used by browsers to submit forms with files.
-
-## 📖 Documentation
-
-Visit the Vapor web framework's [documentation](http://docs.vapor.codes) for instructions on how to use this package. 
-
-## 💧 Community
-
-Join the welcoming community of fellow Vapor developers in [slack](http://vapor.team).
-
-## 🔧 Compatibility
-
-This package has been tested on macOS and Ubuntu.
+    <img src="https://cloud.githubusercontent.com/assets/1977704/25427397/bc203770-2a72-11e7-8aec-db3459966311.png" width="320" alt="Fluent">
+    <br>
+    <br>
+    <a href="http://beta.docs.vapor.codes/multipart/package/">
+        <img src="http://img.shields.io/badge/read_the-docs-92A8D1.svg" alt="Documentation">
+    </a>
+    <a href="http://vapor.team">
+        <img src="http://vapor.team/badge.svg" alt="Slack Team">
+    </a>
+    <a href="LICENSE">
+        <img src="http://img.shields.io/badge/license-MIT-brightgreen.svg" alt="MIT License">
+    </a>
+    <a href="https://circleci.com/gh/vapor/multipart">
+        <img src="https://circleci.com/gh/vapor/multipart.svg?style=shield" alt="Continuous Integration">
+    </a>
+    <a href="https://swift.org">
+        <img src="http://img.shields.io/badge/swift-3.1-brightgreen.svg" alt="Swift 3.1">
+    </a>
+</center>
