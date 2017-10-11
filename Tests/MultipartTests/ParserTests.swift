@@ -188,4 +188,16 @@ class ParserTests: XCTestCase {
         
         XCTAssertEqual(parts.count, 3)
     }
+	
+	func testExtractBoundary() throws {
+		let contentTypeValue = "multipart/form-data; boundary=asdf"
+		
+		XCTAssertEqual(try Parser.extractBoundary(contentType: contentTypeValue), "asdf".makeBytes())
+	}
+	
+	func testExtractBoundaryWithQuotes() throws {
+		let contentTypeValue = "multipart/form-data; boundary=\"asdf\""
+		
+		XCTAssertEqual(try Parser.extractBoundary(contentType: contentTypeValue), "asdf".makeBytes())
+	}
 }

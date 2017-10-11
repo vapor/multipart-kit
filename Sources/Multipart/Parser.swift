@@ -73,11 +73,17 @@ public final class Parser {
     
     /// Extracts the boundary from a multipart Content-Type header
     public static func extractBoundary(contentType: BytesConvertible) throws -> Bytes {
-        let boundaryPieces = try contentType.makeBytes().makeString().components(separatedBy: "boundary=")
-        guard boundaryPieces.count == 2 else {
-            throw Error.invalidBoundary
-        }
-        return boundaryPieces[1].makeBytes()
+        let contentTypeString = try contentType.makeBytes().makeString()
+		guard let boundaryEndIndex = contentTypeString.range(of: "boundary=")?.upperBound else { throw Error.invalidBoundary }
+		
+		var boundaryRange = boundaryEndIndex ..< contentTypeString.endIndex
+		if contentTypeString[boundaryRange].hasPrefix("\"") {
+			if !contentTypeString[boundaryRange].hasSuffix("\"") { throw Error.invalidBoundary } 
+			
+			boundaryRange = contentTypeString.index(boundaryRange.lowerBound, offsetBy: 1) ..< contentTypeString.index(boundaryRange.upperBound, offsetBy: -1) 
+		}
+		
+		return String(contentTypeString[boundaryRange]).makeBytes()
     }
     
     /// Create a new multipart parser from a 
