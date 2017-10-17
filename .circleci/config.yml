@@ -3,9 +3,8 @@ version: 2
 jobs:
   swift3-macos:
     macos:
-      xcode: 8.3
+      xcode: "8.3"
     steps:
-      - run: sudo gem install xcpretty
       - run: brew install vapor/tap/vapor
       - checkout
       - run: swift build
@@ -14,9 +13,8 @@ jobs:
 
   swift4-macos:
     macos:
-      xcode: 9.0
+      xcode: "9.0"
     steps:
-      - run: sudo gem install xcpretty
       - run: brew install vapor/tap/vapor
       - checkout
       - run: swift build
