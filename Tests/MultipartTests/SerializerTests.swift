@@ -33,19 +33,30 @@ class SerializerTests: XCTestCase {
         try serializer.serialize(part1)
         try serializer.serialize(part2)
         try serializer.finish()
+
+        func makeExpected(switchHeaders: Bool) -> String {
+            var expected = ""
+
+            expected += "--boundary42\r\n"
+            if switchHeaders {
+                expected += "Content-Type: text/plain; charset=us-ascii\r\n"
+                expected += "X-Test: 42\r\n"
+            } else {
+                expected += "X-Test: 42\r\n"
+                expected += "Content-Type: text/plain; charset=us-ascii\r\n"
+            }
+            expected += "\r\n"
+            expected += "Systems should choose the 'best' type based on the local environment and references, in some cases even through user interaction.\r\n"
+            expected += "--boundary42\r\n"
+            expected += "\r\n"
+            expected += "Test123\r\n"
+            expected += "--boundary42--\r\n"
+
+            return expected
+        }
+
+        let expected = [makeExpected(switchHeaders: true), makeExpected(switchHeaders: false)]
         
-        var expected = ""
-        
-        expected += "--boundary42\r\n"
-        expected += "Content-Type: text/plain; charset=us-ascii\r\n"
-        expected += "X-Test: 42\r\n"
-        expected += "\r\n"
-        expected += "Systems should choose the 'best' type based on the local environment and references, in some cases even through user interaction.\r\n"
-        expected += "--boundary42\r\n"
-        expected += "\r\n"
-        expected += "Test123\r\n"
-        expected += "--boundary42--\r\n"
-        
-        XCTAssertEqual(serialized.makeString(), expected)
+        XCTAssert(expected.contains(serialized.makeString()))
     }
 }
