@@ -32,17 +32,22 @@ class SerializerTests: XCTestCase {
         try serializer.serialize(field1)
         try serializer.serialize(field2)
         try serializer.multipart.finish()
-        
-        var expected = ""
-        
-        expected += "--boundary42\r\n"
-        #if os(Linux)
+
+        let expected = [expectedBody(typeFirst: true), expectedBody(typeFirst: false)]
+        XCTAssertTrue(expected.contains(serialized.makeString()), "Serialized output did not match any possible expected outputs")
+    }
+
+    private func expectedBody(typeFirst: Bool) -> String {
+        var expected = "--boundary42\r\n"
+
+        if (typeFirst) {
             expected += "Content-Type: text/plain; charset=us-ascii\r\n"
             expected += "Content-Disposition: form-data; name=\"title\"\r\n"
-        #else
+        } else {
             expected += "Content-Disposition: form-data; name=\"title\"\r\n"
             expected += "Content-Type: text/plain; charset=us-ascii\r\n"
-        #endif
+        }
+
         expected += "\r\n"
         expected += "Systems should choose the 'best' type based on the local environment and references, in some cases even through user interaction.\r\n"
         expected += "--boundary42\r\n"
@@ -50,7 +55,7 @@ class SerializerTests: XCTestCase {
         expected += "\r\n"
         expected += "Test123\r\n"
         expected += "--boundary42--\r\n"
-        
-        XCTAssertEqual(serialized.makeString(), expected)
+
+        return expected
     }
 }
