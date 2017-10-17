@@ -1,7 +1,17 @@
 version: 2
 
 jobs:
-  swift-3:
+  macos:
+    macos:
+      xcode: "9.0"
+    steps:
+      - run: brew install vapor/tap/vapor
+      - checkout
+      - run: swift build
+      - run: swift build -c release
+      - run: swift test
+
+  linux-swift3:
     docker:
       - image: swift:3.1
     steps:
@@ -11,7 +21,7 @@ jobs:
       - run: swift build -c release
       - run: swift test
 
-  swift-4:
+  linux:
     docker:
       - image: swift:4.0
     steps:
@@ -25,5 +35,6 @@ workflows:
   version: 2
   tests:
     jobs:
-      - swift-3
-      - swift-4
+      - macos
+      - linux-swift3
+      - linux

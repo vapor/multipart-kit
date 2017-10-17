@@ -77,8 +77,15 @@ public final class Parser {
 		guard let boundaryEndIndex = contentTypeString.range(of: "boundary=")?.upperBound else { throw Error.invalidBoundary }
 		
 		var boundaryRange = boundaryEndIndex ..< contentTypeString.endIndex
-		if contentTypeString[boundaryRange].hasPrefix("\"") {
-			if !contentTypeString[boundaryRange].hasSuffix("\"") { throw Error.invalidBoundary } 
+        #if swift(>=4)
+        let boundaryString = String(contentTypeString[boundaryRange])
+        #else
+        let boundaryString = String(contentTypeString[boundaryRange]) ?? ""
+        #endif
+		if boundaryString.hasPrefix("\"") {
+			if !boundaryString.hasSuffix("\"") {
+                throw Error.invalidBoundary
+            }
 			
 			boundaryRange = contentTypeString.index(boundaryRange.lowerBound, offsetBy: 1) ..< contentTypeString.index(boundaryRange.upperBound, offsetBy: -1) 
 		}
