@@ -188,4 +188,17 @@ class ParserTests: XCTestCase {
         
         XCTAssertEqual(parts.count, 3)
     }
+	
+	func testExtractBoundary() throws {
+		let contentTypeValue = "multipart/form-data; boundary=asdf"
+		
+		XCTAssertEqual(try Parser.extractBoundary(contentType: contentTypeValue), "asdf".makeBytes())
+	}
+	
+	/// Quotes around boundary is allowed in the HTTP spec, see https://tools.ietf.org/html/rfc7231#section-3.1.1.1
+	func testExtractBoundaryWithQuotes() throws {
+		let contentTypeValue = "multipart/form-data; boundary=\"asdf\""
+		
+		XCTAssertEqual(try Parser.extractBoundary(contentType: contentTypeValue), "asdf".makeBytes())
+	}
 }
