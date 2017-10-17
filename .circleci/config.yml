@@ -11,7 +11,7 @@ jobs:
       - run: swift build -c release
       - run: swift test
 
-  "linux/swift3":
+  linux-swift3:
     docker:
       - image: swift:3.1
     steps:
@@ -35,6 +35,6 @@ workflows:
   version: 2
   tests:
     jobs:
-      - "macos"
-      - "linux/swift3"
-      - "linux"
+      - macos
+      - linux-swift3
+      - linux
