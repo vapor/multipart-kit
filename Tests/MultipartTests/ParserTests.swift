@@ -130,7 +130,7 @@ class ParserTests: XCTestCase {
     func testEpilogue() throws {
         let parser = try Parser(boundary: "foo")
         
-        let epilogue = "epliogue"
+        let epilogue = "epilogue"
         
         var message = ""
         message += "preamble"

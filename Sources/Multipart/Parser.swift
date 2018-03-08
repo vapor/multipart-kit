@@ -23,7 +23,7 @@ public final class Parser {
     /// A callback type for handling the parsed epilogue.
     public typealias EpilogueCallback = (Bytes) -> ()
     
-    /// CAlled once after the epilogue has been parsed.
+    /// Called once after the epilogue has been parsed.
     public var onEpilogue: EpilogueCallback?
     
     /// Possible errors that may be encountered while parsing.
@@ -102,7 +102,7 @@ public final class Parser {
     
     // A buffer for the bytes that have been parsed.
     // This allows for a reduction in the number of copies
-    // needed for each step as only indecies into this array
+    // needed for each step as only indices into this array
     // need to be passed around.
     private var buffer: Bytes
     
