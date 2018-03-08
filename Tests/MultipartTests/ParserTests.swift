@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+import Bits
 @testable import Multipart
 
 class ParserTests: XCTestCase {
@@ -201,4 +202,89 @@ class ParserTests: XCTestCase {
 		
 		XCTAssertEqual(try Parser.extractBoundary(contentType: contentTypeValue), "asdf".makeBytes())
 	}
+
+    func testPerformance_100_KB() {
+        let (message, numberOfParts) = makeMessage(boundary: "frontier", targetSize: 100_000)
+        measureMetrics([.wallClockTime], automaticallyStartMeasuring: false) {
+            measureParser(boundary: "frontier", message: message, expectedNumberOfParts: numberOfParts)
+        }
+    }
+
+    func testPerformance_200_KB() {
+        let (message, numberOfParts) = makeMessage(boundary: "frontier", targetSize: 200_000)
+        measureMetrics([.wallClockTime], automaticallyStartMeasuring: false) {
+            measureParser(boundary: "frontier", message: message, expectedNumberOfParts: numberOfParts)
+        }
+    }
+
+    func testPerformance_400_KB() {
+        let (message, numberOfParts) = makeMessage(boundary: "frontier", targetSize: 400_000)
+        measureMetrics([.wallClockTime], automaticallyStartMeasuring: false) {
+            measureParser(boundary: "frontier", message: message, expectedNumberOfParts: numberOfParts)
+        }
+    }
+
+    /// Helper method to measure the performance of the Multipart parser.
+    /// You must call this from inside a
+    /// `measureMetrics([.wallClockTime], automaticallyStartMeasuring: false)`
+    /// block.
+    ///
+    /// - Parameter boundary: The multipart boundary.
+    /// - Parameter message: The message that should be parsed. The message is
+    ///   expected to have a preamble and an epilogue.
+    /// - Parameter expectedNumberOfParts: The number of parts in the message.
+    ///   We use this value to test that the parser works correctly.
+    private func measureParser(boundary: String, message: Bytes, expectedNumberOfParts: Int) {
+        do {
+            let parser = try Parser(boundary: boundary)
+
+            var actualCounts = (preambles: 0, parts: 0, epilogues: 0)
+            parser.onPreamble = { _ in actualCounts.preambles += 1 }
+            parser.onPart = { _ in actualCounts.parts += 1 }
+            parser.onEpilogue = { _ in actualCounts.epilogues += 1 }
+
+            startMeasuring()
+            try parser.parse(message)
+            try parser.finish()
+            stopMeasuring()
+
+            XCTAssertEqual(actualCounts.preambles, 1)
+            XCTAssertEqual(actualCounts.parts, expectedNumberOfParts)
+            XCTAssertEqual(actualCounts.epilogues, 1)
+        } catch {
+            XCTFail("Parse error: \(error)")
+        }
+    }
+}
+
+/// Helper function to generate a multipart message of a given size.
+///
+/// - Parameter boundary: The multipart boundary the message should use.
+/// - Parameter targetSize: The desired size of the message in bytes.
+///   The returned message may be slightly larger than this value.
+/// - Returns: A generated multipart message and the number of parts the message
+///   contains. The message will contain at least one part, even if the input
+///   size is very small.
+private func makeMessage(boundary: String, targetSize: Int) -> (message: Bytes, numberOfParts: Int) {
+    func makePart(index: Int) -> Bytes {
+        var part = ""
+        part += "--\(boundary)\r\n"
+        part += "Content-Type: text/plain\r\n"
+        part += "X-Counter: \(index)\r\n"
+        part += "\r\n"
+        part += "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam id tortor et tellus bibendum suscipit."
+        part += "\r\n"
+        return part.makeBytes()
+    }
+
+    var message: Bytes = []
+    message += "preamble".makeBytes()
+    var counter = 0
+    repeat {
+        counter += 1
+        message += makePart(index: counter)
+    } while message.count <= targetSize
+    message += "--\(boundary)--\r\n".makeBytes()
+    message += "epilogue".makeBytes()
+    return (message, counter)
 }
