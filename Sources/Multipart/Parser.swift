@@ -16,13 +16,13 @@ public final class Parser {
     
     /// A callback type for handling the parsed preamble.
     public typealias PreambleCallback = (Bytes) -> ()
-    
+
     /// Called once after the preamble has been parsed.
     public var onPreamble: PreambleCallback?
     
     /// A callback type for handling the parsed epilogue.
     public typealias EpilogueCallback = (Bytes) -> ()
-    
+
     /// Called once after the epilogue has been parsed.
     public var onEpilogue: EpilogueCallback?
     
@@ -34,13 +34,13 @@ public final class Parser {
     
     /// An enum representing all possible states of the parser.
     private enum State {
-        case preamble(
-            bodyEndIndex: Int
-        )
+        case preamble
         case part(
             state: PartState,
             headers: [HeaderKey: String],
-            bodyEndIndex: Int
+            /// The start index of this part's *body* in `buffer`
+            /// Set to 0 during header parsing
+            bodyStartIndex: ArraySlice<Byte>.Index
         )
         case epilogue
     }
@@ -50,7 +50,9 @@ public final class Parser {
         case headers
         case body
     }
-    
+
+    private var cursor: ArraySlice<Byte>.Index
+
     /// The parser must maintain its state in memory.
     private var state: State
     
@@ -63,12 +65,12 @@ public final class Parser {
     /// Create a new multipart parser.
 	public init(boundary: Bytes) {
 		self.boundary = boundary
-        state = .preamble(bodyEndIndex: 0)
+        buffer = []
+        cursor = buffer.startIndex
+        state = .preamble
         
         boundaryParser = BoundaryParser(boundary: boundary)
         headerParser = HeaderParser()
-        
-        buffer = []
 	}
     
     /// Extracts the boundary from a multipart Content-Type header
@@ -104,7 +106,7 @@ public final class Parser {
     // This allows for a reduction in the number of copies
     // needed for each step as only indices into this array
     // need to be passed around.
-    private var buffer: Bytes
+    private var buffer: ArraySlice<Byte>
     
     /// The main method for passing bytes into the parser.
     ///
@@ -116,7 +118,7 @@ public final class Parser {
     /// epilogue are discovered.
     public func parse(_ bytes: Bytes) throws {
         buffer += bytes
-        
+
         var i = bytes.makeIterator()
         while let byte = i.next() {
             try parse(byte)
@@ -135,9 +137,9 @@ public final class Parser {
         
         hasFinished = true
         
-        let raw = buffer
+        let raw = Array(buffer[cursor...])
         let body = Array(raw.trimmed([.newLine, .carriageReturn]))
-        
+
         buffer = []
         onEpilogue?(body)
     }
@@ -150,36 +152,37 @@ public final class Parser {
         }
 
         switch state {
-        case .preamble(let bodyEndIndex):
+        case .preamble:
             try boundaryParser.parse(byte)
             switch boundaryParser.state {
             case .none:
-                state = .preamble(bodyEndIndex: bodyEndIndex + 1)
+                state = .preamble
+                cursor += 1
             case .parsing:
                 break
             case .invalid(let failed):
-                state = .preamble(bodyEndIndex: bodyEndIndex + failed.count)
+                state = .preamble
+                cursor += failed.count
             case .finished(let boundarySize, let closing):
                 if closing {
                     state = .epilogue
                 } else {
-                    state = .part(state: .headers, headers: [:], bodyEndIndex: 0)
+                    state = .part(state: .headers, headers: [:], bodyStartIndex: 0)
                 }
                 
-                let body = Array(buffer[0..<bodyEndIndex])
+                let body = Array(buffer[buffer.startIndex..<cursor])
                 
-                //                                    newline
-                let pos = bodyEndIndex + boundarySize + 1
-                
-                if pos > buffer.count {
-                    buffer = []
-                } else {
-                    buffer = Array(buffer[pos..<buffer.count])
+                //                       newline
+                cursor += boundarySize + 1
+
+                // Can be > endIndex because of newline
+                if cursor > buffer.endIndex {
+                    cursor = buffer.endIndex
                 }
-                
+
                 onPreamble?(body)
             }
-        case .part(let partState, var headers, let bodyEndIndex):            
+        case .part(let partState, var headers, let bodyStartIndex):
             switch partState {
             case .headers:
                 try headerParser.parse(byte)
@@ -192,24 +195,22 @@ public final class Parser {
                     let headerKey = HeaderKey(key.trimmed([.space]).makeString())
                     headers[headerKey] = value.trimmed([.space]).makeString()
                     
-                    //                  colon              newline
-                    let pos = key.count + 1 + value.count + 2
-                    
-                    buffer = Array(buffer[pos..<buffer.count])
+                    //                    colon             newline
+                    cursor += key.count + 1 + value.count + 2
                     
                     state = .part(
                         state: .headers,
                         headers: headers,
-                        bodyEndIndex: 0
+                        bodyStartIndex: cursor
                     )
                 case .none:
-                    //                   crlf
-                    buffer = Array(buffer[2..<buffer.count])
-                    
+                    //        crlf
+                    cursor += 2
+
                     state = .part(
                         state: .body,
                         headers: headers,
-                        bodyEndIndex: 0
+                        bodyStartIndex: cursor
                     )
                 }
             case .body:
@@ -219,34 +220,35 @@ public final class Parser {
                     state = .part(
                         state: .body,
                         headers: headers,
-                        bodyEndIndex: bodyEndIndex + 1
+                        bodyStartIndex: bodyStartIndex
                     )
+                    cursor += 1
                 case .parsing:
                     break
                 case .invalid(let failed):
                     state = .part(
                         state: .body,
                         headers: headers,
-                        bodyEndIndex: bodyEndIndex + failed.count
+                        bodyStartIndex: bodyStartIndex
                     )
+                    cursor += failed.count
                 case .finished(let boundarySize, let closing):
                     if closing {
                         state = .epilogue
                     } else {
-                        state = .part(state: .headers, headers: headers, bodyEndIndex: 0)
+                        state = .part(state: .headers, headers: headers, bodyStartIndex: 0)
                     }
                     
-                    let raw = Array(buffer[0..<bodyEndIndex])
+                    let raw = Array(buffer[bodyStartIndex..<cursor])
                     let body = Array(raw.trimmed([.newLine, .carriageReturn]))
 
-                    //                                    newline
-                    let pos = bodyEndIndex + boundarySize + 1
-                    if pos > buffer.count {
-                        buffer = []
-                    } else {
-                        buffer = Array(buffer[pos..<buffer.count])
+                    //                       newline
+                    cursor += boundarySize + 1
+
+                    if cursor > buffer.endIndex {
+                        cursor = buffer.endIndex
                     }
-                    
+
                     let part = Part(headers: headers, body: body)
                     onPart?(part)
                 }
