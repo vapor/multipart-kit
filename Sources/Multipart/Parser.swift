@@ -137,7 +137,7 @@ public final class Parser {
         
         hasFinished = true
         
-        let raw = Array(buffer[cursor...])
+        let raw = Array(buffer[cursor..<buffer.endIndex])
         let body = Array(raw.trimmed([.newLine, .carriageReturn]))
 
         buffer = []
