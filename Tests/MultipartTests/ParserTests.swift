@@ -14,6 +14,9 @@ class ParserTests: XCTestCase {
         ("testFormData", testFormData),
         ("testExtractBoundary", testExtractBoundary),
         ("testExtractBoundaryWithQuotes", testExtractBoundaryWithQuotes),
+        ("testPerformance_100_KB", testPerformance_100_KB),
+        ("testPerformance_200_KB", testPerformance_200_KB),
+        ("testPerformance_400_KB", testPerformance_400_KB),
     ]
 
     func testInit() throws {
@@ -207,21 +210,21 @@ class ParserTests: XCTestCase {
 
     func testPerformance_100_KB() {
         let (message, numberOfParts) = makeMessage(boundary: "frontier", targetSize: 100_000)
-        measureMetrics([.wallClockTime], automaticallyStartMeasuring: false) {
+        measureMetrics(type(of: self).defaultMetrics, automaticallyStartMeasuring: false) {
             measureParser(boundary: "frontier", message: message, expectedNumberOfParts: numberOfParts)
         }
     }
 
     func testPerformance_200_KB() {
         let (message, numberOfParts) = makeMessage(boundary: "frontier", targetSize: 200_000)
-        measureMetrics([.wallClockTime], automaticallyStartMeasuring: false) {
+        measureMetrics(type(of: self).defaultMetrics, automaticallyStartMeasuring: false) {
             measureParser(boundary: "frontier", message: message, expectedNumberOfParts: numberOfParts)
         }
     }
 
     func testPerformance_400_KB() {
         let (message, numberOfParts) = makeMessage(boundary: "frontier", targetSize: 400_000)
-        measureMetrics([.wallClockTime], automaticallyStartMeasuring: false) {
+        measureMetrics(type(of: self).defaultMetrics, automaticallyStartMeasuring: false) {
             measureParser(boundary: "frontier", message: message, expectedNumberOfParts: numberOfParts)
         }
     }
@@ -257,6 +260,21 @@ class ParserTests: XCTestCase {
             XCTFail("Parse error: \(error)")
         }
     }
+
+    // corelibs-XCTestLinux in Swift 4.0 expects performance metrics to be a
+    // `[String]` instead of the documented `[XCTPerformanceMetric]`, and the
+    // `XCTestCase.defaultPerformanceMetrics` API is a function, not a property.
+    // The API has been updated for Swift 4.1, see https://bugs.swift.org/browse/SR-5643
+    // and https://github.com/apple/swift-corelibs-xctest/pull/198.
+    #if swift(>=4.1) || (swift(>=4.0) && (os(macOS) || os(iOS) || os(tvOS) || os(watchOS)))
+        private class var defaultMetrics: [XCTPerformanceMetric] {
+            return defaultPerformanceMetrics
+        }
+    #else
+        private class var defaultMetrics: [String] {
+            return defaultPerformanceMetrics()
+        }
+    #endif
 }
 
 /// Helper function to generate a multipart message of a given size.
