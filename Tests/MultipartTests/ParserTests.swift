@@ -12,6 +12,8 @@ class ParserTests: XCTestCase {
         ("testHeaders", testHeaders),
         ("testEpilogue", testEpilogue),
         ("testFormData", testFormData),
+        ("testExtractBoundary", testExtractBoundary),
+        ("testExtractBoundaryWithQuotes", testExtractBoundaryWithQuotes),
     ]
 
     func testInit() throws {
