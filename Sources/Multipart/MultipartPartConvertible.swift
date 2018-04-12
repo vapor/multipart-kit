@@ -1,6 +1,6 @@
 /// Supports converting to / from a `MultipartPart`.
 public protocol MultipartPartConvertible {
-    //// Converts `self` to `MultipartPart`.
+    /// Converts `self` to `MultipartPart`.
     func convertToMultipartPart() throws -> MultipartPart
 
     /// Converts a `MultipartPart` to `Self`.

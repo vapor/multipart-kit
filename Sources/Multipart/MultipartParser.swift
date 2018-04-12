@@ -1,6 +1,6 @@
 import Bits
 
-/// Parses multipart-encoded `Data` into `MultipartForm`. Multipart encoding is a widely-used format for encoding
+/// Parses multipart-encoded `Data` into `MultipartPart`s. Multipart encoding is a widely-used format for encoding
 /// web-form data that includes rich content like files. It allows for arbitrary data to be encoded
 /// in each part thanks to a unique delimiter "boundary" that is defined separately. This
 /// boundary is guranteed by the client to not appear anywhere in the data.
