@@ -1,19 +1,17 @@
+// swift-tools-version:4.0
 import PackageDescription
 
 let package = Package(
     name: "Multipart",
-    targets: [
-        // RFC 2046
-        Target(name: "Multipart"),
-
-		// RFC 2388
-        Target(name: "FormData", dependencies: ["Multipart"])
+    products: [
+        .library(name: "Multipart", targets: ["Multipart"]),
     ],
     dependencies: [
-        // Core extensions, type-aliases, and functions that facilitate common tasks
-        .Package(url: "https://github.com/vapor/core.git", majorVersion: 2),
-
-        // HTTP package for HeaderKey type
-        .Package(url: "https://github.com/vapor/engine.git", majorVersion: 2),
+        // 🌎 Utility package containing tools for byte manipulation, Codable, OS APIs, and debugging.
+        .package(url: "https://github.com/vapor/core.git", from: "3.0.0"),
+    ],
+    targets: [
+        .target(name: "Multipart", dependencies: ["Bits", "Core", "Debugging"]),
+        .testTarget(name: "MultipartTests", dependencies: ["Multipart"]),
     ]
 )

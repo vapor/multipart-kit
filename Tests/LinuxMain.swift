@@ -1,12 +1,17 @@
+#if os(Linux)
+
 import XCTest
-
-@testable import FormDataTests
+@testable import HTTPTests
 @testable import MultipartTests
-
+@testable import FormURLEncodedTests
 XCTMain([
-    testCase(FormDataTests.ParserTests.allTests),
-    testCase(FormDataTests.SerializerTests.allTests),
-    testCase(MultipartTests.ParserTests.allTests),
-    testCase(MultipartTests.SerializerTests.allTests),
+    testCase(HTTPClientTests.allTests),
+
+    testCase(FormURLEncodedCodableTests.allTests),
+    testCase(FormURLEncodedParserTests.allTests),
+    testCase(FormURLEncodedSerializerTests.allTests),
+
+    testCase(MultipartTests.allTests),
 ])
 
+#endif
