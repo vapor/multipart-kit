@@ -95,3 +95,15 @@ extension File: MultipartPartConvertible {
         return File(data: part.data, filename: filename)
     }
 }
+
+extension Data: MultipartPartConvertible {
+    /// See `MultipartPartConvertible`.
+    public func convertToMultipartPart() throws -> MultipartPart {
+        return MultipartPart(data: self)
+    }
+
+    /// See `MultipartPartConvertible`.
+    public static func convertFromMultipartPart(_ part: MultipartPart) throws -> Data {
+        return part.data
+    }
+}
