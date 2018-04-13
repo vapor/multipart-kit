@@ -3,7 +3,7 @@ import Bits
 /// Parses multipart-encoded `Data` into `MultipartPart`s. Multipart encoding is a widely-used format for encoding
 /// web-form data that includes rich content like files. It allows for arbitrary data to be encoded
 /// in each part thanks to a unique delimiter "boundary" that is defined separately. This
-/// boundary is guranteed by the client to not appear anywhere in the data.
+/// boundary is guaranteed by the client to not appear anywhere in the data.
 ///
 /// `multipart/form-data` is a special case of `multipart` encoding where each part contains a `Content-Disposition`
 /// header and name. This is used by the `FormDataEncoder` and `FormDataDecoder` to convert `Codable` types to/from
