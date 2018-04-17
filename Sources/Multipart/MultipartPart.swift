@@ -18,9 +18,6 @@ public struct MultipartPart {
             }
             value.parameters["filename"] = newValue
             contentDisposition = value
-            if let filename = filename, let fileExt = filename.components(separatedBy: ".").last {
-                contentType = MediaType.fileExtension(fileExt)
-            }
         }
     }
 
