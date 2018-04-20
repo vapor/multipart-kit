@@ -84,6 +84,7 @@ extension File: MultipartPartConvertible {
     public func convertToMultipartPart() throws -> MultipartPart {
         var part = MultipartPart(data: data)
         part.filename = filename
+        part.contentType = contentType
         return part
     }
 
