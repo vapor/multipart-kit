@@ -184,8 +184,12 @@ private struct _FormDataUnkeyedDecoder: UnkeyedDecodingContainer {
 
     mutating func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
         defer { currentIndex += 1 }
-        let decoder = _FormDataDecoder(multipart: multipart, codingPath: codingPath + [index])
-        return try T(from: decoder)
+        if T.self is MultipartPartConvertible.Type {
+            return try multipart.decode(T.self, at: codingPath + [index])
+        } else {
+            let decoder = _FormDataDecoder(multipart: multipart, codingPath: codingPath + [index])
+            return try T(from: decoder)
+        }
     }
 
     mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {

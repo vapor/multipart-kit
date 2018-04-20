@@ -233,6 +233,33 @@ class MultipartTests: XCTestCase {
             XCTAssertEqual(data.utf8, "--123\r\n\r\nfoo\r\n--123--\r\n")
         }
     }
+
+    func testMultipleFile() throws {
+        struct UserFiles: Decodable {
+            var upload: [File]
+        }
+
+        /// Content-Type: multipart/form-data; boundary=123
+        let data = """
+        --123\r
+        Content-Disposition: form-data; name="upload[]"; filename=foo1.txt\r
+        \r
+        upload1\r
+        --123\r
+        Content-Disposition: form-data; name="upload[]"; filename=foo2.txt\r
+        \r
+        upload2\r
+        --123\r
+        Content-Disposition: form-data; name="upload[]"; filename=foo3.txt\r
+        \r
+        upload3\r
+        --123--\r
+
+        """
+
+        let files = try FormDataDecoder().decode(UserFiles.self, from: data, boundary: "123")
+        XCTAssertEqual(files.upload.count, 3)
+    }
     
     static let allTests = [
         ("testBasics", testBasics),
@@ -242,6 +269,7 @@ class MultipartTests: XCTestCase {
         ("testFormDataDecoderMultiple", testFormDataDecoderMultiple),
         ("testFormDataDecoderFile", testFormDataDecoderFile),
         ("testDocBlocks", testDocBlocks),
+        ("testMultipleFile", testMultipleFile)
     ]
 }
 
