@@ -50,6 +50,12 @@ private final class FormDataEncoderContext {
         }
         parts.append(part)
     }
+    
+    func encode(_ files: [File], at codingPath: [CodingKey]) throws {
+        for file in files {
+            try encode(file, at: codingPath)
+        }
+    }
 }
 
 private struct _FormDataEncoder: Encoder {
@@ -110,6 +116,8 @@ private struct _FormDataKeyedEncoder<K>: KeyedEncodingContainerProtocol where K:
 
     mutating func encode<T>(_ value: T, forKey key: K) throws where T : Encodable {
         if value is MultipartPartConvertible {
+            try multipart.encode(value, at: codingPath + [key])
+        } else if let value = value as? [File] {
             try multipart.encode(value, at: codingPath + [key])
         } else {
             let encoder = _FormDataEncoder(multipart: multipart, codingPath: codingPath + [key])
