@@ -85,27 +85,27 @@ class MultipartTests: XCTestCase {
         let data = try FormDataEncoder().encode(a, boundary: "hello")
         XCTAssertEqual(data.utf8, """
         --hello\r
-        Content-Disposition: form-data; name=string\r
+        Content-Disposition: form-data; name="string"\r
         \r
         a\r
         --hello\r
-        Content-Disposition: form-data; name=int\r
+        Content-Disposition: form-data; name="int"\r
         \r
         42\r
         --hello\r
-        Content-Disposition: form-data; name=double\r
+        Content-Disposition: form-data; name="double"\r
         \r
         3.14\r
         --hello\r
-        Content-Disposition: form-data; name=array[]\r
+        Content-Disposition: form-data; name="array[]"\r
         \r
         1\r
         --hello\r
-        Content-Disposition: form-data; name=array[]\r
+        Content-Disposition: form-data; name="array[]"\r
         \r
         2\r
         --hello\r
-        Content-Disposition: form-data; name=array[]\r
+        Content-Disposition: form-data; name="array[]"\r
         \r
         3\r
         --hello--\r
