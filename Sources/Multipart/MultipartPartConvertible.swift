@@ -7,6 +7,15 @@ public protocol MultipartPartConvertible {
     static func convertFromMultipartPart(_ part: MultipartPart) throws -> Self
 }
 
+extension MultipartPart: MultipartPartConvertible {
+    
+    /// See `MultipartPartConvertible`.
+    public func convertToMultipartPart() throws -> MultipartPart { return self }
+    
+    /// See `MultipartPartConvertible`.
+    public static func convertFromMultipartPart(_ part: MultipartPart) throws -> MultipartPart { return part }
+}
+
 extension String: MultipartPartConvertible {
     /// See `MultipartPartConvertible`.
     public func convertToMultipartPart() throws -> MultipartPart {
