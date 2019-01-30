@@ -88,6 +88,24 @@ extension Double: MultipartPartConvertible {
     }
 }
 
+extension Bool: MultipartPartConvertible {
+    /// See `MultipartPartConvertible`.
+    public func convertToMultipartPart() throws -> MultipartPart {
+        return MultipartPart(data: description)
+    }
+
+    /// See `MultipartPartConvertible`.
+    public static func convertFromMultipartPart(_ part: MultipartPart) throws -> Bool {
+        guard let stringValue = String(data: part.data, encoding: .utf8) else {
+            throw MultipartError(identifier: "utf8", reason: "Could not convert `Data` to UTF-8 `Bool`.")
+        }
+        guard let option = Bool(stringValue) else {
+            throw MultipartError(identifier: "boolean", reason: "Could not convert `Data` to `Bool`. Must be one of: [true, false]")
+        }
+        return option
+    }
+}
+
 extension File: MultipartPartConvertible {
     /// See `MultipartPartConvertible`.
     public func convertToMultipartPart() throws -> MultipartPart {

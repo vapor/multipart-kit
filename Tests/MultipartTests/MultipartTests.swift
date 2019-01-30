@@ -80,8 +80,9 @@ class MultipartTests: XCTestCase {
             var int: Int
             var double: Double
             var array: [Int]
+            var bool: Bool
         }
-        let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
+        let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3], bool: true)
         let data = try FormDataEncoder().encode(a, boundary: "hello")
         XCTAssertEqual(data.utf8, """
         --hello\r
@@ -108,8 +109,11 @@ class MultipartTests: XCTestCase {
         Content-Disposition: form-data; name="array[]"\r
         \r
         3\r
-        --hello--\r
-
+        --hello\r
+        Content-Disposition: form-data; name="bool"\r
+        \r
+        true\r
+        --hello--\r\n
         """)
     }
 
@@ -174,8 +178,11 @@ class MultipartTests: XCTestCase {
         Content-Disposition: form-data; name="array[]"\r
         \r
         3\r
+        --hello\r
+        Content-Disposition: form-data; name="bool"\r
+        \r
+        true\r
         --hello--\r
-
         """
 
         struct Foo: Decodable {
@@ -183,6 +190,7 @@ class MultipartTests: XCTestCase {
             var int: Int
             var double: Double
             var array: [Int]
+            var bool: Bool
         }
 
         let foo = try FormDataDecoder().decode(Foo.self, from: data, boundary: "hello")
@@ -190,6 +198,7 @@ class MultipartTests: XCTestCase {
         XCTAssertEqual(foo.int, 42)
         XCTAssertEqual(foo.double, 3.14)
         XCTAssertEqual(foo.array, [1, 2, 3])
+        XCTAssertEqual(foo.bool, true)
     }
 
     func testFormDataDecoderFile() throws {
