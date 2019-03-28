@@ -1,5 +1,3 @@
-import Bits
-
 /// Parses multipart-encoded `Data` into `MultipartPart`s. Multipart encoding is a widely-used format for encoding
 /// web-form data that includes rich content like files. It allows for arbitrary data to be encoded
 /// in each part thanks to a unique delimiter "boundary" that is defined separately. This
@@ -34,7 +32,7 @@ public final class MultipartParser {
     ///     - boundary: Multipart boundary separating the parts.
     /// - throws: Any errors parsing the encoded data.
     /// - returns: `MultipartForm` containing the parsed `MultipartPart`s.
-    public func parse(data: LosslessDataConvertible, boundary: LosslessDataConvertible) throws -> [MultipartPart] {
+    public func parse(data: String, boundary: String) throws -> [MultipartPart] {
         return try _MultipartParser(data: data.convertToData(), boundary: boundary.convertToData()).parse()
     }
 }
@@ -45,13 +43,13 @@ public final class MultipartParser {
 /// TODO: Move to more performant impl, such as `ByteBuffer`.
 private final class _MultipartParser {
     /// The boundary between all parts
-    private let boundary: Data
+    private let boundary: String
     
     /// A helper variable that consists of all bytes inbetween one part's body and the next part's headers
-    private let fullBoundary: Data
+    private let fullBoundary: String
     
     /// The multipart form data to parse
-    private let data: Data
+    private let data: String
     
     /// The current position, used for parsing
     private var position = 0
@@ -60,11 +58,11 @@ private final class _MultipartParser {
     private var parts: [MultipartPart]
     
     /// Creates a new parser for a Multipart form
-    init(data: Data, boundary: Data) {
+    init(data: String, boundary: String) {
         self.data = data
         self.boundary = boundary
         self.parts = []
-        self.fullBoundary = [.carriageReturn, .newLine, .hyphen, .hyphen] + self.boundary
+        self.fullBoundary = "\r\n--" + self.boundary
     }
 
 

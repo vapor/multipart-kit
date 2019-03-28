@@ -1,17 +1,14 @@
-// swift-tools-version:4.0
+// swift-tools-version:5.0
 import PackageDescription
 
 let package = Package(
-    name: "Multipart",
+    name: "multipart",
     products: [
         .library(name: "Multipart", targets: ["Multipart"]),
     ],
-    dependencies: [
-        // 🌎 Utility package containing tools for byte manipulation, Codable, OS APIs, and debugging.
-        .package(url: "https://github.com/vapor/core.git", from: "3.0.0"),
-    ],
+    dependencies: [],
     targets: [
-        .target(name: "Multipart", dependencies: ["Bits", "Core", "Debugging"]),
+        .target(name: "Multipart"),
         .testTarget(name: "MultipartTests", dependencies: ["Multipart"]),
     ]
 )
