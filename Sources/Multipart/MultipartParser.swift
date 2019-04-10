@@ -54,7 +54,7 @@ private final class _MultipartParser {
     private let data: Data
     
     /// The current position, used for parsing
-    private var position = 0
+    private var position: Data.Index
     
     /// The output form
     private var parts: [MultipartPart]
@@ -64,6 +64,7 @@ private final class _MultipartParser {
         self.data = data
         self.boundary = boundary
         self.parts = []
+        self.position = self.data.startIndex
         self.fullBoundary = [.carriageReturn, .newLine, .hyphen, .hyphen] + self.boundary
     }
 
@@ -82,7 +83,7 @@ private final class _MultipartParser {
             try assertBoundaryStartEnd()
             
             // skip '--'
-            position = position &+ 2
+            position += 2
             
             let matches = data.subdata(in: position..<(position + boundary.count)).elementsEqual(boundary)
             
@@ -92,7 +93,7 @@ private final class _MultipartParser {
             }
             
             // skip boundary
-            position = position &+ boundary.count
+            position += boundary.count
             
             guard try carriageReturnNewLine() else {
                 try assertBoundaryStartEnd()
@@ -104,21 +105,21 @@ private final class _MultipartParser {
             
             // If it doesn't end in a second `\r\n`, this must be the end of the data z
             guard try carriageReturnNewLine() else {
-                guard data[position] == .hyphen, data[position &+ 1] == .hyphen else {
+                guard data[position] == .hyphen, data[position + 1] == .hyphen else {
                     throw MultipartError(identifier: "eof", reason: "Invalid multipart ending")
                 }
                 
                 return parts
             }
             
-            position = position &+ 2
+            position += 2
         }
         
         return parts
     }
     /// Asserts that the position is on top of two hyphens
     private func assertBoundaryStartEnd() throws {
-        guard data[position] == .hyphen, data[position &+ 1] == .hyphen else {
+        guard data[position] == .hyphen, data[position + 1] == .hyphen else {
             throw MultipartError(identifier: "boundary", reason: "Invalid multipart formatting")
         }
     }
@@ -130,11 +131,11 @@ private final class _MultipartParser {
         // headers
         headerScan: while position < data.count, try carriageReturnNewLine() {
             // skip \r\n
-            position = position &+ 2
+            position += 2
 
             // `\r\n\r\n` marks the end of headers
             if try carriageReturnNewLine() {
-                position = position &+ 2
+                position += 2
                 break headerScan
             }
 
@@ -144,7 +145,7 @@ private final class _MultipartParser {
             }
 
             // skip space (': ')
-            position = position + 2
+            position += 2
 
             // header value
             guard let value = try scanStringUntil(.carriageReturn) else {
@@ -175,19 +176,22 @@ private final class _MultipartParser {
 
         // Seeks to the end of this part's content
         contentSeek: while true {
-            try require(fullBoundary.count)
-
+            try require(fullBoundary.count, from: base)
             let matches = data.withByteBuffer { buffer in
-                return buffer[base] == fullBoundary[0] && buffer[base &+ 1] == fullBoundary[1] && memcmp(fullBoundary.withUnsafeBytes { $0 }, buffer.baseAddress!.advanced(by: base), fullBoundary.count) == 0
+                return fullBoundary.withUnsafeBytes { fullBounaryBytes in
+                    return buffer[base] == fullBoundary[fullBoundary.startIndex]
+                        && buffer[base + 1] == fullBoundary[fullBoundary.index(after: fullBoundary.startIndex)]
+                        && memcmp(fullBounaryBytes, buffer.baseAddress!.advanced(by: base), fullBoundary.count) == 0
+                }
             }
 
             // The first 2 bytes match, check if a boundary is hit
             if matches {
                 defer { position = base }
-                return Data(data[position..<base])
+                return data[position..<base]
             }
 
-            base = base &+ 1
+            base += 1
         }
     }
 
@@ -201,7 +205,7 @@ private final class _MultipartParser {
                 throw MultipartError(identifier: "multipart:eof", reason: "Unexpected end of multipart")
             }
 
-            if data[position &+ offset] == trigger {
+            if data[position + offset] == trigger {
                 break headerKey
             }
 
@@ -219,12 +223,17 @@ private final class _MultipartParser {
     private func carriageReturnNewLine() throws -> Bool {
         try require(2)
 
-        return data[position] == .carriageReturn && data[position &+ 1] == .newLine
+        return data[position] == .carriageReturn && data[position + 1] == .newLine
     }
-
+    
     // Requires `n` bytes
     private func require(_ n: Int) throws {
-        guard position + n < data.count else {
+        try self.require(n, from: position)
+    }
+
+    // Requires `n` bytes from a given base index.
+    private func require(_ n: Int, from base: Data.Index) throws {
+        guard base.advanced(by: n) < data.endIndex else {
             throw MultipartError(identifier: "missingData", reason: "Invalid multipart formatting")
         }
     }
