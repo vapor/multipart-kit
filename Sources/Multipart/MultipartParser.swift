@@ -178,7 +178,9 @@ private final class _MultipartParser {
             try require(fullBoundary.count)
 
             let matches = data.withByteBuffer { buffer in
-                return buffer[base] == fullBoundary[0] && buffer[base &+ 1] == fullBoundary[1] && memcmp(fullBoundary.withUnsafeBytes { $0 }, buffer.baseAddress!.advanced(by: base), fullBoundary.count) == 0
+                return fullBoundary.withUnsafeBytes { fullBounaryBytes in
+                    return buffer[base] == fullBoundary[0] && buffer[base &+ 1] == fullBoundary[1] && memcmp(fullBounaryBytes, buffer.baseAddress!.advanced(by: base), fullBoundary.count) == 0
+                }
             }
 
             // The first 2 bytes match, check if a boundary is hit
