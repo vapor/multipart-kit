@@ -54,7 +54,7 @@ private final class _MultipartParser {
     private let data: Data
     
     /// The current position, used for parsing
-    private var position = 0
+    private var position: Data.Index
     
     /// The output form
     private var parts: [MultipartPart]
@@ -64,6 +64,7 @@ private final class _MultipartParser {
         self.data = data
         self.boundary = boundary
         self.parts = []
+        self.position = self.data.startIndex
         self.fullBoundary = [.carriageReturn, .newLine, .hyphen, .hyphen] + self.boundary
     }
 
@@ -179,17 +180,17 @@ private final class _MultipartParser {
 
             let matches = data.withByteBuffer { buffer in
                 return fullBoundary.withUnsafeBytes { fullBounaryBytes in
-                    return buffer[base] == fullBoundary[0] && buffer[base &+ 1] == fullBoundary[1] && memcmp(fullBounaryBytes, buffer.baseAddress!.advanced(by: base), fullBoundary.count) == 0
+                    return buffer[base] == fullBoundary[0] && buffer[base + 1] == fullBoundary[1] && memcmp(fullBounaryBytes, buffer.baseAddress!.advanced(by: base), fullBoundary.count) == 0
                 }
             }
 
             // The first 2 bytes match, check if a boundary is hit
             if matches {
                 defer { position = base }
-                return Data(data[position..<base])
+                return data[position..<base]
             }
 
-            base = base &+ 1
+            base = base + 1
         }
     }
 
