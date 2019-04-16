@@ -117,6 +117,7 @@ private final class _MultipartParser {
         
         return parts
     }
+    
     /// Asserts that the position is on top of two hyphens
     private func assertBoundaryStartEnd() throws {
         guard data[position] == .hyphen, data[position + 1] == .hyphen else {
