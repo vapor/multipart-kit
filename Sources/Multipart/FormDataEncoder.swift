@@ -1,11 +1,21 @@
+import NIO
+
 /// Encodes `Encodable` items to `multipart/form-data` encoded `Data`.
 ///
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
 ///
 /// Seealso `MultipartParser` for more information about the `multipart` encoding.
-public final class FormDataEncoder {
+public struct FormDataEncoder {
     /// Creates a new `FormDataEncoder`.
     public init() { }
+
+    public func encode<E>(_ encodable: E, boundary: String) throws -> String
+        where E: Encodable
+    {
+        var buffer = ByteBufferAllocator().buffer(capacity: 0)
+        try self.encode(encodable, boundary: boundary, into: &buffer)
+        return buffer.readString(length: buffer.readableBytes)!
+    }
 
     /// Encodes an `Encodable` item to `Data` using the supplied boundary.
     ///
@@ -17,15 +27,27 @@ public final class FormDataEncoder {
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     /// - throws: Any errors encoding the model with `Codable` or serializing the data.
     /// - returns: `multipart/form-data`-encoded `Data`.
-    public func encode<E>(_ encodable: E, boundary: LosslessDataConvertible) throws -> Data where E: Encodable {
+    public func encode<E>(_ encodable: E, boundary: String, into buffer: inout ByteBuffer) throws
+        where E: Encodable
+    {
         let multipart = FormDataEncoderContext()
         let encoder = _FormDataEncoder(multipart: multipart, codingPath: [])
         try encodable.encode(to: encoder)
-        return try MultipartSerializer().serialize(parts: multipart.parts, boundary: boundary)
+        try MultipartSerializer().serialize(parts: multipart.parts, boundary: boundary, into: &buffer)
     }
 }
 
 // MARK: Private
+
+private let chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+
+private func randomBoundaryData() -> String {
+    var string = ""
+    for _ in 0..<16 {
+        string.append(chars.randomElement()!)
+    }
+    return string
+}
 
 private final class FormDataEncoderContext {
     var parts: [MultipartPart]
@@ -50,7 +72,7 @@ private final class FormDataEncoderContext {
         }
         parts.append(part)
     }
-    
+
     func encode(_ files: [File], at codingPath: [CodingKey]) throws {
         for file in files {
             try encode(file, at: codingPath)
@@ -147,7 +169,7 @@ private struct _FormDataUnkeyedEncoder: UnkeyedEncodingContainer {
     let multipart: FormDataEncoderContext
     var codingPath: [CodingKey]
     var index: CodingKey {
-        return BasicKey(0)
+        return BasicCodingKey.index(0)
     }
 
     init(multipart: FormDataEncoderContext, codingPath: [CodingKey]) {

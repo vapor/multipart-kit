@@ -1,11 +1,21 @@
+import NIO
+
 /// Decodes `Decodable` types from `multipart/form-data` encoded `Data`.
 ///
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
 ///
 /// Seealso `MultipartParser` for more information about the `multipart` encoding.
-public final class FormDataDecoder {
+public struct FormDataDecoder {
     /// Creates a new `FormDataDecoder`.
     public init() { }
+
+    public func decode<D>(_ decodable: D.Type, from data: String, boundary: String) throws -> D
+        where D: Decodable
+    {
+        var buffer = ByteBufferAllocator().buffer(capacity: data.utf8.count)
+        buffer.writeString(data)
+        return try self.decode(D.self, from: buffer, boundary: boundary)
+    }
 
     /// Decodes a `Decodable` item from `Data` using the supplied boundary.
     ///
@@ -16,8 +26,34 @@ public final class FormDataDecoder {
     ///     - boundary: Multipart boundary to used in the encoding.
     /// - throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - returns: An instance of the decoded type `D`.
-    public func decode<D>(_ decodable: D.Type, from data: LosslessDataConvertible, boundary: LosslessDataConvertible) throws -> D where D: Decodable {
-        let parts = try MultipartParser().parse(data: data, boundary: boundary)
+    public func decode<D>(_ decodable: D.Type, from data: ByteBuffer, boundary: String) throws -> D
+        where D: Decodable
+    {
+        let parser = MultipartParser(boundary: boundary)
+
+        var parts: [MultipartPart] = []
+        var headers: [String: String] = [:]
+        var body: ByteBuffer? = nil
+
+        parser.onHeader = { (field, value) in
+            headers[field] = value
+        }
+        parser.onBody = { new in
+            if var existing = body {
+                existing.writeBuffer(&new)
+                body = existing
+            } else {
+                body = new
+            }
+        }
+        parser.onPartComplete = {
+            let part = MultipartPart(headers: headers, body: body!)
+            headers = [:]
+            body = nil
+            parts.append(part)
+        }
+
+        try parser.execute(data)
         let multipart = FormDataDecoderContext(parts: parts)
         let decoder = _FormDataDecoder(multipart: multipart, codingPath: [])
         return try D(from: decoder)
@@ -159,7 +195,7 @@ private struct _FormDataUnkeyedDecoder: UnkeyedDecodingContainer {
     }
     var currentIndex: Int
     var index: CodingKey {
-        return BasicKey(currentIndex)
+        return BasicCodingKey.index(self.currentIndex)
     }
 
     let multipart: FormDataDecoderContext

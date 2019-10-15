@@ -1,3 +1,7 @@
+import struct Foundation.Data
+import NIO
+import NIOFoundationCompat
+
 /// Supports converting to / from a `MultipartPart`.
 public protocol MultipartPartConvertible {
     /// Converts `self` to `MultipartPart`.
@@ -8,10 +12,9 @@ public protocol MultipartPartConvertible {
 }
 
 extension MultipartPart: MultipartPartConvertible {
-    
     /// See `MultipartPartConvertible`.
     public func convertToMultipartPart() throws -> MultipartPart { return self }
-    
+
     /// See `MultipartPartConvertible`.
     public static func convertFromMultipartPart(_ part: MultipartPart) throws -> MultipartPart { return part }
 }
@@ -19,27 +22,25 @@ extension MultipartPart: MultipartPartConvertible {
 extension String: MultipartPartConvertible {
     /// See `MultipartPartConvertible`.
     public func convertToMultipartPart() throws -> MultipartPart {
-        return MultipartPart(data: self)
+        return MultipartPart(body: self)
     }
 
     /// See `MultipartPartConvertible`.
     public static func convertFromMultipartPart(_ part: MultipartPart) throws -> String {
-        guard let string = String(data: part.data, encoding: .utf8) else {
-            throw MultipartError(identifier: "utf8", reason: "Could not convert `Data` to UTF-8 `String`.")
-        }
-        return string
+        var buffer = part.body
+        return buffer.readString(length: buffer.readableBytes)!
     }
 }
 
 extension FixedWidthInteger {
     /// See `MultipartPartConvertible`.
     public func convertToMultipartPart() throws -> MultipartPart {
-        return MultipartPart(data: description, headers: [:])
+        return MultipartPart(headers: [:], body: self.description)
     }
 
     /// See `MultipartPartConvertible`.
     public static func convertFromMultipartPart(_ part: MultipartPart) throws -> Self {
-        guard let fwi = String(data: part.data, encoding: .utf8).flatMap({ Self($0 )}) else {
+        guard let fwi = try Self(String.convertFromMultipartPart(part)) else {
             throw MultipartError(identifier: "int", reason: "Could not convert `Data` to `\(Self.self)`.")
         }
         return fwi
@@ -61,12 +62,12 @@ extension UInt64: MultipartPartConvertible { }
 extension Float: MultipartPartConvertible {
     /// See `MultipartPartConvertible`.
     public func convertToMultipartPart() throws -> MultipartPart {
-        return MultipartPart(data: description)
+        return MultipartPart(body: description)
     }
 
     /// See `MultipartPartConvertible`.
     public static func convertFromMultipartPart(_ part: MultipartPart) throws -> Float {
-        guard let float = String(data: part.data, encoding: .utf8).flatMap({ Float($0 )}) else {
+        guard let float = try Float(String.convertFromMultipartPart(part)) else {
             throw MultipartError(identifier: "float", reason: "Could not convert `Data` to `\(Float.self)`.")
         }
         return float
@@ -76,12 +77,12 @@ extension Float: MultipartPartConvertible {
 extension Double: MultipartPartConvertible {
     /// See `MultipartPartConvertible`.
     public func convertToMultipartPart() throws -> MultipartPart {
-        return MultipartPart(data: description)
+        return MultipartPart(body: description)
     }
 
     /// See `MultipartPartConvertible`.
     public static func convertFromMultipartPart(_ part: MultipartPart) throws -> Double {
-        guard let double = String(data: part.data, encoding: .utf8).flatMap({ Double($0 )}) else {
+        guard let double = try Double(String.convertFromMultipartPart(part)) else {
             throw MultipartError(identifier: "double", reason: "Could not convert `Data` to `\(Double.self)`.")
         }
         return double
@@ -91,15 +92,12 @@ extension Double: MultipartPartConvertible {
 extension Bool: MultipartPartConvertible {
     /// See `MultipartPartConvertible`.
     public func convertToMultipartPart() throws -> MultipartPart {
-        return MultipartPart(data: description)
+        return MultipartPart(body: description)
     }
 
     /// See `MultipartPartConvertible`.
     public static func convertFromMultipartPart(_ part: MultipartPart) throws -> Bool {
-        guard let stringValue = String(data: part.data, encoding: .utf8) else {
-            throw MultipartError(identifier: "utf8", reason: "Could not convert `Data` to UTF-8 `Bool`.")
-        }
-        guard let option = Bool(stringValue) else {
+        guard let option = try Bool(String.convertFromMultipartPart(part)) else {
             throw MultipartError(identifier: "boolean", reason: "Could not convert `Data` to `Bool`. Must be one of: [true, false]")
         }
         return option
@@ -109,7 +107,7 @@ extension Bool: MultipartPartConvertible {
 extension File: MultipartPartConvertible {
     /// See `MultipartPartConvertible`.
     public func convertToMultipartPart() throws -> MultipartPart {
-        var part = MultipartPart(data: data)
+        var part = MultipartPart(body: data)
         part.filename = filename
         part.contentType = contentType
         return part
@@ -120,18 +118,21 @@ extension File: MultipartPartConvertible {
         guard let filename = part.filename else {
             throw MultipartError(identifier: "filename", reason: "Multipart part missing a filename.")
         }
-        return File(data: part.data, filename: filename)
+        return File(data: part.body, filename: filename)
     }
 }
 
 extension Data: MultipartPartConvertible {
     /// See `MultipartPartConvertible`.
     public func convertToMultipartPart() throws -> MultipartPart {
-        return MultipartPart(data: self)
+        var buffer = ByteBufferAllocator().buffer(capacity: self.count)
+        buffer.writeBytes(self)
+        return MultipartPart(body: buffer)
     }
 
     /// See `MultipartPartConvertible`.
     public static func convertFromMultipartPart(_ part: MultipartPart) throws -> Data {
-        return part.data
+        var buffer = part.body
+        return buffer.readData(length: buffer.readableBytes)!
     }
 }

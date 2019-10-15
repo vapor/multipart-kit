@@ -6,9 +6,17 @@ let package = Package(
     products: [
         .library(name: "Multipart", targets: ["Multipart"]),
     ],
-    dependencies: [],
+    dependencies: [
+      .package(url: "https://github.com/apple/swift-nio.git", from: "2.2.0"),
+    ],
     targets: [
-        .target(name: "Multipart"),
+        .target(name: "CMultipartParser"),
+        .target(name: "Multipart", dependencies: [
+          "CMultipartParser",
+          "NIO",
+          "NIOHTTP1",
+          "NIOFoundationCompat"
+        ]),
         .testTarget(name: "MultipartTests", dependencies: ["Multipart"]),
     ]
 )

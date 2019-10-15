@@ -1,10 +1,18 @@
+import NIO
+
 /// Serializes `MultipartForm`s to `Data`.
 ///
 /// See `MultipartParser` for more information about the multipart encoding.
 public final class MultipartSerializer {
     /// Creates a new `MultipartSerializer`.
     public init() { }
-    
+
+    public func serialize(parts: [MultipartPart], boundary: String) throws -> String {
+        var buffer = ByteBufferAllocator().buffer(capacity: 0)
+        try self.serialize(parts: parts, boundary: boundary, into: &buffer)
+        return buffer.readString(length: buffer.readableBytes)!
+    }
+
     /// Serializes the `MultipartForm` to data.
     ///
     ///     let data = try MultipartSerializer().serialize(parts: [part], boundary: "123")
@@ -15,36 +23,24 @@ public final class MultipartSerializer {
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     /// - throws: Any errors that may occur during serialization.
     /// - returns: `multipart`-encoded `Data`.
-    public func serialize(parts: [MultipartPart], boundary: LosslessDataConvertible) throws -> Data {
-        var body = Data()
-        var reserved = 0
-        
+    public func serialize(parts: [MultipartPart], boundary: String, into buffer: inout ByteBuffer) throws {
         for part in parts {
-            reserved += part.data.count
-        }
-        
-        body.reserveCapacity(reserved + 512)
-        let boundary =  [.hyphen, .hyphen] + boundary.convertToData()
-        
-        for part in parts {
-            body.append(contentsOf: boundary)
-            body.append(contentsOf: [.carriageReturn, .newLine])
-
+            buffer.writeString("--")
+            buffer.writeString(boundary)
+            buffer.writeString("\r\n")
             for (key, val) in part.headers {
-                body.append(Data(key.description.utf8))
-                body.append(contentsOf: [.colon, .space])
-                body.append(Data(val.utf8))
-                body.append(contentsOf: [.carriageReturn, .newLine])
+                buffer.writeString(key)
+                buffer.writeString(": ")
+                buffer.writeString(val)
+                buffer.writeString("\r\n")
             }
-            body.append(contentsOf: [.carriageReturn, .newLine])
-            
-            body.append(part.data)
-            body.append(contentsOf: [.carriageReturn, .newLine])
+            buffer.writeString("\r\n")
+            var body = part.body
+            buffer.writeBuffer(&body)
+            buffer.writeString("\r\n")
         }
-        
-        body.append(contentsOf: boundary)
-        body.append(contentsOf: [.hyphen, .hyphen, .carriageReturn, .newLine])
-        
-        return body
+        buffer.writeString("--")
+        buffer.writeString(boundary)
+        buffer.writeString("--\r\n")
     }
 }

@@ -1,20 +1,23 @@
-/// A single part of a `multipart`-encoded message.
-public struct MultipartPart {
-    /// The part's raw data.
-    public var data: Data
+import NIO
+import NIOHTTP1
 
+/// A single part of a `multipart`-encoded message.
+public struct MultipartPart: Equatable {
     /// The part's headers.
-    public var headers: [CaseInsensitiveString: String]
+    public var headers: [String: String]
+
+    /// The part's raw data.
+    public var body: ByteBuffer
 
     /// Gets or sets the `filename` attribute from the part's `"Content-Disposition"` header.
     public var filename: String? {
         get { return contentDisposition?.parameters["filename"] }
         set {
-            var value: HeaderValue
+            var value: HTTPHeaderValue
             if let existing = contentDisposition {
                 value = existing
             } else {
-                value = HeaderValue("form-data")
+                value = HTTPHeaderValue("form-data")
             }
             value.parameters["filename"] = newValue
             contentDisposition = value
@@ -25,11 +28,11 @@ public struct MultipartPart {
     public var name: String? {
         get { return contentDisposition?.parameters["name"] }
         set {
-            var value: HeaderValue
+            var value: HTTPHeaderValue
             if let existing = contentDisposition {
                 value = existing
             } else {
-                value = HeaderValue("form-data")
+                value = HTTPHeaderValue("form-data")
             }
             value.parameters["name"] = newValue
             contentDisposition = value
@@ -37,27 +40,40 @@ public struct MultipartPart {
     }
 
     /// Gets or sets the part's `"Content-Disposition"` header.
-    public var contentDisposition: HeaderValue? {
-        get { return headers["Content-Disposition"].flatMap { HeaderValue.parse($0) } }
+    public var contentDisposition: HTTPHeaderValue? {
+        get { return headers["Content-Disposition"].flatMap { HTTPHeaderValue.parse($0) } }
         set { headers["Content-Disposition"] = newValue?.serialize() }
     }
 
     /// Gets or sets the part's `"Content-Type"` header.
-    public var contentType: MediaType? {
-        get { return headers["Content-Type"].flatMap { MediaType.parse($0) } }
+    public var contentType: HTTPMediaType? {
+        get { return headers["Content-Type"].flatMap { HTTPMediaType.parse($0) } }
         set { headers["Content-Type"] = newValue?.serialize() }
     }
 
     /// Creates a new `MultipartPart`.
     ///
-    ///     let part = MultipartPart(data "hello", headers: ["Content-Type": "text/plain"])
+    ///     let part = MultipartPart(headers: ["Content-Type": "text/plain"], body: "hello")
     ///
     /// - parameters:
-    ///     - data: The part's data.
     ///     - headers: The part's headers.
-    public init(data: LosslessDataConvertible, headers: [CaseInsensitiveString: String] = [:]) {
-        self.data = data.convertToData()
+    ///     - body: The part's data.
+    public init(headers: [String: String] = [:], body: String) {
+        var buffer = ByteBufferAllocator().buffer(capacity: body.utf8.count)
+        buffer.writeString(body)
+        self.init(headers: headers, body: buffer)
+    }
+
+    /// Creates a new `MultipartPart`.
+    ///
+    ///     let part = MultipartPart(headers: ["Content-Type": "text/plain"], body: "hello")
+    ///
+    /// - parameters:
+    ///     - headers: The part's headers.
+    ///     - body: The part's data.
+    public init(headers: [String: String] = [:], body: ByteBuffer) {
         self.headers = headers
+        self.body = body
     }
 }
 
