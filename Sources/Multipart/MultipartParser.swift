@@ -1,5 +1,6 @@
 import CMultipartParser
 import NIO
+import NIOHTTP1
 
 /// Parses multipart-encoded `Data` into `MultipartPart`s. Multipart encoding is a widely-used format for encoding/// web-form data that includes rich content like files. It allows for arbitrary data to be encoded
 /// in each part thanks to a unique delimiter "boundary" that is defined separately. This
@@ -140,7 +141,7 @@ public final class MultipartParser {
             }
         }
         guard result == buffer.readableBytes else {
-            throw Abort(.unprocessableEntity)
+            throw HTTPError(httpCode: .unprocessableEntity)
         }
     }
 
@@ -192,4 +193,8 @@ private extension String {
         let pointer = UnsafeRawPointer(cPointer)?.assumingMemoryBound(to: UInt8.self)
         self.init(decoding: UnsafeBufferPointer(start: pointer, count: count), as: UTF8.self)
     }
+}
+
+struct HTTPError: Error {
+  let httpCode: HTTPResponseStatus
 }
