@@ -39,16 +39,6 @@ public struct FormDataEncoder {
 
 // MARK: Private
 
-private let chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-
-private func randomBoundaryData() -> String {
-    var string = ""
-    for _ in 0..<16 {
-        string.append(chars.randomElement()!)
-    }
-    return string
-}
-
 private final class FormDataEncoderContext {
     var parts: [MultipartPart]
     init() {
