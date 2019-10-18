@@ -135,3 +135,32 @@ extension Data: MultipartPartConvertible {
         return part.data
     }
 }
+
+extension Date: MultipartPartConvertible {
+    /// See `MultipartPartConvertible`.
+    public func convertToMultipartPart() throws -> MultipartPart {
+        if #available(macOS 10.12, *) {
+            let dateFormatter = ISO8601DateFormatter()
+            let string = dateFormatter.string(from: self)
+            return MultipartPart(data: string)
+        } else {
+            throw MultipartError(identifier: "ISO 8601", reason: "macOS SDK < 10.12 detected, no ISO-8601 DateFormatter support.")
+        }
+    }
+    
+    /// See `MultipartPartConvertible`.
+    public static func convertFromMultipartPart(_ part: MultipartPart) throws -> Date {
+        guard let string = String(data: part.data, encoding: .utf8) else {
+            throw MultipartError(identifier: "utf8", reason: "Could not convert `Data` to UTF-8 `String`.")
+        }
+        if #available(macOS 10.12, *) {
+            let dateFormatter = ISO8601DateFormatter()
+            guard let date = dateFormatter.date(from: string) else {
+                throw MultipartError(identifier: "DateFormatter", reason: "Could not convert `String` to `Date`")
+            }
+            return date
+        } else {
+            throw MultipartError(identifier: "ISO 8601", reason: "macOS SDK < 10.12 detected, no ISO-8601 DateFormatter support.")
+        }
+    }
+}
