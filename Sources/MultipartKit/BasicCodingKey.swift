@@ -1,5 +1,5 @@
 /// A basic `CodingKey` implementation.
-public enum BasicCodingKey: CodingKey {
+internal enum BasicCodingKey: CodingKey {
     case key(String)
     case index(Int)
 

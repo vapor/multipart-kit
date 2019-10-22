@@ -30,7 +30,7 @@
 ///                   "/" / "[" / "]" / "?" / "="
 ///     ; Must be in quoted-string,
 ///     ; to use within parameter values
-public struct HTTPHeaderValue: Codable {
+internal struct HeaderValue: Codable {
     /// The `HeaderValue`'s main value.
     ///
     /// In the `HeaderValue` `"application/json; charset=utf8"`:
@@ -51,27 +51,6 @@ public struct HTTPHeaderValue: Codable {
         self.parameters = parameters
     }
 
-    /// Initialize a `HTTPHeaderValue` from a Decoder.
-    ///
-    /// This will decode a `String` from the decoder and parse it to a `HTTPHeaderValue`.
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let string = try container.decode(String.self)
-        guard let tempValue = HTTPHeaderValue.parse(string) else {
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid header value string")
-        }
-        self.parameters = tempValue.parameters
-        self.value = tempValue.value
-    }
-
-    /// Encode a `HTTPHeaderValue` into an Encoder.
-    ///
-    /// This will encode the `HTTPHeaderValue` as a `String`.
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(self.serialize())
-    }
-
     /// Serializes this `HeaderValue` to a `String`.
     public func serialize() -> String {
         var string = "\(value)"
@@ -85,7 +64,7 @@ public struct HTTPHeaderValue: Codable {
     ///
     ///     guard let headerValue = HTTPHeaderValue.parse("application/json; charset=utf8") else { ... }
     ///
-    public static func parse(_ data: String) -> HTTPHeaderValue? {
+    public static func parse(_ data: String) -> HeaderValue? {
         let data = data
 
         /// separate the zero or more parameters
@@ -103,7 +82,7 @@ public struct HTTPHeaderValue: Codable {
         switch parts.count {
         case 1:
             /// no parameters, early exit
-            return HTTPHeaderValue(String(value), parameters: [:])
+            return HeaderValue(String(value), parameters: [:])
         case 2: remaining = parts[1]
         default: return nil
         }

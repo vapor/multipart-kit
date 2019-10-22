@@ -2,21 +2,19 @@
 import PackageDescription
 
 let package = Package(
-    name: "multipart",
+    name: "multipart-kit",
+    platforms: [
+       .macOS(.v10_14)
+    ],
     products: [
-        .library(name: "Multipart", targets: ["Multipart"]),
+        .library(name: "MultipartKit", targets: ["MultipartKit"]),
     ],
-    dependencies: [
-      .package(url: "https://github.com/apple/swift-nio.git", from: "2.2.0"),
-    ],
+    dependencies: [ ],
     targets: [
         .target(name: "CMultipartParser"),
-        .target(name: "Multipart", dependencies: [
-          "CMultipartParser",
-          "NIO",
-          "NIOHTTP1",
-          "NIOFoundationCompat"
+        .target(name: "MultipartKit", dependencies: [
+          "CMultipartParser"
         ]),
-        .testTarget(name: "MultipartTests", dependencies: ["Multipart"]),
+        .testTarget(name: "MultipartKitTests", dependencies: ["MultipartKit"]),
     ]
 )
