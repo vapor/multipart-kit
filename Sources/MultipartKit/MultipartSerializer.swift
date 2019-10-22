@@ -1,3 +1,5 @@
+import struct NIO.ByteBufferAllocator
+
 /// Serializes `MultipartForm`s to `Data`.
 ///
 /// See `MultipartParser` for more information about the multipart encoding.
@@ -6,9 +8,9 @@ public final class MultipartSerializer {
     public init() { }
 
     public func serialize(parts: [MultipartPart], boundary: String) throws -> String {
-        var buffer: [UInt8] = []
+        var buffer = ByteBufferAllocator().buffer(capacity: 0)
         try self.serialize(parts: parts, boundary: boundary, into: &buffer)
-        return String(decoding: buffer, as: UTF8.self)
+        return String(decoding: buffer.readableBytesView, as: UTF8.self)
     }
 
     /// Serializes the `MultipartForm` to data.
@@ -21,23 +23,24 @@ public final class MultipartSerializer {
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     /// - throws: Any errors that may occur during serialization.
     /// - returns: `multipart`-encoded `Data`.
-    public func serialize(parts: [MultipartPart], boundary: String, into buffer: inout [UInt8]) throws {
+    public func serialize(parts: [MultipartPart], boundary: String, into buffer: inout ByteBuffer) throws {
         for part in parts {
-            buffer.write(string: "--")
-            buffer.write(string: boundary)
-            buffer.write(string: "\r\n")
+            buffer.writeString("--")
+            buffer.writeString(boundary)
+            buffer.writeString("\r\n")
             for (key, val) in part.headers {
-                buffer.write(string: key)
-                buffer.write(string: ": ")
-                buffer.write(string: val)
-                buffer.write(string: "\r\n")
+                buffer.writeString(key)
+                buffer.writeString(": ")
+                buffer.writeString(val)
+                buffer.writeString("\r\n")
             }
-            buffer.write(string: "\r\n")
-            buffer += part.body
-            buffer.write(string: "\r\n")
+            buffer.writeString("\r\n")
+            var body = part.body
+            buffer.writeBuffer(&body)
+            buffer.writeString("\r\n")
         }
-        buffer.write(string: "--")
-        buffer.write(string: boundary)
-        buffer.write(string: "--\r\n")
+        buffer.writeString("--")
+        buffer.writeString(boundary)
+        buffer.writeString("--\r\n")
     }
 }

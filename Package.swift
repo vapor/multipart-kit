@@ -9,11 +9,15 @@ let package = Package(
     products: [
         .library(name: "MultipartKit", targets: ["MultipartKit"]),
     ],
-    dependencies: [ ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.2.0"),
+    ],
     targets: [
         .target(name: "CMultipartParser"),
         .target(name: "MultipartKit", dependencies: [
-          "CMultipartParser"
+            "NIO",
+            "NIOHTTP1",
+            "CMultipartParser",
         ]),
         .testTarget(name: "MultipartKitTests", dependencies: ["MultipartKit"]),
     ]

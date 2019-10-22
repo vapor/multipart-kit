@@ -1,3 +1,4 @@
+import struct NIO.ByteBufferAllocator
 import CMultipartParser
 
 /// Parses multipart-encoded `Data` into `MultipartPart`s. Multipart encoding is a widely-used format for encoding/// web-form data that includes rich content like files. It allows for arbitrary data to be encoded
@@ -13,7 +14,7 @@ import CMultipartParser
 /// Seealso `form-urlencoded` encoding where delimiter boundaries are not required.
 public final class MultipartParser {
     public var onHeader: (String, String) -> ()
-    public var onBody: ([UInt8]) -> ()
+    public var onBody: (inout ByteBuffer) -> ()
     public var onPartComplete: () -> ()
 
     private var callbacks: multipartparser_callbacks
@@ -60,8 +61,8 @@ public final class MultipartParser {
             guard let context = Context.from(parser) else {
                 return 1
             }
-            let buffer = context.slice(at: data, count: size)
-            context.parser.handleData(buffer)
+            var buffer = context.slice(at: data, count: size)
+            context.parser.handleData(&buffer)
             return 0
         }
         self.callbacks.on_body_begin = { parser in
@@ -96,9 +97,9 @@ public final class MultipartParser {
 
         unowned let parser: MultipartParser
         let unsafeBuffer: UnsafeRawBufferPointer
-        let buffer: [UInt8]
+        let buffer: ByteBuffer
 
-        func slice(at pointer: UnsafePointer<Int8>?, count: Int) -> [UInt8] {
+        func slice(at pointer: UnsafePointer<Int8>?, count: Int) -> ByteBuffer {
             guard let pointer = pointer else {
                 fatalError("no data pointer")
             }
@@ -109,30 +110,45 @@ public final class MultipartParser {
             if pointer >= unsafeBufferStart && pointer <= unsafeBufferEnd {
                 // we were given back a pointer inside our buffer, we can be efficient
                 let offset = unsafeBufferStart.distance(to: pointer)
-                let buffer = self.buffer[offset ..< offset + count]
-                return .init(buffer) // TODO: prevent this copy?
+                guard let buffer = self.buffer.getSlice(at: offset, length: count) else {
+                    fatalError("invalid offset")
+                }
+                return buffer
             } else {
                 // the buffer is to somewhere else, like a statically allocated string
                 // let's create a new buffer
-                let bytes = UnsafeRawBufferPointer(start: UnsafeRawPointer(pointer), count: count)
-                return .init(bytes)
+                let bytes = UnsafeRawBufferPointer(
+                    start: UnsafeRawPointer(pointer),
+                    count: count
+                )
+                var buffer = ByteBufferAllocator().buffer(capacity: bytes.count)
+                buffer.writeBytes(bytes)
+                return buffer
             }
         }
     }
-
+    
     public func execute(_ string: String) throws {
-        return try self.execute([UInt8](string.utf8))
+        try self.execute([UInt8](string.utf8))
     }
 
-    public func execute(_ buffer: [UInt8]) throws {
-        let result = buffer.withUnsafeBytes { (unsafeBuffer: UnsafeRawBufferPointer) -> Int in
+    public func execute<Data>(_ data: Data) throws
+        where Data: DataProtocol
+    {
+        var buffer = ByteBufferAllocator().buffer(capacity: data.count)
+        buffer.writeBytes(data)
+        return try self.execute(buffer)
+    }
+
+    public func execute(_ buffer: ByteBuffer) throws {
+        let result = buffer.withUnsafeReadableBytes { (unsafeBuffer: UnsafeRawBufferPointer) -> Int in
             var context = Context(parser: self, unsafeBuffer: unsafeBuffer, buffer: buffer)
             return withUnsafeMutablePointer(to: &context) { (contextPointer: UnsafeMutablePointer<Context>) -> Int in
                 self.parser.data = .init(contextPointer)
                 return multipartparser_execute(&self.parser, &self.callbacks, unsafeBuffer.baseAddress?.assumingMemoryBound(to: Int8.self), unsafeBuffer.count)
             }
         }
-        guard result == buffer.count else {
+        guard result == buffer.readableBytes else {
             throw MultipartError.invalidFormat
         }
     }
@@ -170,9 +186,9 @@ public final class MultipartParser {
         default: fatalError()
         }
     }
-
-    private func handleData(_ data: [UInt8]) {
-        self.onBody(data)
+    
+    private func handleData(_ data: inout ByteBuffer) {
+        self.onBody(&data)
     }
 
     private func handlePartEnd() {

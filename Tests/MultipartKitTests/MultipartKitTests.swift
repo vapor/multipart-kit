@@ -36,11 +36,11 @@ class MultipartTests: XCTestCase {
         let parser = MultipartParser(boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
 
         var parts: [MultipartPart] = []
-        var headers: [String: String] = [:]
+        var headers: HTTPHeaders = [:]
         var body: String = ""
 
         parser.onHeader = { (field, value) in
-            headers[field] = value
+            headers.replaceOrAdd(name: field, value: value)
         }
         parser.onBody = { new in
             body += new.string
@@ -80,11 +80,11 @@ class MultipartTests: XCTestCase {
         """
         let parser = MultipartParser(boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
         var parts: [MultipartPart] = []
-        var headers: [String: String] = [:]
+        var headers: HTTPHeaders = [:]
         var body: String = ""
 
         parser.onHeader = { (field, value) in
-            headers[field] = value
+            headers.replaceOrAdd(name: field, value: value)
         }
         parser.onBody = { new in
             body += new.string
@@ -221,11 +221,11 @@ class MultipartTests: XCTestCase {
             let parser = MultipartParser(boundary: "12345")
 
             var parts: [MultipartPart] = []
-            var headers: [String: String] = [:]
+            var headers: HTTPHeaders = [:]
             var body: String = ""
 
             parser.onHeader = { (field, value) in
-                headers[field] = value
+                headers.replaceOrAdd(name: field, value: value)
             }
             parser.onBody = { new in
                 body += new.string
@@ -306,11 +306,11 @@ class MultipartTests: XCTestCase {
             """
             let parser = MultipartParser(boundary: "123")
             var parts: [MultipartPart] = []
-            var headers: [String: String] = [:]
+            var headers: HTTPHeaders = [:]
             var body: String = ""
 
             parser.onHeader = { (field, value) in
-                headers[field] = value
+                headers.replaceOrAdd(name: field, value: value)
             }
             parser.onBody = { new in
                 body += new.string
@@ -345,8 +345,8 @@ private extension Collection {
     }
 }
 
-extension Array where Element == UInt8 {
+extension ByteBuffer {
     var string: String {
-        return String(decoding: self, as: UTF8.self)
+        return String(decoding: self.readableBytesView, as: UTF8.self)
     }
 }

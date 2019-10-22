@@ -1,3 +1,5 @@
+import struct NIO.ByteBufferAllocator
+
 /// Encodes `Encodable` items to `multipart/form-data` encoded `Data`.
 ///
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
@@ -10,9 +12,9 @@ public struct FormDataEncoder {
     public func encode<E>(_ encodable: E, boundary: String) throws -> String
         where E: Encodable
     {
-        var buffer: [UInt8] = []
+        var buffer = ByteBufferAllocator().buffer(capacity: 0)
         try self.encode(encodable, boundary: boundary, into: &buffer)
-        return String(decoding: buffer, as: UTF8.self)
+        return String(decoding: buffer.readableBytesView, as: UTF8.self)
     }
 
     /// Encodes an `Encodable` item to `Data` using the supplied boundary.
@@ -25,7 +27,7 @@ public struct FormDataEncoder {
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     /// - throws: Any errors encoding the model with `Codable` or serializing the data.
     /// - returns: `multipart/form-data`-encoded `Data`.
-    public func encode<E>(_ encodable: E, boundary: String, into buffer: inout [UInt8]) throws
+    public func encode<E>(_ encodable: E, boundary: String, into buffer: inout ByteBuffer) throws
         where E: Encodable
     {
         let multipart = FormDataEncoderContext()

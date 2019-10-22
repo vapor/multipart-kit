@@ -1,38 +1,17 @@
+import struct NIO.ByteBufferAllocator
+
 /// A single part of a `multipart`-encoded message.
 public struct MultipartPart: Equatable {
     /// The part's headers.
-    public var headers: [String: String]
+    public var headers: HTTPHeaders
 
     /// The part's raw data.
-    public var body: [UInt8]
+    public var body: ByteBuffer
     
     /// Gets or sets the `name` attribute from the part's `"Content-Disposition"` header.
     public var name: String? {
-        get { self.contentDispositionParameter("name") }
-        set { self.setContentDispositionParameter("name", to: newValue) }
-    }
-
-    /// Gets or sets the part's `"Content-Disposition"` header.
-    public var contentDisposition: (String, [String: String])? {
-        get {
-            self.headers["Content-Disposition"].flatMap {
-                return HeaderValue.parse($0)
-            }.flatMap { value in
-                return (value.value, value.parameters)
-            }
-        }
-        set {
-            self.headers["Content-Disposition"] = newValue.flatMap { value in
-                return HeaderValue(value.0, parameters: value.1)
-            }.flatMap { value in
-                return value.serialize()
-            }
-        }
-    }
-    
-    public var contentType: String? {
-        get { self.headers["Content-Type"] }
-        set { self.headers["Content-Type"] = newValue }
+        get { self.headers.getParameter("Content-Disposition", "name") }
+        set { self.headers.setParameter("Content-Disposition", "name", to: newValue, defaultValue: "form-data") }
     }
 
     /// Creates a new `MultipartPart`.
@@ -42,7 +21,7 @@ public struct MultipartPart: Equatable {
     /// - parameters:
     ///     - headers: The part's headers.
     ///     - body: The part's data.
-    public init(headers: [String: String] = [:], body: String) {
+    public init(headers: HTTPHeaders = .init(), body: String) {
         self.init(headers: headers, body: [UInt8](body.utf8))
     }
 
@@ -53,30 +32,17 @@ public struct MultipartPart: Equatable {
     /// - parameters:
     ///     - headers: The part's headers.
     ///     - body: The part's data.
-    public init(headers: [String: String] = [:], body: [UInt8]) {
+    public init<Data>(headers: HTTPHeaders = .init(), body: Data)
+        where Data: DataProtocol
+    {
+        var buffer = ByteBufferAllocator().buffer(capacity: body.count)
+        buffer.writeBytes(body)
+        self.init(headers: headers, body: buffer)
+    }
+    
+    public init(headers: HTTPHeaders = .init(), body: ByteBuffer) {
         self.headers = headers
         self.body = body
-    }
-    
-    private func contentDispositionParameter(_ name: String) -> String? {
-        guard let (_, parameters) = self.contentDisposition else {
-            return nil
-        }
-        return parameters[name]
-    }
-    
-    private mutating func setContentDispositionParameter(_ name: String, to value: String?) {
-        var parameters: [String: String]
-        let headerValue: String
-        if let (existingValue, existingParameters) = self.contentDisposition {
-            parameters = existingParameters
-            headerValue = existingValue
-        } else {
-            parameters = [:]
-            headerValue = "form-data"
-        }
-        parameters[name] = value
-        self.contentDisposition = (headerValue, parameters)
     }
 }
 

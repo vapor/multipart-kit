@@ -21,7 +21,7 @@ extension String: MultipartPartConvertible {
     }
     
     public init?(multipart: MultipartPart) {
-        self.init(decoding: multipart.body, as: UTF8.self)
+        self.init(decoding: multipart.body.readableBytesView, as: UTF8.self)
     }
 }
 
@@ -91,10 +91,10 @@ extension Bool: MultipartPartConvertible {
 
 extension Data: MultipartPartConvertible {
     public var multipart: MultipartPart? {
-        return MultipartPart(body: .init(self))
+        return MultipartPart(body: self)
     }
     
     public init?(multipart: MultipartPart) {
-        self.init(multipart.body)
+        self.init(multipart.body.readableBytesView)
     }
 }
