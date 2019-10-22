@@ -3,9 +3,17 @@
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
 ///
 /// Seealso `MultipartParser` for more information about the `multipart` encoding.
-public final class FormDataEncoder {
+public struct FormDataEncoder {
     /// Creates a new `FormDataEncoder`.
     public init() { }
+
+    public func encode<E>(_ encodable: E, boundary: String) throws -> String
+        where E: Encodable
+    {
+        var buffer: [UInt8] = []
+        try self.encode(encodable, boundary: boundary, into: &buffer)
+        return String(decoding: buffer, as: UTF8.self)
+    }
 
     /// Encodes an `Encodable` item to `Data` using the supplied boundary.
     ///
@@ -17,11 +25,13 @@ public final class FormDataEncoder {
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     /// - throws: Any errors encoding the model with `Codable` or serializing the data.
     /// - returns: `multipart/form-data`-encoded `Data`.
-    public func encode<E>(_ encodable: E, boundary: LosslessDataConvertible) throws -> Data where E: Encodable {
+    public func encode<E>(_ encodable: E, boundary: String, into buffer: inout [UInt8]) throws
+        where E: Encodable
+    {
         let multipart = FormDataEncoderContext()
         let encoder = _FormDataEncoder(multipart: multipart, codingPath: [])
         try encodable.encode(to: encoder)
-        return try MultipartSerializer().serialize(parts: multipart.parts, boundary: boundary)
+        try MultipartSerializer().serialize(parts: multipart.parts, boundary: boundary, into: &buffer)
     }
 }
 
@@ -35,26 +45,24 @@ private final class FormDataEncoderContext {
 
     func encode<E>(_ encodable: E, at codingPath: [CodingKey]) throws where E: Encodable {
         guard let convertible = encodable as? MultipartPartConvertible else {
-            throw MultipartError(identifier: "convertible", reason: "`\(E.self)` is not `MultipartPartConvertible`.")
+            throw MultipartError.convertibleType(E.self)
         }
 
-        var part = try convertible.convertToMultipartPart()
+        guard var part = convertible.multipart else {
+            throw MultipartError.convertibleType(E.self)
+        }
+        
         switch codingPath.count {
         case 1: part.name = codingPath[0].stringValue
         case 2:
             guard codingPath[1].intValue != nil else {
-                throw MultipartError(identifier: "nestedEncode", reason: "Nesting is not supported when encoding multipart data.")
+                throw MultipartError.nesting
             }
             part.name = codingPath[0].stringValue + "[]"
-        default: throw MultipartError(identifier: "nestedEncode", reason: "Nesting is not supported when encoding multipart data.")
+        default:
+            throw MultipartError.nesting
         }
-        parts.append(part)
-    }
-    
-    func encode(_ files: [File], at codingPath: [CodingKey]) throws {
-        for file in files {
-            try encode(file, at: codingPath)
-        }
+        self.parts.append(part)
     }
 }
 
@@ -117,8 +125,6 @@ private struct _FormDataKeyedEncoder<K>: KeyedEncodingContainerProtocol where K:
     mutating func encode<T>(_ value: T, forKey key: K) throws where T : Encodable {
         if value is MultipartPartConvertible {
             try multipart.encode(value, at: codingPath + [key])
-        } else if let value = value as? [File] {
-            try multipart.encode(value, at: codingPath + [key])
         } else {
             let encoder = _FormDataEncoder(multipart: multipart, codingPath: codingPath + [key])
             try value.encode(to: encoder)
@@ -147,7 +153,7 @@ private struct _FormDataUnkeyedEncoder: UnkeyedEncodingContainer {
     let multipart: FormDataEncoderContext
     var codingPath: [CodingKey]
     var index: CodingKey {
-        return BasicKey(0)
+        return BasicCodingKey.index(0)
     }
 
     init(multipart: FormDataEncoderContext, codingPath: [CodingKey]) {

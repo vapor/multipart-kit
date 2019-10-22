@@ -3,9 +3,15 @@
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
 ///
 /// Seealso `MultipartParser` for more information about the `multipart` encoding.
-public final class FormDataDecoder {
+public struct FormDataDecoder {
     /// Creates a new `FormDataDecoder`.
     public init() { }
+
+    public func decode<D>(_ decodable: D.Type, from data: String, boundary: String) throws -> D
+        where D: Decodable
+    {
+        return try self.decode(D.self, from: [UInt8](data.utf8), boundary: boundary)
+    }
 
     /// Decodes a `Decodable` item from `Data` using the supplied boundary.
     ///
@@ -16,8 +22,34 @@ public final class FormDataDecoder {
     ///     - boundary: Multipart boundary to used in the encoding.
     /// - throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - returns: An instance of the decoded type `D`.
-    public func decode<D>(_ decodable: D.Type, from data: LosslessDataConvertible, boundary: LosslessDataConvertible) throws -> D where D: Decodable {
-        let parts = try MultipartParser().parse(data: data, boundary: boundary)
+    public func decode<D>(_ decodable: D.Type, from data: [UInt8], boundary: String) throws -> D
+        where D: Decodable
+    {
+        let parser = MultipartParser(boundary: boundary)
+
+        var parts: [MultipartPart] = []
+        var headers: [String: String] = [:]
+        var body: [UInt8]? = nil
+
+        parser.onHeader = { (field, value) in
+            headers[field] = value
+        }
+        parser.onBody = { new in
+            if var existing = body {
+                existing += new
+                body = existing
+            } else {
+                body = new
+            }
+        }
+        parser.onPartComplete = {
+            let part = MultipartPart(headers: headers, body: body!)
+            headers = [:]
+            body = nil
+            parts.append(part)
+        }
+
+        try parser.execute(data)
         let multipart = FormDataDecoderContext(parts: parts)
         let decoder = _FormDataDecoder(multipart: multipart, codingPath: [])
         return try D(from: decoder)
@@ -34,7 +66,7 @@ private final class FormDataDecoderContext {
 
     func decode<D>(_ decodable: D.Type, at codingPath: [CodingKey]) throws -> D where D: Decodable {
         guard let convertible = D.self as? MultipartPartConvertible.Type else {
-            throw MultipartError(identifier: "convertible", reason: "`\(D.self)` is not `MultipartPartConvertible`.")
+            throw MultipartError.convertibleType(D.self)
         }
 
         let part: MultipartPart
@@ -42,19 +74,23 @@ private final class FormDataDecoderContext {
         case 1:
             let name = codingPath[0].stringValue
             guard let p = parts.firstPart(named: name) else {
-                throw MultipartError(identifier: "missingPart", reason: "No multipart part named '\(name)' was found.")
+                throw MultipartError.missingPart(name)
             }
             part = p
         case 2:
             let name = codingPath[0].stringValue + "[]"
             guard let offset = codingPath[1].intValue else {
-                throw MultipartError(identifier: "arrayOffset", reason: "Nested form-data is not supported.")
+                throw MultipartError.nesting
             }
             part = parts.allParts(named: name)[offset]
-        default: throw MultipartError(identifier: "nested", reason: "Nested form-data is not supported.")
+        default:
+            throw MultipartError.nesting
         }
 
-        return try convertible.convertFromMultipartPart(part) as! D
+        guard let any = convertible.init(multipart: part) else {
+            throw MultipartError.convertiblePart(D.self, part)
+        }
+        return any as! D
     }
 }
 
@@ -159,7 +195,7 @@ private struct _FormDataUnkeyedDecoder: UnkeyedDecodingContainer {
     }
     var currentIndex: Int
     var index: CodingKey {
-        return BasicKey(currentIndex)
+        return BasicCodingKey.index(self.currentIndex)
     }
 
     let multipart: FormDataDecoderContext
@@ -171,7 +207,8 @@ private struct _FormDataUnkeyedDecoder: UnkeyedDecodingContainer {
         let name: String
         switch codingPath.count {
         case 1: name = codingPath[0].stringValue
-        default: throw MultipartError(identifier: "nesting", reason: "Nested form-data decoding is not supported.")
+        default:
+            throw MultipartError.nesting
         }
         let parts = multipart.parts.allParts(named: name + "[]")
         self.count = parts.count
