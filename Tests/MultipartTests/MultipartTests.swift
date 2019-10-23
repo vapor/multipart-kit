@@ -81,8 +81,10 @@ class MultipartTests: XCTestCase {
             var double: Double
             var array: [Int]
             var bool: Bool
+            var date: Date
         }
-        let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3], bool: true)
+        let date = Date(timeIntervalSince1970: 1571392115)
+        let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3], bool: true, date: date)
         let data = try FormDataEncoder().encode(a, boundary: "hello")
         XCTAssertEqual(data.utf8, """
         --hello\r
@@ -113,6 +115,10 @@ class MultipartTests: XCTestCase {
         Content-Disposition: form-data; name="bool"\r
         \r
         true\r
+        --hello\r
+        Content-Disposition: form-data; name=\"date\"\r
+        \r
+        2019-10-18T09:48:35Z\r
         --hello--\r\n
         """)
     }
