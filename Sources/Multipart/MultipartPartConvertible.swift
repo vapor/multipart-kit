@@ -138,7 +138,7 @@ extension Data: MultipartPartConvertible {
 
 extension Date: MultipartPartConvertible {
     
-    static var useISO8601ForMultipart = true
+    public static var useISO8601ForMultipart = true
     
     /// See `MultipartPartConvertible`.
     public func convertToMultipartPart() throws -> MultipartPart {
