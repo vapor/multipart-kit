@@ -233,7 +233,8 @@ private final class _MultipartParser {
 
     // Requires `n` bytes from a given base index.
     private func require(_ n: Int, from base: Data.Index) throws {
-        guard base.advanced(by: n) <= data.endIndex else {
+        assert(n > 0, "Cannot require less than 1 byte: \(n)")
+        guard base.advanced(by: n - 1) < data.endIndex else {
             throw MultipartError(identifier: "missingData", reason: "Invalid multipart formatting")
         }
     }
