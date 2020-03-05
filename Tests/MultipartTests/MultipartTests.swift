@@ -316,7 +316,8 @@ class MultipartTests: XCTestCase {
         ("testFormDataDecoderMultiple", testFormDataDecoderMultiple),
         ("testFormDataDecoderFile", testFormDataDecoderFile),
         ("testDocBlocks", testDocBlocks),
-        ("testMultipleFile", testMultipleFile)
+        ("testMultipleFile", testMultipleFile),
+        ("testTwilioFile", testTwilioFile),
     ]
 }
 
