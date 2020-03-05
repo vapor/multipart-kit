@@ -135,3 +135,45 @@ extension Data: MultipartPartConvertible {
         return part.data
     }
 }
+
+extension Date: MultipartPartConvertible {
+    
+    public static var useISO8601ForMultipart = true
+    
+    /// See `MultipartPartConvertible`.
+    public func convertToMultipartPart() throws -> MultipartPart {
+        if Date.useISO8601ForMultipart {
+            if #available(macOS 10.12, *) {
+                let dateFormatter = ISO8601DateFormatter()
+                let string = dateFormatter.string(from: self)
+                return MultipartPart(data: string)
+            } else {
+                throw MultipartError(identifier: "ISO 8601", reason: "macOS SDK < 10.12 detected, no ISO-8601 DateFormatter support.")
+            }
+        } else {
+            let doubleValue: Double = self.timeIntervalSince1970
+            return try doubleValue.convertToMultipartPart()
+        }
+    }
+    
+    /// See `MultipartPartConvertible`.
+    public static func convertFromMultipartPart(_ part: MultipartPart) throws -> Date {
+        if Date.useISO8601ForMultipart {
+            guard let string = String(data: part.data, encoding: .utf8) else {
+                throw MultipartError(identifier: "utf8", reason: "Could not convert `Data` to UTF-8 `String`.")
+            }
+            if #available(macOS 10.12, *) {
+                let dateFormatter = ISO8601DateFormatter()
+                guard let date = dateFormatter.date(from: string) else {
+                    throw MultipartError(identifier: "DateFormatter", reason: "Could not convert `String` to `Date`")
+                }
+                return date
+            } else {
+                throw MultipartError(identifier: "ISO 8601", reason: "macOS SDK < 10.12 detected, no ISO-8601 DateFormatter support.")
+            }
+        } else {
+            let doubleValue = try Double.convertFromMultipartPart(part)
+            return Date(timeIntervalSince1970: doubleValue)
+        }
+    }
+}
