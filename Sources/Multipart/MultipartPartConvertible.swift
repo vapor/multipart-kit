@@ -143,7 +143,7 @@ extension Date: MultipartPartConvertible {
     /// See `MultipartPartConvertible`.
     public func convertToMultipartPart() throws -> MultipartPart {
         if Date.useISO8601ForMultipart {
-            if #available(macOS 10.12, *) {
+            if #available(macOS 10.12, iOS 10.0, *) {
                 let dateFormatter = ISO8601DateFormatter()
                 let string = dateFormatter.string(from: self)
                 return MultipartPart(data: string)
@@ -162,7 +162,7 @@ extension Date: MultipartPartConvertible {
             guard let string = String(data: part.data, encoding: .utf8) else {
                 throw MultipartError(identifier: "utf8", reason: "Could not convert `Data` to UTF-8 `String`.")
             }
-            if #available(macOS 10.12, *) {
+            if #available(macOS 10.12, iOS 10.0, *) {
                 let dateFormatter = ISO8601DateFormatter()
                 guard let date = dateFormatter.date(from: string) else {
                     throw MultipartError(identifier: "DateFormatter", reason: "Could not convert `String` to `Date`")
