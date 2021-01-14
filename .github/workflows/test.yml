@@ -1,18 +1,33 @@
 name: test
-on:
-- pull_request
+on: { pull_request: {} }
+
 jobs:
-  xenial:
-    container: 
-      image: vapor/swift:5.1-xenial
+  getcidata:
     runs-on: ubuntu-latest
+    outputs:
+      environments: ${{ steps.output.outputs.environments }}
     steps:
-    - uses: actions/checkout@v1
-    - run: swift test --enable-test-discovery --sanitize=thread
-  bionic:
-    container: 
-      image: vapor/swift:5.1-bionic
-    runs-on: ubuntu-latest
+      - id: output
+        run: |
+          envblob="$(curl -fsSL https://raw.githubusercontent.com/vapor/ci/main/pr-environments.json | jq -cMj '.')"
+          echo "::set-output name=environments::${envblob}"
+
+  test-vapor:
+    needs: getcidata
+    strategy:
+      fail-fast: false
+      matrix:
+        env: ${{ fromJSON(needs.getcidata.outputs.environments) }}
+    runs-on: ${{ matrix.env.os }}
+    container: ${{ matrix.env.image }}
     steps:
-    - uses: actions/checkout@v1
-    - run: swift test --enable-test-discovery --sanitize=thread
+      - name: Select toolchain
+        uses: maxim-lobanov/setup-xcode@v1.2.1
+        with:
+          xcode-version: ${{ matrix.env.toolchain }}
+        if: ${{ matrix.env.toolchain != '' }}
+      - name: Check out Vapor
+        uses: actions/checkout@v2
+      - name: Run tests with Thread Sanitizer
+        timeout-minutes: 20
+        run: swift test --enable-test-discovery --sanitize=thread
