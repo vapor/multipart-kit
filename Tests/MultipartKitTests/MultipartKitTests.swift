@@ -330,6 +330,30 @@ class MultipartTests: XCTestCase {
             XCTAssertEqual(data, "--123\r\n\r\nfoo\r\n--123--\r\n")
         }
     }
+    
+    func testFormDataDecoderMultipleWithMissingData() {
+        /// Content-Type: multipart/form-data; boundary=hello
+        let data = """
+        --hello\r\n\
+        Content-Disposition: form-data; name="link"\r\n\
+        \r\n\
+        https://google.com\r\n\
+        --hello--\r\n
+        """
+
+        struct Foo: Decodable {
+            var link: URL
+        }
+
+        XCTAssertThrowsError(try FormDataDecoder().decode(Foo.self, from: data, boundary: "hello")) { error in
+            guard case let MultipartError.missingPart(array) = error else {
+                XCTFail("Was expecting an error of type MultipartError.missingPart")
+                return
+            }
+
+            XCTAssertEqual(array, "relative")
+        }
+    }
 }
 
 // https://stackoverflow.com/a/54524110/1041105
