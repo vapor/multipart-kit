@@ -15,9 +15,9 @@ let package = Package(
     targets: [
         .target(name: "CMultipartParser"),
         .target(name: "MultipartKit", dependencies: [
-            "NIO",
-            "NIOHTTP1",
-            "CMultipartParser",
+            .product(name: "NIO", package: "swift-nio"),
+            .product(name: "NIOHTTP1", package: "swift-nio"),
+            .target(name: "CMultipartParser"),
         ]),
         .testTarget(name: "MultipartKitTests", dependencies: ["MultipartKit"]),
     ]
