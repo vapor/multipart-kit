@@ -1,10 +1,10 @@
-// swift-tools-version:5.1
+// swift-tools-version:5.2
 import PackageDescription
 
 let package = Package(
     name: "multipart-kit",
     platforms: [
-       .macOS(.v10_14)
+       .macOS(.v10_15)
     ],
     products: [
         .library(name: "MultipartKit", targets: ["MultipartKit"]),
@@ -15,9 +15,9 @@ let package = Package(
     targets: [
         .target(name: "CMultipartParser"),
         .target(name: "MultipartKit", dependencies: [
-            "NIO",
-            "NIOHTTP1",
-            "CMultipartParser",
+            .product(name: "NIO", package: "swift-nio"),
+            .product(name: "NIOHTTP1", package: "swift-nio"),
+            .target(name: "CMultipartParser"),
         ]),
         .testTarget(name: "MultipartKitTests", dependencies: ["MultipartKit"]),
     ]
