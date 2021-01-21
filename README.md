@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://user-images.githubusercontent.com/1342803/38707794-e50a4bda-3e80-11e8-850b-5a3088797edf.png" height="64" alt="Multipart">
+    <img src="https://user-images.githubusercontent.com/1049951/105351980-94fe4280-5bed-11eb-876e-ae60df0f41f0.png" height="64" alt="Multipart">
     <br>
     <br>
     <a href="https://docs.vapor.codes/4.0/">
