@@ -51,16 +51,23 @@ public struct MultipartPart: Equatable {
 extension Array where Element == MultipartPart {
     /// Returns the first `MultipartPart` with matching name attribute in `"Content-Disposition"` header.
     public func firstPart(named name: String) -> MultipartPart? {
-        for el in self {
-            if el.name == name {
-                return el
-            }
-        }
-        return nil
+        first { $0.name == name }
     }
 
     /// Returns all `MultipartPart`s with matching name attribute in `"Content-Disposition"` header.
     public func allParts(named name: String) -> [MultipartPart] {
-        return filter { $0.name == name }
+        filter { $0.name == name }
+    }
+
+    /// Returns the nth`MultipartPart` with matching name attribute in `"Content-Disposition"` header..
+    public func part(named name: String, at offset: Int) -> MultipartPart? {
+        var index = 0
+        for part in self where part.name == name {
+            if index == offset {
+                return part
+            }
+            index += 1
+        }
+        return nil
     }
 }

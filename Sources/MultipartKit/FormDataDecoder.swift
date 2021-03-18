@@ -12,7 +12,7 @@ public struct FormDataDecoder {
     public func decode<D>(_ decodable: D.Type, from data: String, boundary: String) throws -> D
         where D: Decodable
     {
-        return try self.decode(D.self, from: [UInt8](data.utf8), boundary: boundary)
+        try self.decode(D.self, from: [UInt8](data.utf8), boundary: boundary)
     }
 
     /// Decodes a `Decodable` item from `Data` using the supplied boundary.
@@ -40,10 +40,9 @@ public struct FormDataDecoder {
             body.writeBuffer(&new)
         }
         parser.onPartComplete = {
-            let part = MultipartPart(headers: headers, body: body)
+            parts.append(MultipartPart(headers: headers, body: body))
             headers = [:]
             body = ByteBufferAllocator().buffer(capacity: 0)
-            parts.append(part)
         }
 
         try parser.execute(data)
@@ -79,7 +78,7 @@ private final class FormDataDecoderContext {
             guard let offset = codingPath[1].intValue else {
                 throw MultipartError.nesting
             }
-            guard let p = parts.allParts(named: name)[safe: offset] else {
+            guard let p = parts.part(named: name, at: offset) else {
                 throw MultipartError.missingPart("\(codingPath[1].stringValue)")
             }
             part = p
@@ -94,12 +93,9 @@ private final class FormDataDecoderContext {
     }
 }
 
-
 private struct _FormDataDecoder: Decoder {
     var codingPath: [CodingKey]
-    var userInfo: [CodingUserInfoKey: Any] {
-        return [:]
-    }
+    var userInfo: [CodingUserInfoKey: Any] { [:] }
     let multipart: FormDataDecoderContext
 
     init(multipart: FormDataDecoderContext, codingPath: [CodingKey]) {
@@ -108,15 +104,15 @@ private struct _FormDataDecoder: Decoder {
     }
 
     func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> where Key : CodingKey {
-        return KeyedDecodingContainer(_FormDataKeyedDecoder<Key>(multipart: multipart, codingPath: codingPath))
+        KeyedDecodingContainer(_FormDataKeyedDecoder<Key>(multipart: multipart, codingPath: codingPath))
     }
 
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
-        return try _FormDataUnkeyedDecoder(multipart: multipart, codingPath: codingPath)
+        try _FormDataUnkeyedDecoder(multipart: multipart, codingPath: codingPath)
     }
 
     func singleValueContainer() throws -> SingleValueDecodingContainer {
-        return _FormDataSingleValueDecoder(multipart: multipart, codingPath: codingPath)
+        _FormDataSingleValueDecoder(multipart: multipart, codingPath: codingPath)
     }
 }
 
@@ -130,20 +126,18 @@ private struct _FormDataSingleValueDecoder: SingleValueDecodingContainer {
     }
 
     func decodeNil() -> Bool {
-        return false
+        false
     }
 
     func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
-        return try multipart.decode(T.self, at: codingPath)
+        try multipart.decode(T.self, at: codingPath)
     }
 }
 
 private struct _FormDataKeyedDecoder<K>: KeyedDecodingContainerProtocol where K: CodingKey {
     var codingPath: [CodingKey]
     var allKeys: [K] {
-        return multipart.parts
-            .compactMap { $0.name }
-            .compactMap { K(stringValue: $0) }
+        multipart.parts.compactMap { $0.name.flatMap(K.init(stringValue:)) }
     }
 
     let multipart: FormDataDecoderContext
@@ -154,36 +148,35 @@ private struct _FormDataKeyedDecoder<K>: KeyedDecodingContainerProtocol where K:
     }
 
     func contains(_ key: K) -> Bool {
-        return multipart.parts.contains { $0.name == key.stringValue }
+        multipart.parts.contains { $0.name == key.stringValue }
     }
 
     func decodeNil(forKey key: K) throws -> Bool {
-        return false
+        false
     }
 
     func decode<T>(_ type: T.Type, forKey key: K) throws -> T where T : Decodable {
-        if T.self is MultipartPartConvertible.Type {
-            return try multipart.decode(T.self, at: codingPath + [key])
-        } else {
+        guard T.self is MultipartPartConvertible.Type else {
             let decoder = _FormDataDecoder(multipart: multipart, codingPath: codingPath + [key])
             return try T(from: decoder)
         }
+        return try multipart.decode(T.self, at: codingPath + [key])
     }
 
     func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: K) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
-        return KeyedDecodingContainer(_FormDataKeyedDecoder<NestedKey>(multipart: multipart, codingPath: codingPath + [key]))
+        KeyedDecodingContainer(_FormDataKeyedDecoder<NestedKey>(multipart: multipart, codingPath: codingPath + [key]))
     }
 
     func nestedUnkeyedContainer(forKey key: K) throws -> UnkeyedDecodingContainer {
-        return try _FormDataUnkeyedDecoder(multipart: multipart, codingPath: codingPath + [key])
+        try _FormDataUnkeyedDecoder(multipart: multipart, codingPath: codingPath + [key])
     }
 
     func superDecoder() throws -> Decoder {
-        return _FormDataDecoder(multipart: multipart, codingPath: codingPath)
+        _FormDataDecoder(multipart: multipart, codingPath: codingPath)
     }
 
     func superDecoder(forKey key: K) throws -> Decoder {
-        return _FormDataDecoder(multipart: multipart, codingPath: codingPath + [key])
+        _FormDataDecoder(multipart: multipart, codingPath: codingPath + [key])
     }
 }
 
@@ -191,11 +184,11 @@ private struct _FormDataUnkeyedDecoder: UnkeyedDecodingContainer {
     var codingPath: [CodingKey]
     var count: Int?
     var isAtEnd: Bool {
-        return currentIndex >= count!
+        currentIndex >= count!
     }
     var currentIndex: Int
-    var index: CodingKey {
-        return BasicCodingKey.index(self.currentIndex)
+    var codingPathAtIndex: [CodingKey] {
+        codingPath + [BasicCodingKey.index(self.currentIndex)]
     }
 
     let multipart: FormDataDecoderContext
@@ -216,30 +209,27 @@ private struct _FormDataUnkeyedDecoder: UnkeyedDecodingContainer {
     }
 
     mutating func decodeNil() throws -> Bool {
-        return false
+        false
     }
 
     mutating func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
         defer { currentIndex += 1 }
-        if T.self is MultipartPartConvertible.Type {
-            return try multipart.decode(T.self, at: codingPath + [index])
-        } else {
-            let decoder = _FormDataDecoder(multipart: multipart, codingPath: codingPath + [index])
+        guard T.self is MultipartPartConvertible.Type else {
+            let decoder = _FormDataDecoder(multipart: multipart, codingPath: codingPathAtIndex)
             return try T(from: decoder)
         }
+        return try multipart.decode(T.self, at: codingPathAtIndex)
     }
 
     mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
-        return KeyedDecodingContainer(_FormDataKeyedDecoder<NestedKey>(multipart: multipart, codingPath: codingPath + [index]))
+        KeyedDecodingContainer(_FormDataKeyedDecoder<NestedKey>(multipart: multipart, codingPath: codingPathAtIndex))
     }
 
     mutating func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer {
-        return try _FormDataUnkeyedDecoder(multipart: multipart, codingPath: codingPath + [index])
+        try _FormDataUnkeyedDecoder(multipart: multipart, codingPath: codingPathAtIndex)
     }
 
     mutating func superDecoder() throws -> Decoder {
-        return _FormDataDecoder(multipart: multipart, codingPath: codingPath + [index])
+        _FormDataDecoder(multipart: multipart, codingPath: codingPathAtIndex)
     }
-
-
 }
