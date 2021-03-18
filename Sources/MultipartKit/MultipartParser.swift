@@ -1,7 +1,7 @@
 import struct NIO.ByteBufferAllocator
-import CMultipartParser
 
-/// Parses multipart-encoded `Data` into `MultipartPart`s. Multipart encoding is a widely-used format for encoding/// web-form data that includes rich content like files. It allows for arbitrary data to be encoded
+/// Parses multipart-encoded `Data` into `MultipartPart`s. Multipart encoding is a widely-used format for encoding
+/// web-form data that includes rich content like files. It allows for arbitrary data to be encoded
 /// in each part thanks to a unique delimiter "boundary" that is defined separately. This
 /// boundary is guaranteed by the client to not appear anywhere in the data.
 ///
@@ -13,192 +13,258 @@ import CMultipartParser
 ///
 /// Seealso `form-urlencoded` encoding where delimiter boundaries are not required.
 public final class MultipartParser {
+    private enum Error: Swift.Error {
+        case syntax
+    }
+
+    private enum CRLF {
+        case cr, lf
+    }
+
+    private enum HeaderState {
+        case preHeaders(CRLF = .cr)
+        case headerName([UInt8] = [])
+        case headerValue([UInt8] = [], name: [UInt8])
+        case postHeaderValue([UInt8], name: [UInt8])
+        case postHeaders
+    }
+
+    private enum State {
+        case preamble(boundaryMatchIndex: Int = 0)
+        case headers(state: HeaderState = .preHeaders())
+        case body(lowerBound: Int, boundaryMatchIndex: Int = 0)
+        case epilogue
+    }
+
     public var onHeader: (String, String) -> ()
     public var onBody: (inout ByteBuffer) -> ()
     public var onPartComplete: () -> ()
 
-    private var callbacks: multipartparser_callbacks
-    private var parser: multipartparser
+    private let boundary: [UInt8]
+    private let boundaryLength: Int
+    private var state: State
+    private var buffer: ByteBuffer!
+    private var bufferForSlicing: ByteBuffer!
 
-    private enum HeaderState {
-        case ready
-        case field(field: String)
-        case value(field: String, value: String)
-    }
-
-    private var headerState: HeaderState
-
-    /// Creates a new `MultipartParser`.
+    /// Create a new parser
+    /// - Parameter boundary: boundary separating parts. Must not be empty nor longer than 70 characters according to rfc1341 but we don't check for the latter.
     public init(boundary: String) {
+        precondition(!boundary.isEmpty)
+
         self.onHeader = { _, _ in }
         self.onBody = { _ in }
         self.onPartComplete = { }
 
-        var parser = multipartparser()
-        multipartparser_init(&parser, boundary)
-        var callbacks = multipartparser_callbacks()
-        multipartparser_callbacks_init(&callbacks)
-        self.callbacks = callbacks
-        self.parser = parser
-        self.headerState = .ready
-        self.callbacks.on_header_field = { parser, data, size in
-            guard let context = Context.from(parser) else {
-                return 1
-            }
-            let string = String(cPointer: data, count: size)
-            context.parser.handleHeaderField(string)
-            return 0
-        }
-        self.callbacks.on_header_value = { parser, data, size in
-            guard let context = Context.from(parser) else {
-                return 1
-            }
-            let string = String(cPointer: data, count: size)
-            context.parser.handleHeaderValue(string)
-            return 0
-        }
-        self.callbacks.on_data = { parser, data, size in
-            guard let context = Context.from(parser) else {
-                return 1
-            }
-            var buffer = context.slice(at: data, count: size)
-            context.parser.handleData(&buffer)
-            return 0
-        }
-        self.callbacks.on_body_begin = { parser in
-            return 0
-        }
-        self.callbacks.on_headers_complete = { parser in
-            guard let context = Context.from(parser) else {
-                return 1
-            }
-            context.parser.handleHeadersComplete()
-            return 0
-        }
-        self.callbacks.on_part_end = { parser in
-            guard let context = Context.from(parser) else {
-                return 1
-            }
-            context.parser.handlePartEnd()
-            return 0
-        }
-        self.callbacks.on_body_end = { parser in
-            return 0
-        }
+        self.boundary = Array("\r\n--\(boundary)".utf8)
+        self.boundaryLength = self.boundary.count
+        self.state = .preamble(boundaryMatchIndex: 0)
     }
 
-    struct Context {
-        static func from(_ pointer: UnsafeMutablePointer<multipartparser>?) -> Context? {
-            guard let parser = pointer?.pointee else {
-                return nil
-            }
-            return parser.data.assumingMemoryBound(to: MultipartParser.Context.self).pointee
-        }
-
-        unowned let parser: MultipartParser
-        let unsafeBuffer: UnsafeRawBufferPointer
-        let buffer: ByteBuffer
-
-        func slice(at pointer: UnsafePointer<Int8>?, count: Int) -> ByteBuffer {
-            guard let pointer = pointer else {
-                fatalError("no data pointer")
-            }
-            guard let unsafeBufferStart = unsafeBuffer.baseAddress?.assumingMemoryBound(to: Int8.self) else {
-                fatalError("no base address")
-            }
-            let unsafeBufferEnd = unsafeBufferStart.advanced(by: unsafeBuffer.count)
-            if pointer >= unsafeBufferStart && pointer <= unsafeBufferEnd {
-                // we were given back a pointer inside our buffer, we can be efficient
-                let offset = unsafeBufferStart.distance(to: pointer)
-                guard let buffer = self.buffer.getSlice(at: offset, length: count) else {
-                    fatalError("invalid offset")
-                }
-                return buffer
-            } else {
-                // the buffer is to somewhere else, like a statically allocated string
-                // let's create a new buffer
-                let bytes = UnsafeRawBufferPointer(
-                    start: UnsafeRawPointer(pointer),
-                    count: count
-                )
-                var buffer = ByteBufferAllocator().buffer(capacity: bytes.count)
-                buffer.writeBytes(bytes)
-                return buffer
-            }
-        }
-    }
-    
     public func execute(_ string: String) throws {
-        try self.execute([UInt8](string.utf8))
+        try execute(ByteBuffer(string: string))
     }
 
-    public func execute<Data>(_ data: Data) throws
-        where Data: DataProtocol
-    {
-        var buffer = ByteBufferAllocator().buffer(capacity: data.count)
-        buffer.writeBytes(data)
-        return try self.execute(buffer)
+    public func execute(_ bytes: [UInt8]) throws {
+        try execute(ByteBuffer(bytes: bytes))
     }
 
     public func execute(_ buffer: ByteBuffer) throws {
-        let result = buffer.withUnsafeReadableBytes { (unsafeBuffer: UnsafeRawBufferPointer) -> Int in
-            var context = Context(parser: self, unsafeBuffer: unsafeBuffer, buffer: buffer)
-            return withUnsafeMutablePointer(to: &context) { (contextPointer: UnsafeMutablePointer<Context>) -> Int in
-                self.parser.data = .init(contextPointer)
-                return multipartparser_execute(&self.parser, &self.callbacks, unsafeBuffer.baseAddress?.assumingMemoryBound(to: Int8.self), unsafeBuffer.count)
+        self.buffer = buffer
+        defer { self.buffer = nil }
+
+        self.bufferForSlicing = buffer
+        defer { self.bufferForSlicing = nil }
+
+        try execute()
+    }
+
+    private func execute() throws {
+        while buffer.readableBytes > 0 {
+            switch state {
+            case let .preamble(boundaryMatchIndex):
+                state = parsePreamble(boundaryMatchIndex: boundaryMatchIndex)
+            case let .headers(headerState):
+                state = try parseHeaders(headerState: headerState)
+            case let .body(lowerbound, boundaryMatchIndex):
+                state = try parseBody(lowerbound, boundaryMatchIndex: boundaryMatchIndex)
+            case .epilogue:
+                // ignore any data in epilogue
+                return
             }
         }
-        guard result == buffer.readableBytes else {
-            throw MultipartError.invalidFormat
+    }
+
+    private func readByte() -> UInt8? { buffer.readInteger() }
+
+    private func parsePreamble(boundaryMatchIndex: Int) -> State {
+        var boundaryMatchIndex = boundaryMatchIndex
+
+        while boundaryMatchIndex < boundaryLength, let byte = readByte() {
+            // (continues to) match boundary: move on to next index
+
+            if boundaryMatchIndex == 0, byte == boundary[2] {
+                boundaryMatchIndex = 3
+            } else if byte == boundary[boundaryMatchIndex] {
+                boundaryMatchIndex = boundaryMatchIndex + 1
+            // stopped matching boundary but matches with start of boundary: restart at 1
+            } else if boundaryMatchIndex > 0, byte == boundary[0] {
+                boundaryMatchIndex = 1
+            // no match at either current position or start of boundary: restart at 0
+            } else {
+                boundaryMatchIndex = 0
+            }
+        }
+
+        if boundaryMatchIndex >= boundaryLength {
+            return .headers()
+        } else {
+            return .preamble(boundaryMatchIndex: boundaryMatchIndex)
         }
     }
 
-    // MARK: Private
+    private func parseCRLF(_ crlf: CRLF) throws -> CRLF? {
+        var crlf = crlf
 
-    private func handleHeaderField(_ new: String) {
-        switch self.headerState {
-        case .ready:
-            self.headerState = .field(field: new)
-        case .field(let existing):
-            self.headerState = .field(field: existing + new)
-        case .value(let field, let value):
-            self.onHeader(field, value)
-            self.headerState = .field(field: new)
+        while let byte = readByte() {
+            switch (crlf, byte) {
+            case (.cr, .cr):
+                crlf = .lf
+            case (.lf, .lf):
+                return nil
+            default:
+                throw Error.syntax
+            }
         }
+
+        return crlf
     }
 
-    private func handleHeaderValue(_ new: String) {
-        switch self.headerState {
-        case .field(let name):
-            self.headerState = .value(field: name, value: new)
-        case .value(let name, let existing):
-            self.headerState = .value(field: name, value: existing + new)
-        default: fatalError()
+    private func parseHeaders(headerState: HeaderState) throws -> State {
+        var headerState = headerState
+
+        while buffer.readableBytes > 0 {
+            switch headerState {
+            case let .preHeaders(crlf):
+                headerState = try parseCRLF(crlf).map(HeaderState.preHeaders) ?? .headerName()
+            case let .headerName(name):
+                headerState = try parseHeaderName(name: name)
+            case let .headerValue(value, name):
+                headerState = try parseHeaderValue(value, name: name)
+            case let .postHeaderValue(value, name):
+                guard readByte() == .lf else {
+                    throw Error.syntax
+                }
+                onHeader(String(bytes: name, encoding: .ascii) ?? "", String(bytes: value, encoding: .ascii) ?? "")
+                headerState = .headerName([])
+            case .postHeaders:
+                guard readByte() == .lf else {
+                    throw Error.syntax
+                }
+                return .body(lowerBound: buffer.readableBytes > 0 ? buffer.readerIndex : 0)
+            }
         }
+
+        return .headers(state: headerState)
     }
 
-    private func handleHeadersComplete() {
-        switch self.headerState {
-        case .value(let field, let value):
-            self.onHeader(field, value)
-            self.headerState = .ready
-        case .ready: break
-        default: fatalError()
+    private func parseHeaderName(name: [UInt8]) throws -> HeaderState {
+        var name = name
+
+        while let byte = readByte() {
+            switch byte {
+            case .colon:
+                return .headerValue(name: name)
+            case .cr where name.isEmpty:
+                return .postHeaders
+            // TODO: deal with invalid characters
+            default:
+                name.append(byte)
+            }
         }
-    }
-    
-    private func handleData(_ data: inout ByteBuffer) {
-        self.onBody(&data)
+
+        return .headerName(name)
     }
 
-    private func handlePartEnd() {
-        self.onPartComplete()
+    private func parseHeaderValue(_ value: [UInt8], name: [UInt8]) throws -> HeaderState {
+        var value = value
+
+        while let byte = readByte() {
+            switch byte {
+            case .cr:
+                return .postHeaderValue(value, name: name)
+            case .space, .tab:
+                if value.isEmpty {
+                    continue
+                }
+                fallthrough
+            // TODO: deal with invalid characters
+            default:
+                value.append(byte)
+            }
+        }
+
+        return .headerValue(value, name: name)
+    }
+
+    private func parseBody(_ lowerBound: Int, boundaryMatchIndex: Int) throws -> State {
+        var lowerBound = lowerBound
+        var boundaryMatchIndex = boundaryMatchIndex
+
+        func sendBody(shorten: Bool = false) {
+            guard boundaryMatchIndex == 0 else {
+                return
+            }
+            let length = buffer.readerIndex - lowerBound - (shorten ? 1 : 0)
+            if length > 0, var slice = bufferForSlicing.getSlice(at: lowerBound, length: length) {
+                onBody(&slice)
+            }
+        }
+        defer {
+            sendBody()
+        }
+
+        while true {
+            guard let byte = readByte() else {
+                return .body(lowerBound: 0, boundaryMatchIndex: boundaryMatchIndex)
+            }
+
+            guard boundaryMatchIndex < boundaryLength else {
+                lowerBound = buffer.readerIndex
+                onPartComplete()
+                switch byte {
+                case .cr:
+                    return .headers(state: .preHeaders(.lf))
+                case .hyphen:
+                    return .epilogue
+                default:
+                    throw Error.syntax
+                }
+            }
+
+            switch (boundaryMatchIndex, byte == boundary[boundaryMatchIndex]) {
+            case (0, true):
+                sendBody(shorten: true)
+                lowerBound = buffer.readerIndex
+                fallthrough
+            case (_, true):
+                boundaryMatchIndex += 1
+            case (1..., false):
+                var a = ByteBuffer(bytes: boundary[0..<boundaryMatchIndex])
+                onBody(&a)
+                lowerBound = buffer.readerIndex - 1
+                fallthrough
+            default:
+                boundaryMatchIndex = 0
+            }
+        }
     }
 }
 
-private extension String {
-    init(cPointer: UnsafePointer<Int8>?, count: Int) {
-        let pointer = UnsafeRawPointer(cPointer)?.assumingMemoryBound(to: UInt8.self)
-        self.init(decoding: UnsafeBufferPointer(start: pointer, count: count), as: UTF8.self)
-    }
+private extension UInt8 {
+    static let colon: UInt8 = 58
+    static let lf: UInt8 = 10
+    static let cr: UInt8 = 13
+    static let hyphen: UInt8 = 45
+    static let space: UInt8 = 9
+    static let tab: UInt8 = 32
 }

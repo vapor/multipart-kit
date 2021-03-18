@@ -175,7 +175,6 @@ class MultipartTests: XCTestCase {
         let foo = try FormDataDecoder().decode(Foo.self, from: data, boundary: "12345")
         XCTAssertEqual(foo.sometext, "some text sent via post...")
         XCTAssert(foo.files.contains("picture.jpg"))
-        print(foo.files)
     }
 
     func testFormDataDecoderW3Streaming() throws {
@@ -208,7 +207,7 @@ class MultipartTests: XCTestCase {
             ),
             MultipartPart(
                 headers: ["Content-Disposition": "form-data; name=\"files\"", "Content-Type": "multipart/mixed; boundary=abcde"],
-                body: "--abcde\r\nContent-Disposition: file; file=\"picture.jpg\"\r\n\r\ncontent of jpg...abcde\r\nContent-Disposition: file; file=\"test.py\"\r\n\r\ncontent of test.py file ....abcde--"
+                body: "--abcde\r\nContent-Disposition: file; file=\"picture.jpg\"\r\n\r\ncontent of jpg...\r\n--abcde\r\nContent-Disposition: file; file=\"test.py\"\r\n\r\ncontent of test.py file ....\r\n--abcde--"
             )
         ]
 
@@ -371,6 +370,6 @@ private extension Collection {
 
 extension ByteBuffer {
     var string: String {
-        return String(decoding: self.readableBytesView, as: UTF8.self)
+        String(buffer: self)
     }
 }
