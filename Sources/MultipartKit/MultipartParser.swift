@@ -46,7 +46,7 @@ public final class MultipartParser {
     private var buffer: ByteBuffer!
     private var sliceBuffer: ByteBuffer!
 
-    /// Create a new parser
+    /// Creates a new `MultipartParser`.
     /// - Parameter boundary: boundary separating parts. Must not be empty nor longer than 70 characters according to rfc1341 but we don't check for the latter.
     public init(boundary: String) {
         precondition(!boundary.isEmpty)
@@ -252,8 +252,8 @@ public final class MultipartParser {
             case (_, true):
                 boundaryMatchIndex += 1
             case (1..., false):
-                var a = ByteBuffer(bytes: boundary[0..<boundaryMatchIndex])
-                onBody(&a)
+                var boundaryBuffer = ByteBuffer(bytes: boundary[0..<boundaryMatchIndex])
+                onBody(&boundaryBuffer)
                 lowerBound = buffer.readerIndex - 1
                 fallthrough
             default:
