@@ -353,6 +353,27 @@ class MultipartTests: XCTestCase {
             XCTAssertEqual(array, "relative")
         }
     }
+
+    func testAllowedHeaderFieldNameCharacters() {
+        let disallowedASCIICodes: [Int] = (0...127).compactMap {
+            let parser = MultipartParser(boundary: "-")
+            let body: String = """
+            ---\r\n\
+            a\(Unicode.Scalar($0)!): b\r\n\
+            \r\n\
+            c\r\n\
+            ---\r\n
+            """
+            do {
+                try parser.execute(body)
+                return nil
+            } catch {
+                return $0
+            }
+        }
+        let expectedDisallowedASCIICodes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34, 40, 41, 44, 47, 59, 60, 61, 62, 63, 64, 91, 92, 93, 123, 125, 127]
+        XCTAssertEqual(disallowedASCIICodes, expectedDisallowedASCIICodes)
+    }
 }
 
 // https://stackoverflow.com/a/54524110/1041105

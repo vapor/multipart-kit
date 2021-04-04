@@ -177,7 +177,7 @@ public final class MultipartParser {
                 return .headerValue(name: name)
             case .cr where name.isEmpty:
                 return .postHeaders
-            case _ where byte.isValidHeaderCharacter:
+            case _ where byte.isAllowedHeaderFieldNameCharacter:
                 name.append(byte)
             default:
                 throw Error.syntax
@@ -272,18 +272,20 @@ private extension UInt8 {
     static let tab: UInt8 = 32
 
     /*
-        * field-name    = token
-        * token         = 1*<any CHAR except CTLs or tspecials>
-        * CTL           = <any US-ASCII control character (octets 0 - 31) and DEL (127)>
-        * tspecials     = "(" | ")" | "<" | ">" | "@"
-        *               | "," | ";" | ":" | "\" | DQUOTE
-        *               | "/" | "[" | "]" | "?" | "="
-        *               | "{" | "}" | SP | HT
-        * DQUOTE        = <US-ASCII double-quote mark (34)>
-        * SP            = <US-ASCII SP, space (32)>
-        * HT            = <US-ASCII HT, horizontal-tab (9)>
+     See https://tools.ietf.org/html/rfc1341#page-6 and https://tools.ietf.org/html/rfc822#section-3.2
+
+        field-name  = token
+        token       = 1*<any CHAR except CTLs or tspecials>
+        CTL         = <any US-ASCII control character (octets 0 - 31) and DEL (127)>
+        tspecials   = "(" | ")" | "<" | ">" | "@"
+                    | "," | ";" | ":" | "\" | DQUOTE
+                    | "/" | "[" | "]" | "?" | "="
+                    | "{" | "}" | SP | HT
+        DQUOTE      = <US-ASCII double-quote mark (34)>
+        SP          = <US-ASCII SP, space (32)>
+        HT          = <US-ASCII HT, horizontal-tab (9)>
      */
-    private static let validHeaderCharacters: [Bool] = [
+    private static let allowedHeaderFieldNameCharacterFlags: [Bool] = [
         //  0 nul   1 soh   2 stx   3 etx   4 eot   5 enq   6 ack   7 bel
             false,  false,  false,  false,  false,  false,  false,  false,
         //  8 bs    9 ht    10 nl   11 vt   12 np   13 cr   14 so   15 si
@@ -318,7 +320,7 @@ private extension UInt8 {
             true,   true,   true,   false,  true,   false,  true,   false
     ]
 
-    var isValidHeaderCharacter: Bool {
-        Self.validHeaderCharacters[Int(self)]
+    var isAllowedHeaderFieldNameCharacter: Bool {
+        Self.allowedHeaderFieldNameCharacterFlags[Int(self)]
     }
 }
