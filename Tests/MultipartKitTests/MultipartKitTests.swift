@@ -19,18 +19,18 @@ class MultipartTests: XCTestCase {
 
     func testBasics() throws {
         let data = """
-        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r\n\
-        Content-Disposition: form-data; name="test"\r\n\
-        \r\n\
-        eqw-dd-sa----123;1[234\r\n\
-        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r\n\
-        Content-Disposition: form-data; name="named"; filename=""\r\n\
-        \r\n\
-        \(named)\r\n\
-        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r\n\
-        Content-Disposition: form-data; name="multinamed[]"; filename=""\r\n\
-        \r\n\
-        \(multinamed)\r\n\
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+        Content-Disposition: form-data; name="test"\r
+        \r
+        eqw-dd-sa----123;1[234\r
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+        Content-Disposition: form-data; name="named"; filename=""\r
+        \r
+        \(named)\r
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+        Content-Disposition: form-data; name="multinamed[]"; filename=""\r
+        \r
+        \(multinamed)\r
         ------WebKitFormBoundaryPVOZifB9OqEwP2fn--\r\n
         """
         let parser = MultipartParser(boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
@@ -64,18 +64,18 @@ class MultipartTests: XCTestCase {
 
     func testMultifile() throws {
         let data = """
-        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r\n\
-        Content-Disposition: form-data; name="test"\r\n\
-        \r\n\
-        eqw-dd-sa----123;1[234\r\n\
-        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r\n\
-        Content-Disposition: form-data; name="multinamed[]"; filename=""\r\n\
-        \r\n\
-        \(named)\r\n\
-        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r\n\
-        Content-Disposition: form-data; name="multinamed[]"; filename=""\r\n\
-        \r\n\
-        \(multinamed)\r\n\
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+        Content-Disposition: form-data; name="test"\r
+        \r
+        eqw-dd-sa----123;1[234\r
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+        Content-Disposition: form-data; name="multinamed[]"; filename=""\r
+        \r
+        \(named)\r
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+        Content-Disposition: form-data; name="multinamed[]"; filename=""\r
+        \r
+        \(multinamed)\r
         ------WebKitFormBoundaryPVOZifB9OqEwP2fn--\r\n
         """
         let parser = MultipartParser(boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
@@ -112,34 +112,34 @@ class MultipartTests: XCTestCase {
         let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3], bool: true)
         let data = try FormDataEncoder().encode(a, boundary: "hello")
         XCTAssertEqual(data, """
-        --hello\r\n\
-        Content-Disposition: form-data; name="string"\r\n\
-        \r\n\
-        a\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="int"\r\n\
-        \r\n\
-        42\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="double"\r\n\
-        \r\n\
-        3.14\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="array[]"\r\n\
-        \r\n\
-        1\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="array[]"\r\n\
-        \r\n\
-        2\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="array[]"\r\n\
-        \r\n\
-        3\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="bool"\r\n\
-        \r\n\
-        true\r\n\
+        --hello\r
+        Content-Disposition: form-data; name="string"\r
+        \r
+        a\r
+        --hello\r
+        Content-Disposition: form-data; name="int"\r
+        \r
+        42\r
+        --hello\r
+        Content-Disposition: form-data; name="double"\r
+        \r
+        3.14\r
+        --hello\r
+        Content-Disposition: form-data; name="array[]"\r
+        \r
+        1\r
+        --hello\r
+        Content-Disposition: form-data; name="array[]"\r
+        \r
+        2\r
+        --hello\r
+        Content-Disposition: form-data; name="array[]"\r
+        \r
+        3\r
+        --hello\r
+        Content-Disposition: form-data; name="bool"\r
+        \r
+        true\r
         --hello--\r\n
         """)
     }
@@ -147,23 +147,23 @@ class MultipartTests: XCTestCase {
     func testFormDataDecoderW3() throws {
         /// Content-Type: multipart/form-data; boundary=12345
         let data = """
-        --12345\r\n\
-        Content-Disposition: form-data; name="sometext"\r\n\
-        \r\n\
-        some text sent via post...\r\n\
-        --12345\r\n\
-        Content-Disposition: form-data; name="files"\r\n\
-        Content-Type: multipart/mixed; boundary=abcde\r\n\
-        \r\n\
-        --abcde\r\n\
-        Content-Disposition: file; file="picture.jpg"\r\n\
-        \r\n\
-        content of jpg...\r\n\
-        --abcde\r\n\
-        Content-Disposition: file; file="test.py"\r\n\
-        \r\n\
-        content of test.py file ....\r\n\
-        --abcde--\r\n\
+        --12345\r
+        Content-Disposition: form-data; name="sometext"\r
+        \r
+        some text sent via post...\r
+        --12345\r
+        Content-Disposition: form-data; name="files"\r
+        Content-Type: multipart/mixed; boundary=abcde\r
+        \r
+        --abcde\r
+        Content-Disposition: file; file="picture.jpg"\r
+        \r
+        content of jpg...\r
+        --abcde\r
+        Content-Disposition: file; file="test.py"\r
+        \r
+        content of test.py file ....\r
+        --abcde--\r
         --12345--\r\n
         """
 
@@ -180,23 +180,23 @@ class MultipartTests: XCTestCase {
     func testFormDataDecoderW3Streaming() throws {
         /// Content-Type: multipart/form-data; boundary=12345
         let data = """
-        --12345\r\n\
-        Content-Disposition: form-data; name="sometext"\r\n\
-        \r\n\
-        some text sent via post...\r\n\
-        --12345\r\n\
-        Content-Disposition: form-data; name="files"\r\n\
-        Content-Type: multipart/mixed; boundary=abcde\r\n\
-        \r\n\
-        --abcde\r\n\
-        Content-Disposition: file; file="picture.jpg"\r\n\
-        \r\n\
-        content of jpg...\r\n\
-        --abcde\r\n\
-        Content-Disposition: file; file="test.py"\r\n\
-        \r\n\
-        content of test.py file ....\r\n\
-        --abcde--\r\n\
+        --12345\r
+        Content-Disposition: form-data; name="sometext"\r
+        \r
+        some text sent via post...\r
+        --12345\r
+        Content-Disposition: form-data; name="files"\r
+        Content-Type: multipart/mixed; boundary=abcde\r
+        \r
+        --abcde\r
+        Content-Disposition: file; file="picture.jpg"\r
+        \r
+        content of jpg...\r
+        --abcde\r
+        Content-Disposition: file; file="test.py"\r
+        \r
+        content of test.py file ....\r
+        --abcde--\r
         --12345--\r\n
         """
 
@@ -247,34 +247,34 @@ class MultipartTests: XCTestCase {
     func testFormDataDecoderMultiple() throws {
         /// Content-Type: multipart/form-data; boundary=12345
         let data = """
-        --hello\r\n\
-        Content-Disposition: form-data; name="string"\r\n\
-        \r\n\
-        string\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="int"\r\n\
-        \r\n\
-        42\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="double"\r\n\
-        \r\n\
-        3.14\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="array[]"\r\n\
-        \r\n\
-        1\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="array[]"\r\n\
-        \r\n\
-        2\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="array[]"\r\n\
-        \r\n\
-        3\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="bool"\r\n\
-        \r\n\
-        true\r\n\
+        --hello\r
+        Content-Disposition: form-data; name="string"\r
+        \r
+        string\r
+        --hello\r
+        Content-Disposition: form-data; name="int"\r
+        \r
+        42\r
+        --hello\r
+        Content-Disposition: form-data; name="double"\r
+        \r
+        3.14\r
+        --hello\r
+        Content-Disposition: form-data; name="array[]"\r
+        \r
+        1\r
+        --hello\r
+        Content-Disposition: form-data; name="array[]"\r
+        \r
+        2\r
+        --hello\r
+        Content-Disposition: form-data; name="array[]"\r
+        \r
+        3\r
+        --hello\r
+        Content-Disposition: form-data; name="bool"\r
+        \r
+        true\r
         --hello--\r\n
         """
 
@@ -298,9 +298,9 @@ class MultipartTests: XCTestCase {
         do {
             /// Content-Type: multipart/form-data; boundary=123
             let data = """
-            --123\r\n\
-            \r\n\
-            foo\r\n\
+            --123\r
+            \r
+            foo\r
             --123--\r\n
             """
             let parser = MultipartParser(boundary: "123")
@@ -333,10 +333,10 @@ class MultipartTests: XCTestCase {
     func testFormDataDecoderMultipleWithMissingData() {
         /// Content-Type: multipart/form-data; boundary=hello
         let data = """
-        --hello\r\n\
-        Content-Disposition: form-data; name="link"\r\n\
-        \r\n\
-        https://google.com\r\n\
+        --hello\r
+        Content-Disposition: form-data; name="link"\r
+        \r
+        https://google.com\r
         --hello--\r\n
         """
 
@@ -358,10 +358,10 @@ class MultipartTests: XCTestCase {
         let disallowedASCIICodes: [Int] = (0...127).compactMap {
             let parser = MultipartParser(boundary: "-")
             let body: String = """
-            ---\r\n\
-            a\(Unicode.Scalar($0)!): b\r\n\
-            \r\n\
-            c\r\n\
+            ---\r
+            a\(Unicode.Scalar($0)!): b\r
+            \r
+            c\r
             ---\r\n
             """
             do {
