@@ -255,8 +255,8 @@ public final class MultipartParser {
                 var boundaryBuffer = ByteBuffer(bytes: boundary[0..<boundaryMatchIndex])
                 onBody(&boundaryBuffer)
                 lowerBound = buffer.readerIndex - 1
-                fallthrough
-            default:
+                boundaryMatchIndex = byte == boundary[0] ? 1 : 0
+            case (_, false):
                 boundaryMatchIndex = 0
             }
         }
