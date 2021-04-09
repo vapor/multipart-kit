@@ -6,6 +6,8 @@ class MultipartTests: XCTestCase {
     test123
     aijdisadi>SDASD<a|
 
+    \r\n--
+
     """
 
     let multinamed = """
