@@ -297,6 +297,7 @@ reexecute:
                     parser->index++;
                     break;
                 }
+                CALLBACK_DATA(data, "\r\n--", 4);
                 CALLBACK_DATA(data, parser->boundary, parser->index);
                 parser->state = s_data;
                 goto reexecute;
