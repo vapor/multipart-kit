@@ -210,7 +210,7 @@ class MultipartTests: XCTestCase {
             ),
             MultipartPart(
                 headers: ["Content-Disposition": "form-data; name=\"files\"", "Content-Type": "multipart/mixed; boundary=abcde"],
-                body: "--abcde\r\nContent-Disposition: file; file=\"picture.jpg\"\r\n\r\ncontent of jpg...abcde\r\nContent-Disposition: file; file=\"test.py\"\r\n\r\ncontent of test.py file ....abcde--"
+                body: "--abcde\r\nContent-Disposition: file; file=\"picture.jpg\"\r\n\r\ncontent of jpg...\r\n--abcde\r\nContent-Disposition: file; file=\"test.py\"\r\n\r\ncontent of test.py file ....\r\n--abcde--"
             )
         ]
 
