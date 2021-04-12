@@ -32,7 +32,7 @@ public struct FormDataEncoder {
     {
         let encoder = _Encoder(codingPath: [])
         try encodable.encode(to: encoder)
-        return try MultipartSerializer().serialize(parts: encoder.getData().namedParts(), boundary: boundary, into: &buffer)
+        try MultipartSerializer().serialize(parts: encoder.getData().namedParts(), boundary: boundary, into: &buffer)
     }
 }
 
