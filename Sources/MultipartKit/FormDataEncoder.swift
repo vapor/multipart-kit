@@ -1,7 +1,10 @@
 import struct NIO.ByteBufferAllocator
 
-// MARK: NewFormDataEncoder
-
+/// Encodes `Encodable` items to `multipart/form-data` encoded `Data`.
+///
+/// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
+///
+/// Seealso `MultipartParser` for more information about the `multipart` encoding.
 public struct FormDataEncoder {
     /// Creates a new `FormDataEncoder`.
     public init() { }
@@ -33,9 +36,11 @@ public struct FormDataEncoder {
     }
 }
 
+// MARK: - Private
+
 // MARK: MultipartFormData
 
-enum MultipartFormData {
+private enum MultipartFormData {
     case single(MultipartPart)
     case array([MultipartFormData])
     case keyed([(String, MultipartFormData)])
@@ -44,7 +49,7 @@ enum MultipartFormData {
         Self.namedParts(from: self)
     }
 
-    private static func namedParts(from data: MultipartFormData, path: String? = nil) -> [MultipartPart] {
+    static func namedParts(from data: MultipartFormData, path: String? = nil) -> [MultipartPart] {
         switch data {
         case .array(let array):
             return array.flatMap { namedParts(from: $0, path: path.map { "\($0)[]" }) }
@@ -107,7 +112,7 @@ extension _Encoder: _Container {
 
 // MARK: _Encoder.KeyedContainer
 
-private extension _Encoder {
+extension _Encoder {
     final class KeyedContainer<Key> where Key: CodingKey {
         var codingPath: [CodingKey]
         var data: [(String, DataOrContainer)] = []
@@ -183,7 +188,7 @@ private enum DataOrContainer {
 
 // MARK: _Encoder.UnkeyedContainer
 
-private extension _Encoder {
+extension _Encoder {
     final class UnkeyedContainer {
         var codingPath: [CodingKey]
         var data: [DataOrContainer] = []
@@ -242,7 +247,7 @@ extension _Encoder.UnkeyedContainer: _Container {
 
 // MARK: _Encoder.SingleValueContainer
 
-private extension _Encoder {
+extension _Encoder {
     final class SingleValueContainer {
         var codingPath: [CodingKey]
         var data: MultipartFormData?
