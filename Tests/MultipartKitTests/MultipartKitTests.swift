@@ -19,40 +19,25 @@ class MultipartTests: XCTestCase {
 
     func testBasics() throws {
         let data = """
-        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r\n\
-        Content-Disposition: form-data; name="test"\r\n\
-        \r\n\
-        eqw-dd-sa----123;1[234\r\n\
-        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r\n\
-        Content-Disposition: form-data; name="named"; filename=""\r\n\
-        \r\n\
-        \(named)\r\n\
-        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r\n\
-        Content-Disposition: form-data; name="multinamed[]"; filename=""\r\n\
-        \r\n\
-        \(multinamed)\r\n\
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+        Content-Disposition: form-data; name="test"\r
+        \r
+        eqw-dd-sa----123;1[234\r
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+        Content-Disposition: form-data; name="named"; filename=""\r
+        \r
+        \(named)\r
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+        Content-Disposition: form-data; name="multinamed[]"; filename=""\r
+        \r
+        \(multinamed)\r
         ------WebKitFormBoundaryPVOZifB9OqEwP2fn--\r\n
         """
-        let parser = MultipartParser(boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
 
-        var parts: [MultipartPart] = []
-        var headers: HTTPHeaders = [:]
-        var body: String = ""
+        let parts = try MultipartParserOutputReceiver
+            .collectOutput(data: data, boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
+            .parts
 
-        parser.onHeader = { (field, value) in
-            headers.replaceOrAdd(name: field, value: value)
-        }
-        parser.onBody = { new in
-            body += new.string
-        }
-        parser.onPartComplete = {
-            let part = MultipartPart(headers: headers, body: body)
-            headers = [:]
-            body = ""
-            parts.append(part)
-        }
-
-        try parser.execute(data)
         XCTAssertEqual(parts.count, 3)
         XCTAssertEqual(parts.firstPart(named: "test")?.body.string, "eqw-dd-sa----123;1[234")
         XCTAssertEqual(parts.firstPart(named: "named")?.body.string, named)
@@ -64,38 +49,25 @@ class MultipartTests: XCTestCase {
 
     func testMultifile() throws {
         let data = """
-        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r\n\
-        Content-Disposition: form-data; name="test"\r\n\
-        \r\n\
-        eqw-dd-sa----123;1[234\r\n\
-        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r\n\
-        Content-Disposition: form-data; name="multinamed[]"; filename=""\r\n\
-        \r\n\
-        \(named)\r\n\
-        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r\n\
-        Content-Disposition: form-data; name="multinamed[]"; filename=""\r\n\
-        \r\n\
-        \(multinamed)\r\n\
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+        Content-Disposition: form-data; name="test"\r
+        \r
+        eqw-dd-sa----123;1[234\r
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+        Content-Disposition: form-data; name="multinamed[]"; filename=""\r
+        \r
+        \(named)\r
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+        Content-Disposition: form-data; name="multinamed[]"; filename=""\r
+        \r
+        \(multinamed)\r
         ------WebKitFormBoundaryPVOZifB9OqEwP2fn--\r\n
         """
-        let parser = MultipartParser(boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
-        var parts: [MultipartPart] = []
-        var headers: HTTPHeaders = [:]
-        var body: String = ""
 
-        parser.onHeader = { (field, value) in
-            headers.replaceOrAdd(name: field, value: value)
-        }
-        parser.onBody = { new in
-            body += new.string
-        }
-        parser.onPartComplete = {
-            let part = MultipartPart(headers: headers, body: body)
-            headers = [:]
-            body = ""
-            parts.append(part)
-        }
-        try parser.execute(data)
+        let parts = try MultipartParserOutputReceiver
+            .collectOutput(data: data, boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
+            .parts
+
         let file = parts.firstPart(named: "multinamed[]")?.body
         XCTAssertEqual(file?.string, named)
         try XCTAssertEqual(MultipartSerializer().serialize(parts: parts, boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn"), data)
@@ -112,34 +84,34 @@ class MultipartTests: XCTestCase {
         let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3], bool: true)
         let data = try FormDataEncoder().encode(a, boundary: "hello")
         XCTAssertEqual(data, """
-        --hello\r\n\
-        Content-Disposition: form-data; name="string"\r\n\
-        \r\n\
-        a\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="int"\r\n\
-        \r\n\
-        42\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="double"\r\n\
-        \r\n\
-        3.14\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="array[]"\r\n\
-        \r\n\
-        1\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="array[]"\r\n\
-        \r\n\
-        2\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="array[]"\r\n\
-        \r\n\
-        3\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="bool"\r\n\
-        \r\n\
-        true\r\n\
+        --hello\r
+        Content-Disposition: form-data; name="string"\r
+        \r
+        a\r
+        --hello\r
+        Content-Disposition: form-data; name="int"\r
+        \r
+        42\r
+        --hello\r
+        Content-Disposition: form-data; name="double"\r
+        \r
+        3.14\r
+        --hello\r
+        Content-Disposition: form-data; name="array[]"\r
+        \r
+        1\r
+        --hello\r
+        Content-Disposition: form-data; name="array[]"\r
+        \r
+        2\r
+        --hello\r
+        Content-Disposition: form-data; name="array[]"\r
+        \r
+        3\r
+        --hello\r
+        Content-Disposition: form-data; name="bool"\r
+        \r
+        true\r
         --hello--\r\n
         """)
     }
@@ -147,23 +119,23 @@ class MultipartTests: XCTestCase {
     func testFormDataDecoderW3() throws {
         /// Content-Type: multipart/form-data; boundary=12345
         let data = """
-        --12345\r\n\
-        Content-Disposition: form-data; name="sometext"\r\n\
-        \r\n\
-        some text sent via post...\r\n\
-        --12345\r\n\
-        Content-Disposition: form-data; name="files"\r\n\
-        Content-Type: multipart/mixed; boundary=abcde\r\n\
-        \r\n\
-        --abcde\r\n\
-        Content-Disposition: file; file="picture.jpg"\r\n\
-        \r\n\
-        content of jpg...\r\n\
-        --abcde\r\n\
-        Content-Disposition: file; file="test.py"\r\n\
-        \r\n\
-        content of test.py file ....\r\n\
-        --abcde--\r\n\
+        --12345\r
+        Content-Disposition: form-data; name="sometext"\r
+        \r
+        some text sent via post...\r
+        --12345\r
+        Content-Disposition: form-data; name="files"\r
+        Content-Type: multipart/mixed; boundary=abcde\r
+        \r
+        --abcde\r
+        Content-Disposition: file; file="picture.jpg"\r
+        \r
+        content of jpg...\r
+        --abcde\r
+        Content-Disposition: file; file="test.py"\r
+        \r
+        content of test.py file ....\r
+        --abcde--\r
         --12345--\r\n
         """
 
@@ -175,29 +147,28 @@ class MultipartTests: XCTestCase {
         let foo = try FormDataDecoder().decode(Foo.self, from: data, boundary: "12345")
         XCTAssertEqual(foo.sometext, "some text sent via post...")
         XCTAssert(foo.files.contains("picture.jpg"))
-        print(foo.files)
     }
 
     func testFormDataDecoderW3Streaming() throws {
         /// Content-Type: multipart/form-data; boundary=12345
         let data = """
-        --12345\r\n\
-        Content-Disposition: form-data; name="sometext"\r\n\
-        \r\n\
-        some text sent via post...\r\n\
-        --12345\r\n\
-        Content-Disposition: form-data; name="files"\r\n\
-        Content-Type: multipart/mixed; boundary=abcde\r\n\
-        \r\n\
-        --abcde\r\n\
-        Content-Disposition: file; file="picture.jpg"\r\n\
-        \r\n\
-        content of jpg...\r\n\
-        --abcde\r\n\
-        Content-Disposition: file; file="test.py"\r\n\
-        \r\n\
-        content of test.py file ....\r\n\
-        --abcde--\r\n\
+        --12345\r
+        Content-Disposition: form-data; name="sometext"\r
+        \r
+        some text sent via post...\r
+        --12345\r
+        Content-Disposition: form-data; name="files"\r
+        Content-Type: multipart/mixed; boundary=abcde\r
+        \r
+        --abcde\r
+        Content-Disposition: file; file="picture.jpg"\r
+        \r
+        content of jpg...\r
+        --abcde\r
+        Content-Disposition: file; file="test.py"\r
+        \r
+        content of test.py file ....\r
+        --abcde--\r
         --12345--\r\n
         """
 
@@ -208,7 +179,7 @@ class MultipartTests: XCTestCase {
             ),
             MultipartPart(
                 headers: ["Content-Disposition": "form-data; name=\"files\"", "Content-Type": "multipart/mixed; boundary=abcde"],
-                body: "--abcde\r\nContent-Disposition: file; file=\"picture.jpg\"\r\n\r\ncontent of jpg...abcde\r\nContent-Disposition: file; file=\"test.py\"\r\n\r\ncontent of test.py file ....abcde--"
+                body: "--abcde\r\nContent-Disposition: file; file=\"picture.jpg\"\r\n\r\ncontent of jpg...\r\n--abcde\r\nContent-Disposition: file; file=\"test.py\"\r\n\r\ncontent of test.py file ....\r\n--abcde--"
             )
         ]
 
@@ -219,63 +190,48 @@ class MultipartTests: XCTestCase {
 
         for i in 1..<data.count {
             let parser = MultipartParser(boundary: "12345")
-
-            var parts: [MultipartPart] = []
-            var headers: HTTPHeaders = [:]
-            var body: String = ""
-
-            parser.onHeader = { (field, value) in
-                headers.replaceOrAdd(name: field, value: value)
-            }
-            parser.onBody = { new in
-                body += new.string
-            }
-            parser.onPartComplete = {
-                let part = MultipartPart(headers: headers, body: body)
-                headers = [:]
-                body = ""
-                parts.append(part)
-            }
+            let output = MultipartParserOutputReceiver()
+            output.setUp(with: parser)
 
             for chunk in data.chunked(by: i) {
                 try parser.execute(.init(chunk))
             }
 
-            XCTAssertEqual(parts, expected)
+            XCTAssertEqual(output.parts, expected)
         }
     }
 
     func testFormDataDecoderMultiple() throws {
         /// Content-Type: multipart/form-data; boundary=12345
         let data = """
-        --hello\r\n\
-        Content-Disposition: form-data; name="string"\r\n\
-        \r\n\
-        string\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="int"\r\n\
-        \r\n\
-        42\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="double"\r\n\
-        \r\n\
-        3.14\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="array[]"\r\n\
-        \r\n\
-        1\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="array[]"\r\n\
-        \r\n\
-        2\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="array[]"\r\n\
-        \r\n\
-        3\r\n\
-        --hello\r\n\
-        Content-Disposition: form-data; name="bool"\r\n\
-        \r\n\
-        true\r\n\
+        --hello\r
+        Content-Disposition: form-data; name="string"\r
+        \r
+        string\r
+        --hello\r
+        Content-Disposition: form-data; name="int"\r
+        \r
+        42\r
+        --hello\r
+        Content-Disposition: form-data; name="double"\r
+        \r
+        3.14\r
+        --hello\r
+        Content-Disposition: form-data; name="array[]"\r
+        \r
+        1\r
+        --hello\r
+        Content-Disposition: form-data; name="array[]"\r
+        \r
+        2\r
+        --hello\r
+        Content-Disposition: form-data; name="array[]"\r
+        \r
+        3\r
+        --hello\r
+        Content-Disposition: form-data; name="bool"\r
+        \r
+        true\r
         --hello--\r\n
         """
 
@@ -299,29 +255,15 @@ class MultipartTests: XCTestCase {
         do {
             /// Content-Type: multipart/form-data; boundary=123
             let data = """
-            --123\r\n\
-            \r\n\
-            foo\r\n\
+            --123\r
+            \r
+            foo\r
             --123--\r\n
             """
-            let parser = MultipartParser(boundary: "123")
-            var parts: [MultipartPart] = []
-            var headers: HTTPHeaders = [:]
-            var body: String = ""
+            let parts = try MultipartParserOutputReceiver
+                .collectOutput(data: data, boundary: "123")
+                .parts
 
-            parser.onHeader = { (field, value) in
-                headers.replaceOrAdd(name: field, value: value)
-            }
-            parser.onBody = { new in
-                body += new.string
-            }
-            parser.onPartComplete = {
-                let part = MultipartPart(headers: headers, body: body)
-                headers = [:]
-                body = ""
-                parts.append(part)
-            }
-            try parser.execute(data)
             XCTAssertEqual(parts.count, 1)
         }
         do {
@@ -334,10 +276,10 @@ class MultipartTests: XCTestCase {
     func testFormDataDecoderMultipleWithMissingData() {
         /// Content-Type: multipart/form-data; boundary=hello
         let data = """
-        --hello\r\n\
-        Content-Disposition: form-data; name="link"\r\n\
-        \r\n\
-        https://google.com\r\n\
+        --hello\r
+        Content-Disposition: form-data; name="link"\r
+        \r
+        https://google.com\r
         --hello--\r\n
         """
 
@@ -353,6 +295,62 @@ class MultipartTests: XCTestCase {
 
             XCTAssertEqual(array, "relative")
         }
+    }
+
+    func testAllowedHeaderFieldNameCharacters() {
+        let disallowedASCIICodes: [Int] = (0...127).compactMap {
+            let parser = MultipartParser(boundary: "-")
+            let body: String = """
+            ---\r
+            a\(Unicode.Scalar($0)!): b\r
+            \r
+            c\r
+            ---\r\n
+            """
+            do {
+                try parser.execute(body)
+                return nil
+            } catch {
+                return $0
+            }
+        }
+        let expectedDisallowedASCIICodes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34, 40, 41, 44, 47, 59, 60, 61, 62, 63, 64, 91, 92, 93, 123, 125, 127]
+        XCTAssertEqual(disallowedASCIICodes, expectedDisallowedASCIICodes)
+    }
+
+    func testPreamble() throws {
+        let dataWithPreamble = """
+        preamble\r
+        ---\r
+        \r
+        body
+        """
+
+        let output = try MultipartParserOutputReceiver.collectOutput(data: dataWithPreamble, boundary: "-")
+        XCTAssertEqual(output.body, "body")
+
+        let dataWithoutPreamble = """
+        ---\r
+        \r
+        body
+        """
+
+        let output2 = try MultipartParserOutputReceiver.collectOutput(data: dataWithoutPreamble, boundary: "-")
+        XCTAssertEqual(output2.body, "body")
+    }
+
+    func testBodyClose() throws {
+        // this tests handling a "false start" for the closing boundary of a body
+        let data = """
+        ---\r
+        \r
+        body\r
+        -\r
+        ---\r
+        """
+
+        let output = try MultipartParserOutputReceiver.collectOutput(data: data, boundary: "-")
+        XCTAssertEqual(output.parts.count, 1)
     }
 }
 
@@ -371,6 +369,36 @@ private extension Collection {
 
 extension ByteBuffer {
     var string: String {
-        return String(decoding: self.readableBytesView, as: UTF8.self)
+        String(buffer: self)
     }
 }
+
+private class MultipartParserOutputReceiver {
+    var parts: [MultipartPart] = []
+    var headers: HTTPHeaders = [:]
+    var body: String = ""
+
+    static func collectOutput(data: String, boundary: String) throws -> MultipartParserOutputReceiver {
+        let output = MultipartParserOutputReceiver()
+        let parser = MultipartParser(boundary: boundary)
+        output.setUp(with: parser)
+        try parser.execute(data)
+        return output
+    }
+
+    func setUp(with parser: MultipartParser) {
+        parser.onHeader = { (field, value) in
+            self.headers.replaceOrAdd(name: field, value: value)
+        }
+        parser.onBody = { new in
+            self.body += new.string
+        }
+        parser.onPartComplete = {
+            let part = MultipartPart(headers: self.headers, body: self.body)
+            self.headers = [:]
+            self.body = ""
+            self.parts.append(part)
+        }
+    }
+}
+
