@@ -167,7 +167,7 @@ extension _Encoder.KeyedContainer: KeyedEncodingContainerProtocol {
 }
 
 extension _Encoder.KeyedContainer: _Container {
-    func getData() -> MultipartFormData {
+    fileprivate func getData() -> MultipartFormData {
         .keyed(data.map { key, value in (key, value.data) })
     }
 }
@@ -240,7 +240,7 @@ extension _Encoder.UnkeyedContainer: UnkeyedEncodingContainer {
 }
 
 extension _Encoder.UnkeyedContainer: _Container {
-    func getData() -> MultipartFormData {
+    fileprivate func getData() -> MultipartFormData {
         .array(data.map(\.data))
     }
 }
@@ -279,7 +279,7 @@ extension _Encoder.SingleValueContainer: SingleValueEncodingContainer {
 }
 
 extension _Encoder.SingleValueContainer: _Container {
-    func getData() -> MultipartFormData {
+    fileprivate func getData() -> MultipartFormData {
         data ?? .keyed([])
     }
 }
