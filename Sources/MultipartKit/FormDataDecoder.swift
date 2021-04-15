@@ -45,199 +45,159 @@ public struct FormDataDecoder {
         }
 
         try parser.execute(data)
-        let multipart = FormDataDecoderContext(parts: parts)
-        let decoder = _FormDataDecoder(multipart: multipart, codingPath: [])
+        let data = MultipartFormData(parts: parts)
+        let decoder = _FormDataDecoder(codingPath: [], data: data)
         return try D(from: decoder)
     }
 }
 
 // MARK: Private
 
-private final class FormDataDecoderContext {
-    var parts: [MultipartPart]
-    init(parts: [MultipartPart]) {
-        self.parts = parts
-    }
-
-    func decode<D>(_ decodable: D.Type, at codingPath: [CodingKey]) throws -> D where D: Decodable {
-        guard let convertible = D.self as? MultipartPartConvertible.Type else {
-            throw MultipartError.convertibleType(D.self)
-        }
-
-        let part: MultipartPart
-        switch codingPath.count {
-        case 1:
-            let name = codingPath[0].stringValue
-            guard let p = parts.firstPart(named: name) else {
-                throw MultipartError.missingPart(name)
-            }
-            part = p
-        case 2:
-            let name = codingPath[0].stringValue + "[]"
-            guard let offset = codingPath[1].intValue else {
-                throw MultipartError.nesting
-            }
-            guard let p = parts.allParts(named: name)[safe: offset] else {
-                throw MultipartError.missingPart("\(codingPath[1].stringValue)")
-            }
-            part = p
-        default:
-            throw MultipartError.nesting
-        }
-
-        guard let any = convertible.init(multipart: part) else {
-            throw MultipartError.convertiblePart(D.self, part)
-        }
-        return any as! D
-    }
-}
-
-
 private struct _FormDataDecoder: Decoder {
     var codingPath: [CodingKey]
-    var userInfo: [CodingUserInfoKey: Any] {
-        return [:]
-    }
-    let multipart: FormDataDecoderContext
+    let data: MultipartFormData
 
-    init(multipart: FormDataDecoderContext, codingPath: [CodingKey]) {
-        self.multipart = multipart
-        self.codingPath = codingPath
-    }
+    var userInfo: [CodingUserInfoKey: Any] { [:] }
 
     func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> where Key : CodingKey {
-        return KeyedDecodingContainer(_FormDataKeyedDecoder<Key>(multipart: multipart, codingPath: codingPath))
+        KeyedDecodingContainer(_FormDataKeyedDecoder<Key>(codingPath: codingPath, data: data.dictionary))
     }
 
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
-        return try _FormDataUnkeyedDecoder(multipart: multipart, codingPath: codingPath)
+        _FormDataUnkeyedDecoder(codingPath: codingPath, data: data.array)
     }
 
     func singleValueContainer() throws -> SingleValueDecodingContainer {
-        return _FormDataSingleValueDecoder(multipart: multipart, codingPath: codingPath)
+        // must coding path be empty?
+        _FormDataSingleValueDecoder(codingPath: codingPath, part: data.part)
+    }
+}
+
+extension MultipartPart {
+    func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
+        guard let convertible = T.self as? MultipartPartConvertible.Type else {
+            throw MultipartError.convertibleType(T.self)
+        }
+        return convertible.init(multipart: self) as! T
     }
 }
 
 private struct _FormDataSingleValueDecoder: SingleValueDecodingContainer {
     var codingPath: [CodingKey]
-    let multipart: FormDataDecoderContext
-
-    init(multipart: FormDataDecoderContext, codingPath: [CodingKey]) {
-        self.multipart = multipart
-        self.codingPath = codingPath
-    }
+    let part: MultipartPart?
 
     func decodeNil() -> Bool {
-        return false
+        part == nil
     }
 
     func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
-        return try multipart.decode(T.self, at: codingPath)
+        guard let part = part else {
+            // TODO: description
+            throw DecodingError.valueNotFound(T.self, .init(codingPath: codingPath, debugDescription: ""))
+        }
+        return try part.decode(T.self)
     }
 }
 
 private struct _FormDataKeyedDecoder<K>: KeyedDecodingContainerProtocol where K: CodingKey {
-    var codingPath: [CodingKey]
+    let codingPath: [CodingKey]
     var allKeys: [K] {
-        return multipart.parts
-            .compactMap { $0.name }
-            .compactMap { K(stringValue: $0) }
+        data.keys.compactMap(K.init(stringValue:))
     }
 
-    let multipart: FormDataDecoderContext
-
-    init(multipart: FormDataDecoderContext, codingPath: [CodingKey]) {
-        self.multipart = multipart
-        self.codingPath = codingPath
-    }
+    let data: MultipartFormData.Keyed
 
     func contains(_ key: K) -> Bool {
-        return multipart.parts.contains { $0.name == key.stringValue }
+        data.keys.contains(key.stringValue)
+    }
+
+    func getValue(forKey key: K) throws -> MultipartFormData {
+        guard let value = data[key.stringValue] else {
+            // TODO: add description
+            throw DecodingError.keyNotFound(key, .init(codingPath: codingPath, debugDescription: ""))
+        }
+        return value
     }
 
     func decodeNil(forKey key: K) throws -> Bool {
-        return false
+        // TODO: is this a good way to represent null?
+        return try getValue(forKey: key) == .single(.init(body: "null"))
     }
 
     func decode<T>(_ type: T.Type, forKey key: K) throws -> T where T : Decodable {
+        let value = try getValue(forKey: key)
+
         if T.self is MultipartPartConvertible.Type {
-            return try multipart.decode(T.self, at: codingPath + [key])
+            guard let part = value.part else {
+                // TODO:
+                throw MultipartError.missingPart("Asdads")
+            }
+            return try part.decode(T.self)
+
         } else {
-            let decoder = _FormDataDecoder(multipart: multipart, codingPath: codingPath + [key])
+            let decoder = _FormDataDecoder(codingPath: codingPath + [key], data: data[key.stringValue]!)
             return try T(from: decoder)
         }
     }
 
     func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: K) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
-        return KeyedDecodingContainer(_FormDataKeyedDecoder<NestedKey>(multipart: multipart, codingPath: codingPath + [key]))
+        try KeyedDecodingContainer(_FormDataKeyedDecoder<NestedKey>(codingPath: codingPath + [key], data: getValue(forKey: key).dictionary))
     }
 
     func nestedUnkeyedContainer(forKey key: K) throws -> UnkeyedDecodingContainer {
-        return try _FormDataUnkeyedDecoder(multipart: multipart, codingPath: codingPath + [key])
+        try _FormDataUnkeyedDecoder(codingPath: codingPath + [key], data: getValue(forKey: key).array)
     }
 
     func superDecoder() throws -> Decoder {
-        return _FormDataDecoder(multipart: multipart, codingPath: codingPath)
+        _FormDataDecoder(codingPath: codingPath, data: .keyed(data))
     }
 
     func superDecoder(forKey key: K) throws -> Decoder {
-        return _FormDataDecoder(multipart: multipart, codingPath: codingPath + [key])
+        _FormDataDecoder(codingPath: codingPath + [key], data: .keyed([key.stringValue: .keyed(data)]))
     }
 }
 
 private struct _FormDataUnkeyedDecoder: UnkeyedDecodingContainer {
+//    init(codingPath: [CodingKey], data: MultipartFormData) {
+//        self.data =
+//    }
+
+    var isAtEnd: Bool { currentIndex >= data.count }
+
+    var currentIndex: Int = 0
+
     var codingPath: [CodingKey]
-    var count: Int?
-    var isAtEnd: Bool {
-        return currentIndex >= count!
-    }
-    var currentIndex: Int
-    var index: CodingKey {
-        return BasicCodingKey.index(self.currentIndex)
-    }
+    var count: Int? { data.count }
 
-    let multipart: FormDataDecoderContext
+    var index: CodingKey { BasicCodingKey.index(currentIndex) }
 
-    init(multipart: FormDataDecoderContext, codingPath: [CodingKey]) throws {
-        self.multipart = multipart
-        self.codingPath = codingPath
-
-        let name: String
-        switch codingPath.count {
-        case 1: name = codingPath[0].stringValue
-        default:
-            throw MultipartError.nesting
-        }
-        let parts = multipart.parts.allParts(named: name + "[]")
-        self.count = parts.count
-        self.currentIndex = 0
-    }
+    var data: [MultipartFormData]
 
     mutating func decodeNil() throws -> Bool {
-        return false
+        false
     }
 
     mutating func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
         defer { currentIndex += 1 }
+        let current = data[currentIndex]
         if T.self is MultipartPartConvertible.Type {
-            return try multipart.decode(T.self, at: codingPath + [index])
+            // TODO: !
+            return try current.part!.decode(T.self)
         } else {
-            let decoder = _FormDataDecoder(multipart: multipart, codingPath: codingPath + [index])
+            let decoder = _FormDataDecoder(codingPath: codingPath + [index], data: current)
             return try T(from: decoder)
         }
     }
 
     mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
-        return KeyedDecodingContainer(_FormDataKeyedDecoder<NestedKey>(multipart: multipart, codingPath: codingPath + [index]))
+        KeyedDecodingContainer(_FormDataKeyedDecoder<NestedKey>(codingPath: codingPath + [index], data: data[currentIndex].dictionary))
     }
 
     mutating func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer {
-        return try _FormDataUnkeyedDecoder(multipart: multipart, codingPath: codingPath + [index])
+        _FormDataUnkeyedDecoder(codingPath: codingPath + [index], data: data)
     }
 
     mutating func superDecoder() throws -> Decoder {
-        return _FormDataDecoder(multipart: multipart, codingPath: codingPath + [index])
+        _FormDataDecoder(codingPath: codingPath + [index], data: .array(data))
     }
-
-
 }

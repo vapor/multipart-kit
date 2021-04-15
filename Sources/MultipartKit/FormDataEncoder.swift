@@ -1,4 +1,5 @@
 import struct NIO.ByteBufferAllocator
+import struct OrderedCollections.OrderedDictionary
 
 /// Encodes `Encodable` items to `multipart/form-data` encoded `Data`.
 ///
@@ -37,32 +38,6 @@ public struct FormDataEncoder {
 }
 
 // MARK: - Private
-
-// MARK: MultipartFormData
-
-private enum MultipartFormData {
-    case single(MultipartPart)
-    case array([MultipartFormData])
-    case keyed([(String, MultipartFormData)])
-
-    func namedParts() -> [MultipartPart] {
-        Self.namedParts(from: self)
-    }
-
-    static func namedParts(from data: MultipartFormData, path: String? = nil) -> [MultipartPart] {
-        switch data {
-        case .array(let array):
-            return array.flatMap { namedParts(from: $0, path: path.map { "\($0)[]" }) }
-        case .single(var part):
-            part.name = path
-            return [part]
-        case .keyed(let keysAndValues):
-            return keysAndValues.flatMap { key, value in
-                namedParts(from: value, path: path.map { "\($0)[\(key)]" } ?? key)
-            }
-        }
-    }
-}
 
 // MARK: _Container
 
@@ -115,7 +90,7 @@ extension _Encoder: _Container {
 extension _Encoder {
     final class KeyedContainer<Key> where Key: CodingKey {
         var codingPath: [CodingKey]
-        var data: [(String, DataOrContainer)] = []
+        var data: OrderedDictionary<String, DataOrContainer> = [:]
 
         init(codingPath: [CodingKey]) {
             self.codingPath = codingPath
@@ -133,12 +108,12 @@ extension _Encoder.KeyedContainer: KeyedEncodingContainerProtocol {
     {
         if let convertible = value as? MultipartPartConvertible {
             if let part = convertible.multipart {
-                data.append((key.stringValue, .data(.single(part))))
+                data[key.stringValue] = .data(.single(part))
             }
         } else {
             let encoder = _Encoder(codingPath: codingPath + [key])
             try value.encode(to: encoder)
-            data.append((key.stringValue, .data(encoder.getData())))
+            data[key.stringValue] = .data(encoder.getData())
         }
     }
 
@@ -146,14 +121,14 @@ extension _Encoder.KeyedContainer: KeyedEncodingContainerProtocol {
         where NestedKey: CodingKey
     {
         let container = _Encoder.KeyedContainer<NestedKey>(codingPath: codingPath + [key])
-        data.append((key.stringValue, .container(container)))
+        data[key.stringValue] = .container(container)
         return .init(container)
     }
 
     /// See `KeyedEncodingContainerProtocol`
     func nestedUnkeyedContainer(forKey key: Key) -> UnkeyedEncodingContainer {
         let container = _Encoder.UnkeyedContainer(codingPath: codingPath + [key])
-        data.append((key.stringValue, .container(container)))
+        data[key.stringValue] = .container(container)
         return container
     }
 
@@ -167,8 +142,8 @@ extension _Encoder.KeyedContainer: KeyedEncodingContainerProtocol {
 }
 
 extension _Encoder.KeyedContainer: _Container {
-    fileprivate func getData() -> MultipartFormData {
-        .keyed(data.map { key, value in (key, value.data) })
+    func getData() -> MultipartFormData {
+        .keyed(data.mapValues(\.data))
     }
 }
 
@@ -240,7 +215,7 @@ extension _Encoder.UnkeyedContainer: UnkeyedEncodingContainer {
 }
 
 extension _Encoder.UnkeyedContainer: _Container {
-    fileprivate func getData() -> MultipartFormData {
+    func getData() -> MultipartFormData {
         .array(data.map(\.data))
     }
 }
@@ -279,7 +254,7 @@ extension _Encoder.SingleValueContainer: SingleValueEncodingContainer {
 }
 
 extension _Encoder.SingleValueContainer: _Container {
-    fileprivate func getData() -> MultipartFormData {
-        data ?? .keyed([])
+    func getData() -> MultipartFormData {
+        data ?? .empty
     }
 }
