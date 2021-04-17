@@ -94,7 +94,19 @@ public final class MultipartParser {
         }
     }
 
-    private func readByte() -> UInt8? { buffer.readInteger() }
+    var maxWorkingBytes: Int = 1024 // 1KB
+    var internalBuffer: [UInt8] = []
+
+    private func readByte() -> UInt8? {
+//        return buffer.readInteger()
+        if internalBuffer.isEmpty && buffer.readableBytes > 0 {
+            guard let workingBytes = buffer.readBytes(length: min(buffer.readableBytes, maxWorkingBytes)) else {
+                preconditionFailure("unable to read bytes")
+            }
+            internalBuffer = workingBytes
+        }
+        return internalBuffer.removeFirst()
+    }
 
     private func parsePreamble(boundaryMatchIndex: Int) -> State {
         var boundaryMatchIndex = boundaryMatchIndex
