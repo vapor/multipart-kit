@@ -352,6 +352,26 @@ class MultipartTests: XCTestCase {
         let output = try MultipartParserOutputReceiver.collectOutput(data: data, boundary: "-")
         XCTAssertEqual(output.parts.count, 1)
     }
+
+    func testPerformance() throws {
+        guard let dataURL = Bundle.module.url(forResource: "request-body", withExtension: "txt") else {
+            return XCTFail("Unable to load test resource")
+        }
+
+        let data = try Data(contentsOf: dataURL)
+        let buf = ByteBuffer(bytes: data)
+
+        let opts = XCTMeasureOptions.default
+        opts.iterationCount = 4
+
+        measure(options: opts) {
+            do {
+                let output = try MultipartDataParserOutputReceiver.collectOutput(buf: buf, boundary: "__X_PAW_BOUNDARY__")
+            } catch {
+                XCTFail(error.localizedDescription)
+            }
+        }
+    }
 }
 
 // https://stackoverflow.com/a/54524110/1041105
@@ -397,6 +417,36 @@ private class MultipartParserOutputReceiver {
             let part = MultipartPart(headers: self.headers, body: self.body)
             self.headers = [:]
             self.body = ""
+            self.parts.append(part)
+        }
+    }
+}
+
+
+private class MultipartDataParserOutputReceiver {
+    var parts: [MultipartPart] = []
+    var headers: HTTPHeaders = [:]
+    var body: Data = Data()
+
+    static func collectOutput(buf: ByteBuffer, boundary: String) throws -> MultipartDataParserOutputReceiver {
+        let output = MultipartDataParserOutputReceiver()
+        let parser = MultipartParser(boundary: boundary)
+        output.setUp(with: parser)
+        try parser.execute(buf)
+        return output
+    }
+
+    func setUp(with parser: MultipartParser) {
+        parser.onHeader = { (field, value) in
+            self.headers.replaceOrAdd(name: field, value: value)
+        }
+        parser.onBody = { new in
+            self.body += new.readableBytesView
+        }
+        parser.onPartComplete = {
+            let part = MultipartPart(headers: self.headers, body: self.body)
+            self.headers = [:]
+            self.body = Data()
             self.parts.append(part)
         }
     }
