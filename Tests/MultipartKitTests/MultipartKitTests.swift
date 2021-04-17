@@ -361,10 +361,7 @@ class MultipartTests: XCTestCase {
         let data = try Data(contentsOf: dataURL)
         let buf = ByteBuffer(bytes: data)
 
-        let opts = XCTMeasureOptions.default
-        opts.iterationCount = 4
-
-        measure(options: opts) {
+        measure {
             do {
                 let _ = try MultipartDataParserOutputReceiver.collectOutput(buf: buf, boundary: "__X_PAW_BOUNDARY__")
             } catch {
