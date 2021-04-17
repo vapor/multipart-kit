@@ -52,6 +52,7 @@ public final class MultipartParser {
 
     private var internalBuffer: [UInt8] = []
     private var internalBufferPtr: Int = 0
+    private var internalReaderIndex: Int = 0
 
     /// Creates a new `MultipartParser`.
     /// - Parameter boundary: boundary separating parts. Must not be empty nor longer than 70 characters according to rfc1341 but we don't check for the latter.
@@ -84,7 +85,7 @@ public final class MultipartParser {
 
         self.internalBuffer = []
         self.internalBufferPtr = 0
-        self.offset = 0
+        self.internalReaderIndex = 0
 
         try execute()
     }
@@ -113,10 +114,9 @@ public final class MultipartParser {
     }
 
     private func readerIndex() -> Int {
-        return offset + internalBufferPtr
+        return internalReaderIndex + internalBufferPtr
     }
 
-    var offset: Int = 0
 
     private func readByte() -> UInt8? {
 //        return buffer.readInteger()
@@ -129,7 +129,7 @@ public final class MultipartParser {
 
 //            debugPrint("read more bytes")
 
-            buffer.moveReaderIndex(to: offset + internalBufferPtr)
+            buffer.moveReaderIndex(to: internalReaderIndex + internalBufferPtr)
             let idx = buffer.readerIndex
 
             guard buffer.readableBytes > 0 else {
@@ -150,7 +150,7 @@ public final class MultipartParser {
             buffer.moveReaderIndex(to: idx)
 //            debugPrint(buffer.readerIndex, idx)
 
-            offset = idx
+            internalReaderIndex = idx
             internalBuffer = workingBytes
             internalBufferPtr = 0
 
