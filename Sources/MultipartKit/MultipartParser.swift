@@ -1,3 +1,4 @@
+import Foundation
 import struct NIO.ByteBufferAllocator
 
 /// Parses multipart-encoded `Data` into `MultipartPart`s. Multipart encoding is a widely-used format for encoding
@@ -94,18 +95,29 @@ public final class MultipartParser {
         }
     }
 
-    var maxWorkingBytes: Int = 1024 // 1KB
+    var maxWorkingBytes: Int = 1 * 1024 // 1KB
     var internalBuffer: [UInt8] = []
+    var internalBufferPtr: Int = 0
 
     private func readByte() -> UInt8? {
-//        return buffer.readInteger()
-        if internalBuffer.isEmpty && buffer.readableBytes > 0 {
+        if internalBuffer.count >= internalBufferPtr {
+            guard buffer.readableBytes > 0 else {
+                return nil
+            }
+
+            debugPrint("\(Date()) reading data into buffer")
+
             guard let workingBytes = buffer.readBytes(length: min(buffer.readableBytes, maxWorkingBytes)) else {
                 preconditionFailure("unable to read bytes")
             }
             internalBuffer = workingBytes
+            internalBufferPtr = 0
         }
-        return internalBuffer.removeFirst()
+
+        let b = internalBuffer[internalBufferPtr]
+        internalBufferPtr += 1
+
+        return b
     }
 
     private func parsePreamble(boundaryMatchIndex: Int) -> State {
