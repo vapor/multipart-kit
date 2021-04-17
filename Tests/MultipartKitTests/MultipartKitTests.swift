@@ -366,7 +366,7 @@ class MultipartTests: XCTestCase {
 
         measure(options: opts) {
             do {
-                let output = try MultipartDataParserOutputReceiver.collectOutput(buf: buf, boundary: "__X_PAW_BOUNDARY__")
+                let _ = try MultipartDataParserOutputReceiver.collectOutput(buf: buf, boundary: "__X_PAW_BOUNDARY__")
             } catch {
                 XCTFail(error.localizedDescription)
             }

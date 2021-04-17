@@ -41,11 +41,17 @@ public final class MultipartParser {
     public var onBody: (inout ByteBuffer) -> ()
     public var onPartComplete: () -> ()
 
+    /// The maximum number of bytes read into memory
+    public var maxWorkingBytes: Int = 1 * 1024 // 1KB
+
     private let boundary: [UInt8]
     private let boundaryLength: Int
     private var state: State
     private var buffer: ByteBuffer!
     private var sliceBuffer: ByteBuffer!
+
+    private var internalBuffer: [UInt8] = []
+    private var internalBufferPtr: Int = 0
 
     /// Creates a new `MultipartParser`.
     /// - Parameter boundary: boundary separating parts. Must not be empty nor longer than 70 characters according to rfc1341 but we don't check for the latter.
@@ -95,21 +101,16 @@ public final class MultipartParser {
         }
     }
 
-    var maxWorkingBytes: Int = 1 * 1024 // 1KB
-    var internalBuffer: [UInt8] = []
-    var internalBufferPtr: Int = 0
-
     private func readByte() -> UInt8? {
         if internalBuffer.count >= internalBufferPtr {
             guard buffer.readableBytes > 0 else {
                 return nil
             }
 
-            debugPrint("\(Date()) reading data into buffer")
-
             guard let workingBytes = buffer.readBytes(length: min(buffer.readableBytes, maxWorkingBytes)) else {
-                preconditionFailure("unable to read bytes")
+                preconditionFailure("unable to read expected bytes")
             }
+
             internalBuffer = workingBytes
             internalBufferPtr = 0
         }
