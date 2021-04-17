@@ -82,11 +82,15 @@ public final class MultipartParser {
         self.sliceBuffer = buffer
         defer { self.sliceBuffer = nil }
 
+        self.internalBuffer = []
+        self.internalBufferPtr = 0
+        self.offset = 0
+
         try execute()
     }
 
     private func execute() throws {
-        while buffer.readableBytes > 0 {
+        while self.hasReadableBytes() {
             switch state {
             case let .preamble(boundaryMatchIndex):
                 state = parsePreamble(boundaryMatchIndex: boundaryMatchIndex)
@@ -101,9 +105,35 @@ public final class MultipartParser {
         }
     }
 
+    private func hasReadableBytes() -> Bool {
+        if internalBufferPtr >= internalBuffer.count {
+            return buffer.readableBytes > 0
+        }
+        return true
+    }
+
+    private func readerIndex() -> Int {
+        return offset + internalBufferPtr
+    }
+
+    var offset: Int = 0
+
     private func readByte() -> UInt8? {
-        if internalBuffer.count >= internalBufferPtr {
+//        return buffer.readInteger()
+
+        if internalBufferPtr >= internalBuffer.count {
+//            let idx = buffer.readerIndex
+//
+//            let int8: UInt8? = buffer.readInteger()
+//            buffer.moveReaderIndex(to: idx)
+
+//            debugPrint("read more bytes")
+
+            buffer.moveReaderIndex(to: offset + internalBufferPtr)
+            let idx = buffer.readerIndex
+
             guard buffer.readableBytes > 0 else {
+//                assert(int8 == nil)
                 return nil
             }
 
@@ -111,12 +141,29 @@ public final class MultipartParser {
                 preconditionFailure("unable to read expected bytes")
             }
 
+            if workingBytes.count == 0 {
+                return nil
+            }
+
+//            debugPrint("workingBytes.count", workingBytes.count)
+
+            buffer.moveReaderIndex(to: idx)
+//            debugPrint(buffer.readerIndex, idx)
+
+            offset = idx
             internalBuffer = workingBytes
             internalBufferPtr = 0
+
+//            assert(internalBuffer.first == int8)
         }
+
+//        debugPrint(internalBufferPtr, internalBuffer.count)
 
         let b = internalBuffer[internalBufferPtr]
         internalBufferPtr += 1
+
+//        let i: UInt8? = buffer.getInteger(at: offset + internalBufferPtr - 1)
+//        assert(i == b)
 
         return b
     }
@@ -168,7 +215,7 @@ public final class MultipartParser {
     private func parseHeaders(headerState: HeaderState) throws -> State {
         var headerState = headerState
 
-        while buffer.readableBytes > 0 {
+        while self.hasReadableBytes() {
             switch headerState {
             case let .preHeaders(crlf):
                 headerState = try parseCRLF(crlf).map(HeaderState.preHeaders) ?? .headerName()
@@ -186,7 +233,7 @@ public final class MultipartParser {
                 guard readByte() == .lf else {
                     throw Error.syntax
                 }
-                return .body(lowerBound: buffer.readableBytes > 0 ? buffer.readerIndex : 0)
+                return .body(lowerBound: self.hasReadableBytes() ? readerIndex() : 0)
             }
         }
 
@@ -242,7 +289,7 @@ public final class MultipartParser {
                 return
             }
 
-            if var slice = sliceBuffer.getSlice(at: lowerBound, length: buffer.readerIndex - lowerBound), slice.readableBytes > 0 {
+            if var slice = sliceBuffer.getSlice(at: lowerBound, length: readerIndex() - lowerBound), slice.readableBytes > 0 {
                 onBody(&slice)
             }
         }
@@ -254,7 +301,7 @@ public final class MultipartParser {
             }
 
             guard boundaryMatchIndex < boundaryLength else {
-                lowerBound = buffer.readerIndex
+                lowerBound = readerIndex()
                 sendBody()
                 onPartComplete()
                 switch byte {
@@ -269,17 +316,17 @@ public final class MultipartParser {
 
             switch (boundaryMatchIndex, byte == boundary[boundaryMatchIndex]) {
             case (0, true):
-                if var slice = sliceBuffer.getSlice(at: lowerBound, length: buffer.readerIndex - lowerBound - 1) {
+                if var slice = sliceBuffer.getSlice(at: lowerBound, length: readerIndex() - lowerBound - 1) {
                     onBody(&slice)
                 }
-                lowerBound = buffer.readerIndex
+                lowerBound = readerIndex()
                 fallthrough
             case (_, true):
                 boundaryMatchIndex += 1
             case (1..., false):
                 var boundaryBuffer = ByteBuffer(bytes: boundary[0..<boundaryMatchIndex])
                 onBody(&boundaryBuffer)
-                lowerBound = buffer.readerIndex - 1
+                lowerBound = readerIndex() - 1
                 boundaryMatchIndex = byte == boundary[0] ? 1 : 0
             case (_, false):
                 boundaryMatchIndex = 0
