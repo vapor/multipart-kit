@@ -384,15 +384,24 @@ class MultipartTests: XCTestCase {
                 let baz: Int
             }
             let bar: Bar
+            let bars: [Bar]
         }
 
         let encoder = FormDataEncoder()
-        let data = try encoder.encode(Foo(bar: .init(baz: 1)), boundary: "-")
+        let data = try encoder.encode(Foo(bar: .init(baz: 1), bars: [.init(baz: 2), .init(baz: 3)]), boundary: "-")
         let expected = """
         ---\r
         Content-Disposition: form-data; name="bar[baz]"\r
         \r
         1\r
+        ---\r
+        Content-Disposition: form-data; name="bars[][baz]"\r
+        \r
+        2\r
+        ---\r
+        Content-Disposition: form-data; name="bars[][baz]"\r
+        \r
+        3\r
         -----\r\n
         """
 
@@ -405,6 +414,7 @@ class MultipartTests: XCTestCase {
                 let baz: Int
             }
             let bar: Bar
+            let bars: [Bar]
         }
 
         let data = """
@@ -412,13 +422,21 @@ class MultipartTests: XCTestCase {
         Content-Disposition: form-data; name="bar[baz]"\r
         \r
         1\r
+        ---\r
+        Content-Disposition: form-data; name="bars[][baz]"\r
+        \r
+        2\r
+        ---\r
+        Content-Disposition: form-data; name="bars[][baz]"\r
+        \r
+        3\r
         -----\r\n
         """
 
         let decoder = FormDataDecoder()
         let foo = try decoder.decode(Foo.self, from: data, boundary: "-")
 
-        XCTAssertEqual(foo, Foo(bar: .init(baz: 1)))
+        XCTAssertEqual(foo, Foo(bar: .init(baz: 1), bars: [.init(baz: 2), .init(baz: 3)]))
     }
 }
 
