@@ -149,57 +149,57 @@ class MultipartTests: XCTestCase {
         XCTAssert(foo.files.contains("picture.jpg"))
     }
 
-//    func testFormDataDecoderW3Streaming() throws {
-//        /// Content-Type: multipart/form-data; boundary=12345
-//        let data = """
-//        --12345\r
-//        Content-Disposition: form-data; name="sometext"\r
-//        \r
-//        some text sent via post...\r
-//        --12345\r
-//        Content-Disposition: form-data; name="files"\r
-//        Content-Type: multipart/mixed; boundary=abcde\r
-//        \r
-//        --abcde\r
-//        Content-Disposition: file; file="picture.jpg"\r
-//        \r
-//        content of jpg...\r
-//        --abcde\r
-//        Content-Disposition: file; file="test.py"\r
-//        \r
-//        content of test.py file ....\r
-//        --abcde--\r
-//        --12345--\r\n
-//        """
-//
-//        let expected = [
-//            MultipartPart(
-//                headers: ["Content-Disposition": "form-data; name=\"sometext\""],
-//                body: "some text sent via post..."
-//            ),
-//            MultipartPart(
-//                headers: ["Content-Disposition": "form-data; name=\"files\"", "Content-Type": "multipart/mixed; boundary=abcde"],
-//                body: "--abcde\r\nContent-Disposition: file; file=\"picture.jpg\"\r\n\r\ncontent of jpg...\r\n--abcde\r\nContent-Disposition: file; file=\"test.py\"\r\n\r\ncontent of test.py file ....\r\n--abcde--"
-//            )
-//        ]
-//
-//        struct Foo: Decodable {
-//            var sometext: String
-//            var files: String
-//        }
-//
-//        for i in 1..<data.count {
-//            let parser = MultipartParser(boundary: "12345")
-//            let output = MultipartParserOutputReceiver()
-//            output.setUp(with: parser)
-//
-//            for chunk in data.chunked(by: i) {
-//                try parser.execute(.init(chunk))
-//            }
-//
-//            XCTAssertEqual(output.parts, expected)
-//        }
-//    }
+    func testFormDataDecoderW3Streaming() throws {
+        /// Content-Type: multipart/form-data; boundary=12345
+        let data = """
+        --12345\r
+        Content-Disposition: form-data; name="sometext"\r
+        \r
+        some text sent via post...\r
+        --12345\r
+        Content-Disposition: form-data; name="files"\r
+        Content-Type: multipart/mixed; boundary=abcde\r
+        \r
+        --abcde\r
+        Content-Disposition: file; file="picture.jpg"\r
+        \r
+        content of jpg...\r
+        --abcde\r
+        Content-Disposition: file; file="test.py"\r
+        \r
+        content of test.py file ....\r
+        --abcde--\r
+        --12345--\r\n
+        """
+
+        let expected = [
+            MultipartPart(
+                headers: ["Content-Disposition": "form-data; name=\"sometext\""],
+                body: "some text sent via post..."
+            ),
+            MultipartPart(
+                headers: ["Content-Disposition": "form-data; name=\"files\"", "Content-Type": "multipart/mixed; boundary=abcde"],
+                body: "--abcde\r\nContent-Disposition: file; file=\"picture.jpg\"\r\n\r\ncontent of jpg...\r\n--abcde\r\nContent-Disposition: file; file=\"test.py\"\r\n\r\ncontent of test.py file ....\r\n--abcde--"
+            )
+        ]
+
+        struct Foo: Decodable {
+            var sometext: String
+            var files: String
+        }
+
+        for i in 1..<data.count {
+            let parser = MultipartParser(boundary: "12345")
+            let output = MultipartParserOutputReceiver()
+            output.setUp(with: parser)
+
+            for chunk in data.chunked(by: i) {
+                try parser.execute(.init(chunk))
+            }
+
+            XCTAssertEqual(output.parts, expected)
+        }
+    }
 
     func testFormDataDecoderMultiple() throws {
         /// Content-Type: multipart/form-data; boundary=12345
@@ -422,4 +422,3 @@ private class MultipartParserOutputReceiver {
         }
     }
 }
-

@@ -17,6 +17,6 @@ let package = Package(
             .product(name: "NIO", package: "swift-nio"),
             .product(name: "NIOHTTP1", package: "swift-nio"),
         ]),
-        .testTarget(name: "MultipartKitTests", dependencies: ["MultipartKit"], resources: [.copy("request-100k.txt"), .copy("request-body.txt")]),
+        .testTarget(name: "MultipartKitTests", dependencies: ["MultipartKit"], resources: [.copy("request-body.txt")]),
     ]
 )

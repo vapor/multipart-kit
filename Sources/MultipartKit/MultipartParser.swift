@@ -32,7 +32,8 @@ public final class MultipartParser {
     private enum State {
         case preamble(boundaryMatchIndex: Int = 0)
         case headers(state: HeaderState = .preHeaders())
-        case body(lowerBound: Int, boundaryMatchIndex: Int = 0)
+        case body
+        case boundary(boundaryMatchIndex: Int = 0)
         case epilogue
     }
 
@@ -44,7 +45,6 @@ public final class MultipartParser {
     private let boundaryLength: Int
     private var state: State
     private var buffer: ByteBuffer!
-//    private var sliceBuffer: ByteBuffer!
 
     /// Creates a new `MultipartParser`.
     /// - Parameter boundary: boundary separating parts. Must not be empty nor longer than 70 characters according to rfc1341 but we don't check for the latter.
@@ -72,9 +72,6 @@ public final class MultipartParser {
         self.buffer = buffer
         defer { self.buffer = nil }
 
-//        self.sliceBuffer = buffer
-//        defer { self.sliceBuffer = nil }
-
         try execute()
     }
 
@@ -85,8 +82,10 @@ public final class MultipartParser {
                 state = parsePreamble(boundaryMatchIndex: boundaryMatchIndex)
             case let .headers(headerState):
                 state = try parseHeaders(headerState: headerState)
-            case let .body(lowerbound, boundaryMatchIndex):
-                state = try parseBody(lowerbound, boundaryMatchIndex: boundaryMatchIndex)
+            case .body:
+                state = parseBody()
+            case let .boundary(boundaryMatchIndex):
+                state = try parseBoundary(boundaryMatchIndex: boundaryMatchIndex)
             case .epilogue:
                 // ignore any data in epilogue
                 return
@@ -161,7 +160,7 @@ public final class MultipartParser {
                 guard readByte() == .lf else {
                     throw Error.syntax
                 }
-                return .body(lowerBound: buffer.readableBytes > 0 ? buffer.readerIndex : 0)
+                return .body
             }
         }
 
@@ -207,21 +206,23 @@ public final class MultipartParser {
         return .headerValue(value, name: name)
     }
 
-    private func parseBody(_ lowerBound: Int, boundaryMatchIndex: Int) throws -> State {
-        guard boundaryMatchIndex != 0 else {
-            var b = ByteBuffer(buffer.readableBytesView.prefix { $0 != boundary[0] })
-            if b.writerIndex > 0 {
-                onBody(&b)
-                buffer.moveReaderIndex(forwardBy: min(b.writerIndex + 1, buffer.readableBytes))
-            }
-            return .body(lowerBound: 0, boundaryMatchIndex: buffer.readableBytes == 0 ? 0 : 1)
+    private func parseBody() -> State {
+        var slice = ByteBuffer(buffer.readableBytesView.prefix { $0 != boundary[0] })
+
+        if slice.readableBytes > 0 {
+            buffer.moveReaderIndex(forwardBy: slice.readableBytes)
+            onBody(&slice)
         }
 
+        return buffer.readableBytes > 0 ? .boundary() : .body
+    }
+
+    private func parseBoundary(boundaryMatchIndex: Int) throws -> State {
         var boundaryMatchIndex = boundaryMatchIndex
 
         while true {
             guard let byte = readByte() else {
-                return .body(lowerBound: 0, boundaryMatchIndex: boundaryMatchIndex)
+                return .boundary(boundaryMatchIndex: boundaryMatchIndex)
             }
 
             guard boundaryMatchIndex < boundaryLength else {
@@ -238,8 +239,15 @@ public final class MultipartParser {
 
             guard byte == boundary[boundaryMatchIndex] else {
                 var boundaryBuffer = ByteBuffer(bytes: boundary[0..<boundaryMatchIndex])
-                onBody(&boundaryBuffer)
-                return .body(lowerBound: 0, boundaryMatchIndex: byte == boundary[0] ? 1 : 0)
+
+                if byte == boundary[0] {
+                    onBody(&boundaryBuffer)
+                    return .boundary(boundaryMatchIndex: 1)
+                } else {
+                    boundaryBuffer.writeInteger(byte)
+                    onBody(&boundaryBuffer)
+                    return .body
+                }
             }
 
             boundaryMatchIndex += 1
