@@ -44,7 +44,7 @@ public final class MultipartParser {
     private let boundaryLength: Int
     private var state: State
     private var buffer: ByteBuffer!
-    private var sliceBuffer: ByteBuffer!
+//    private var sliceBuffer: ByteBuffer!
 
     /// Creates a new `MultipartParser`.
     /// - Parameter boundary: boundary separating parts. Must not be empty nor longer than 70 characters according to rfc1341 but we don't check for the latter.
@@ -72,8 +72,8 @@ public final class MultipartParser {
         self.buffer = buffer
         defer { self.buffer = nil }
 
-        self.sliceBuffer = buffer
-        defer { self.sliceBuffer = nil }
+//        self.sliceBuffer = buffer
+//        defer { self.sliceBuffer = nil }
 
         try execute()
     }
@@ -208,29 +208,23 @@ public final class MultipartParser {
     }
 
     private func parseBody(_ lowerBound: Int, boundaryMatchIndex: Int) throws -> State {
-        var lowerBound = lowerBound
-        var boundaryMatchIndex = boundaryMatchIndex
-
-        func sendBody() {
-            // don't send the body if we're (potentially) inside the boundary
-            guard boundaryMatchIndex == 0 else {
-                return
+        guard boundaryMatchIndex != 0 else {
+            var b = ByteBuffer(buffer.readableBytesView.prefix { $0 != boundary[0] })
+            if b.writerIndex > 0 {
+                onBody(&b)
+                buffer.moveReaderIndex(forwardBy: min(b.writerIndex + 1, buffer.readableBytes))
             }
-
-            if var slice = sliceBuffer.getSlice(at: lowerBound, length: buffer.readerIndex - lowerBound), slice.readableBytes > 0 {
-                onBody(&slice)
-            }
+            return .body(lowerBound: 0, boundaryMatchIndex: buffer.readableBytes == 0 ? 0 : 1)
         }
+
+        var boundaryMatchIndex = boundaryMatchIndex
 
         while true {
             guard let byte = readByte() else {
-                sendBody()
                 return .body(lowerBound: 0, boundaryMatchIndex: boundaryMatchIndex)
             }
 
             guard boundaryMatchIndex < boundaryLength else {
-                lowerBound = buffer.readerIndex
-                sendBody()
                 onPartComplete()
                 switch byte {
                 case .cr:
@@ -242,23 +236,13 @@ public final class MultipartParser {
                 }
             }
 
-            switch (boundaryMatchIndex, byte == boundary[boundaryMatchIndex]) {
-            case (0, true):
-                if var slice = sliceBuffer.getSlice(at: lowerBound, length: buffer.readerIndex - lowerBound - 1) {
-                    onBody(&slice)
-                }
-                lowerBound = buffer.readerIndex
-                fallthrough
-            case (_, true):
-                boundaryMatchIndex += 1
-            case (1..., false):
+            guard byte == boundary[boundaryMatchIndex] else {
                 var boundaryBuffer = ByteBuffer(bytes: boundary[0..<boundaryMatchIndex])
                 onBody(&boundaryBuffer)
-                lowerBound = buffer.readerIndex - 1
-                boundaryMatchIndex = byte == boundary[0] ? 1 : 0
-            case (_, false):
-                boundaryMatchIndex = 0
+                return .body(lowerBound: 0, boundaryMatchIndex: byte == boundary[0] ? 1 : 0)
             }
+
+            boundaryMatchIndex += 1
         }
     }
 }
