@@ -1,5 +1,3 @@
-import struct NIO.ByteBufferAllocator
-
 /// Parses multipart-encoded `Data` into `MultipartPart`s. Multipart encoding is a widely-used format for encoding
 /// web-form data that includes rich content like files. It allows for arbitrary data to be encoded
 /// in each part thanks to a unique delimiter "boundary" that is defined separately. This
@@ -32,7 +30,8 @@ public final class MultipartParser {
     private enum State {
         case preamble(boundaryMatchIndex: Int = 0)
         case headers(state: HeaderState = .preHeaders())
-        case body(lowerBound: Int, boundaryMatchIndex: Int = 0)
+        case body
+        case boundary(boundaryMatchIndex: Int = 0)
         case epilogue
     }
 
@@ -44,7 +43,6 @@ public final class MultipartParser {
     private let boundaryLength: Int
     private var state: State
     private var buffer: ByteBuffer!
-    private var sliceBuffer: ByteBuffer!
 
     /// Creates a new `MultipartParser`.
     /// - Parameter boundary: boundary separating parts. Must not be empty nor longer than 70 characters according to rfc1341 but we don't check for the latter.
@@ -57,7 +55,7 @@ public final class MultipartParser {
 
         self.boundary = Array("\r\n--\(boundary)".utf8)
         self.boundaryLength = self.boundary.count
-        self.state = .preamble(boundaryMatchIndex: 0)
+        self.state = .preamble()
     }
 
     public func execute(_ string: String) throws {
@@ -72,9 +70,6 @@ public final class MultipartParser {
         self.buffer = buffer
         defer { self.buffer = nil }
 
-        self.sliceBuffer = buffer
-        defer { self.sliceBuffer = nil }
-
         try execute()
     }
 
@@ -85,8 +80,10 @@ public final class MultipartParser {
                 state = parsePreamble(boundaryMatchIndex: boundaryMatchIndex)
             case let .headers(headerState):
                 state = try parseHeaders(headerState: headerState)
-            case let .body(lowerbound, boundaryMatchIndex):
-                state = try parseBody(lowerbound, boundaryMatchIndex: boundaryMatchIndex)
+            case .body:
+                state = parseBody()
+            case let .boundary(boundaryMatchIndex):
+                state = try parseBoundary(boundaryMatchIndex: boundaryMatchIndex)
             case .epilogue:
                 // ignore any data in epilogue
                 return
@@ -161,7 +158,7 @@ public final class MultipartParser {
                 guard readByte() == .lf else {
                     throw Error.syntax
                 }
-                return .body(lowerBound: buffer.readableBytes > 0 ? buffer.readerIndex : 0)
+                return .body
             }
         }
 
@@ -207,30 +204,26 @@ public final class MultipartParser {
         return .headerValue(value, name: name)
     }
 
-    private func parseBody(_ lowerBound: Int, boundaryMatchIndex: Int) throws -> State {
-        var lowerBound = lowerBound
-        var boundaryMatchIndex = boundaryMatchIndex
+    private func parseBody() -> State {
+        var slice = ByteBuffer(buffer.readableBytesView.prefix { $0 != boundary[0] })
 
-        func sendBody() {
-            // don't send the body if we're (potentially) inside the boundary
-            guard boundaryMatchIndex == 0 else {
-                return
-            }
-
-            if var slice = sliceBuffer.getSlice(at: lowerBound, length: buffer.readerIndex - lowerBound), slice.readableBytes > 0 {
-                onBody(&slice)
-            }
+        if slice.readableBytes > 0 {
+            buffer.moveReaderIndex(forwardBy: slice.readableBytes)
+            onBody(&slice)
         }
+
+        return buffer.readableBytes > 0 ? .boundary() : .body
+    }
+
+    private func parseBoundary(boundaryMatchIndex: Int) throws -> State {
+        var boundaryMatchIndex = boundaryMatchIndex
 
         while true {
             guard let byte = readByte() else {
-                sendBody()
-                return .body(lowerBound: 0, boundaryMatchIndex: boundaryMatchIndex)
+                return .boundary(boundaryMatchIndex: boundaryMatchIndex)
             }
 
             guard boundaryMatchIndex < boundaryLength else {
-                lowerBound = buffer.readerIndex
-                sendBody()
                 onPartComplete()
                 switch byte {
                 case .cr:
@@ -242,23 +235,20 @@ public final class MultipartParser {
                 }
             }
 
-            switch (boundaryMatchIndex, byte == boundary[boundaryMatchIndex]) {
-            case (0, true):
-                if var slice = sliceBuffer.getSlice(at: lowerBound, length: buffer.readerIndex - lowerBound - 1) {
-                    onBody(&slice)
-                }
-                lowerBound = buffer.readerIndex
-                fallthrough
-            case (_, true):
-                boundaryMatchIndex += 1
-            case (1..., false):
+            guard byte == boundary[boundaryMatchIndex] else {
                 var boundaryBuffer = ByteBuffer(bytes: boundary[0..<boundaryMatchIndex])
-                onBody(&boundaryBuffer)
-                lowerBound = buffer.readerIndex - 1
-                boundaryMatchIndex = byte == boundary[0] ? 1 : 0
-            case (_, false):
-                boundaryMatchIndex = 0
+
+                if byte == boundary[0] {
+                    onBody(&boundaryBuffer)
+                    return .boundary(boundaryMatchIndex: 1)
+                } else {
+                    boundaryBuffer.writeInteger(byte)
+                    onBody(&boundaryBuffer)
+                    return .body
+                }
             }
+
+            boundaryMatchIndex += 1
         }
     }
 }

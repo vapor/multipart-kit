@@ -35,7 +35,7 @@ class MultipartTests: XCTestCase {
         """
 
         let parts = try MultipartParserOutputReceiver
-            .collectOutput(data: data, boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
+            .collectOutput(data, boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
             .parts
 
         XCTAssertEqual(parts.count, 3)
@@ -65,7 +65,7 @@ class MultipartTests: XCTestCase {
         """
 
         let parts = try MultipartParserOutputReceiver
-            .collectOutput(data: data, boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
+            .collectOutput(data, boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
             .parts
 
         let file = parts.firstPart(named: "multinamed[]")?.body
@@ -261,7 +261,7 @@ class MultipartTests: XCTestCase {
             --123--\r\n
             """
             let parts = try MultipartParserOutputReceiver
-                .collectOutput(data: data, boundary: "123")
+                .collectOutput(data, boundary: "123")
                 .parts
 
             XCTAssertEqual(parts.count, 1)
@@ -326,8 +326,8 @@ class MultipartTests: XCTestCase {
         body
         """
 
-        let output = try MultipartParserOutputReceiver.collectOutput(data: dataWithPreamble, boundary: "-")
-        XCTAssertEqual(output.body, "body")
+        let output = try MultipartParserOutputReceiver.collectOutput( dataWithPreamble, boundary: "-")
+        XCTAssertEqual(output.body.string, "body")
 
         let dataWithoutPreamble = """
         ---\r
@@ -335,8 +335,8 @@ class MultipartTests: XCTestCase {
         body
         """
 
-        let output2 = try MultipartParserOutputReceiver.collectOutput(data: dataWithoutPreamble, boundary: "-")
-        XCTAssertEqual(output2.body, "body")
+        let output2 = try MultipartParserOutputReceiver.collectOutput(dataWithoutPreamble, boundary: "-")
+        XCTAssertEqual(output2.body.string, "body")
     }
 
     func testBodyClose() throws {
@@ -349,8 +349,31 @@ class MultipartTests: XCTestCase {
         ---\r
         """
 
-        let output = try MultipartParserOutputReceiver.collectOutput(data: data, boundary: "-")
+        let output = try MultipartParserOutputReceiver.collectOutput(data, boundary: "-")
         XCTAssertEqual(output.parts.count, 1)
+    }
+
+    func testPerformance() throws {
+        let testSize: Int
+        #if DEBUG
+            #warning("Performance test results in debug configuration are not a good indicator for performance in release configuration.")
+            testSize = 100_000
+        #else
+            testSize = 100_000_000
+        #endif
+
+        var buf = ByteBuffer(string: "---\r\n\r\n")
+        buf.writeRepeatingByte(.init(ascii: "a"), count: testSize)
+        buf.writeString("\r\n-----\r\n")
+
+        measure {
+            do {
+                let receiver = try MultipartParserOutputReceiver.collectOutput(buf, boundary: "-")
+                XCTAssertEqual(receiver.parts[0].body.readableBytes, testSize)
+            } catch {
+                XCTFail(error.localizedDescription)
+            }
+        }
     }
 }
 
@@ -376,9 +399,13 @@ extension ByteBuffer {
 private class MultipartParserOutputReceiver {
     var parts: [MultipartPart] = []
     var headers: HTTPHeaders = [:]
-    var body: String = ""
+    var body: ByteBuffer = ByteBuffer()
 
-    static func collectOutput(data: String, boundary: String) throws -> MultipartParserOutputReceiver {
+    static func collectOutput(_ data: String, boundary: String) throws -> MultipartParserOutputReceiver {
+        try collectOutput(ByteBuffer(string: data), boundary: boundary)
+    }
+
+    static func collectOutput(_ data: ByteBuffer, boundary: String) throws -> MultipartParserOutputReceiver {
         let output = MultipartParserOutputReceiver()
         let parser = MultipartParser(boundary: boundary)
         output.setUp(with: parser)
@@ -391,14 +418,13 @@ private class MultipartParserOutputReceiver {
             self.headers.replaceOrAdd(name: field, value: value)
         }
         parser.onBody = { new in
-            self.body += new.string
+            self.body.writeBuffer(&new)
         }
         parser.onPartComplete = {
             let part = MultipartPart(headers: self.headers, body: self.body)
             self.headers = [:]
-            self.body = ""
+            self.body = ByteBuffer()
             self.parts.append(part)
         }
     }
 }
-
