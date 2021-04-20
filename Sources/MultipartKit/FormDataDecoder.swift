@@ -1,5 +1,3 @@
-import struct NIO.ByteBufferAllocator
-
 /// Decodes `Decodable` types from `multipart/form-data` encoded `Data`.
 ///
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
@@ -31,7 +29,7 @@ public struct FormDataDecoder {
 
         var parts: [MultipartPart] = []
         var headers: HTTPHeaders = .init()
-        var body: ByteBuffer = ByteBufferAllocator().buffer(capacity: 0)
+        var body: ByteBuffer = ByteBuffer()
 
         parser.onHeader = { (field, value) in
             headers.replaceOrAdd(name: field, value: value)
@@ -42,7 +40,7 @@ public struct FormDataDecoder {
         parser.onPartComplete = {
             let part = MultipartPart(headers: headers, body: body)
             headers = [:]
-            body = ByteBufferAllocator().buffer(capacity: 0)
+            body = ByteBuffer()
             parts.append(part)
         }
 
