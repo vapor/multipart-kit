@@ -353,22 +353,23 @@ class MultipartTests: XCTestCase {
         XCTAssertEqual(output.parts.count, 1)
     }
 
-    func testPerformance() throws {
-        guard let dataURL = Bundle.module.url(forResource: "request-body", withExtension: "txt") else {
-            return XCTFail("Unable to load test resource")
-        }
-
-        let data = try Data(contentsOf: dataURL)
-        let buf = ByteBuffer(bytes: data)
-
-        measure {
-            do {
-                let _ = try MultipartParserOutputReceiver.collectOutput(buf, boundary: "__X_PAW_BOUNDARY__")
-            } catch {
-                XCTFail(error.localizedDescription)
-            }
-        }
-    }
+    // TODO: reenable this test with test data generated in code instead of loaded from file
+//    func testPerformance() throws {
+//        guard let dataURL = Bundle.module.url(forResource: "request-body", withExtension: "txt") else {
+//            return XCTFail("Unable to load test resource")
+//        }
+//
+//        let data = try Data(contentsOf: dataURL)
+//        let buf = ByteBuffer(bytes: data)
+//
+//        measure {
+//            do {
+//                let _ = try MultipartParserOutputReceiver.collectOutput(buf, boundary: "__X_PAW_BOUNDARY__")
+//            } catch {
+//                XCTFail(error.localizedDescription)
+//            }
+//        }
+//    }
 }
 
 // https://stackoverflow.com/a/54524110/1041105

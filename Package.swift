@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.2
 import PackageDescription
 
 let package = Package(
@@ -17,6 +17,6 @@ let package = Package(
             .product(name: "NIO", package: "swift-nio"),
             .product(name: "NIOHTTP1", package: "swift-nio"),
         ]),
-        .testTarget(name: "MultipartKitTests", dependencies: ["MultipartKit"], resources: [.copy("request-body.txt")]),
+        .testTarget(name: "MultipartKitTests", dependencies: ["MultipartKit"]),
     ]
 )
