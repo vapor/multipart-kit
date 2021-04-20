@@ -55,7 +55,7 @@ public final class MultipartParser {
 
         self.boundary = Array("\r\n--\(boundary)".utf8)
         self.boundaryLength = self.boundary.count
-        self.state = .preamble(boundaryMatchIndex: 0)
+        self.state = .preamble()
     }
 
     public func execute(_ string: String) throws {
