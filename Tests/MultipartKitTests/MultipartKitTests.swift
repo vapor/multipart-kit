@@ -353,23 +353,51 @@ class MultipartTests: XCTestCase {
         XCTAssertEqual(output.parts.count, 1)
     }
 
-    // TODO: reenable this test with test data generated in code instead of loaded from file
-//    func testPerformance() throws {
-//        guard let dataURL = Bundle.module.url(forResource: "request-body", withExtension: "txt") else {
-//            return XCTFail("Unable to load test resource")
-//        }
-//
-//        let data = try Data(contentsOf: dataURL)
-//        let buf = ByteBuffer(bytes: data)
-//
-//        measure {
-//            do {
-//                let _ = try MultipartParserOutputReceiver.collectOutput(buf, boundary: "__X_PAW_BOUNDARY__")
-//            } catch {
-//                XCTFail(error.localizedDescription)
-//            }
-//        }
-//    }
+    func testPerformance() throws {
+        let testSize: Int
+        #if DEBUG
+            #warning("Performance test results in debug configuration are not a good indicator for performance in release configuration.")
+            testSize = 100_000
+        #else
+            testSize = 100_000_000
+        #endif
+
+        var buf = ByteBuffer(string: "---\r\n\r\n")
+        buf.writeRepeatingByte(.init(ascii: "a"), count: testSize)
+        buf.writeString("\r\n-----\r\n")
+
+        measure {
+            do {
+                let receiver = try MultipartParserOutputReceiver.collectOutput(buf, boundary: "-")
+                XCTAssertEqual(receiver.parts[0].body.readableBytes, testSize)
+            } catch {
+                XCTFail(error.localizedDescription)
+            }
+        }
+    }
+}
+
+public struct RepeatingSequence<T: Collection>: Sequence {
+    private let base: T
+    public init(baseCollection: T) {
+        self.base = baseCollection
+    }
+    public func makeIterator() -> AnyIterator<T.Element> {
+        var i = base.startIndex
+        return AnyIterator({ [base] () -> T.Element in
+            defer {
+                i = (base.index(after: i) == base.endIndex)
+                    ? base.startIndex : base.index(after: i)
+            }
+            return base[i]
+        })
+    }
+}
+
+extension Collection {
+    public func repeated() -> RepeatingSequence<Self> {
+        return RepeatingSequence(baseCollection: self)
+    }
 }
 
 // https://stackoverflow.com/a/54524110/1041105
