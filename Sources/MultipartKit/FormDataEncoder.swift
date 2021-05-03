@@ -1,10 +1,7 @@
 import struct NIO.ByteBufferAllocator
 
-/// Encodes `Encodable` items to `multipart/form-data` encoded `Data`.
-///
-/// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
-///
-/// Seealso `MultipartParser` for more information about the `multipart` encoding.
+// MARK: NewFormDataEncoder
+
 public struct FormDataEncoder {
     /// Creates a new `FormDataEncoder`.
     public init() { }
@@ -12,9 +9,9 @@ public struct FormDataEncoder {
     public func encode<E>(_ encodable: E, boundary: String) throws -> String
         where E: Encodable
     {
-        var buffer = ByteBufferAllocator().buffer(capacity: 0)
-        try self.encode(encodable, boundary: boundary, into: &buffer)
-        return String(decoding: buffer.readableBytesView, as: UTF8.self)
+        let encoder = _Encoder(codingPath: [])
+        try encodable.encode(to: encoder)
+        return try MultipartSerializer().serialize(parts: encoder.getData().namedParts(), boundary: boundary)
     }
 
     /// Encodes an `Encodable` item to `Data` using the supplied boundary.
@@ -30,158 +27,254 @@ public struct FormDataEncoder {
     public func encode<E>(_ encodable: E, boundary: String, into buffer: inout ByteBuffer) throws
         where E: Encodable
     {
-        let multipart = FormDataEncoderContext()
-        let encoder = _FormDataEncoder(multipart: multipart, codingPath: [])
+        let encoder = _Encoder(codingPath: [])
         try encodable.encode(to: encoder)
-        try MultipartSerializer().serialize(parts: multipart.parts, boundary: boundary, into: &buffer)
+        return try MultipartSerializer().serialize(parts: encoder.getData().namedParts(), boundary: boundary, into: &buffer)
     }
 }
 
-// MARK: Private
+// MARK: MultipartFormData
 
-private final class FormDataEncoderContext {
-    var parts: [MultipartPart]
-    init() {
-        self.parts = []
+enum MultipartFormData {
+    case single(MultipartPart)
+    case array([MultipartFormData])
+    case keyed([(String, MultipartFormData)])
+
+    func namedParts() -> [MultipartPart] {
+        Self.namedParts(from: self)
     }
 
-    func encode<E>(_ encodable: E, at codingPath: [CodingKey]) throws where E: Encodable {
-        guard let convertible = encodable as? MultipartPartConvertible else {
-            throw MultipartError.convertibleType(E.self)
-        }
-
-        guard var part = convertible.multipart else {
-            throw MultipartError.convertibleType(E.self)
-        }
-        
-        switch codingPath.count {
-        case 1: part.name = codingPath[0].stringValue
-        case 2:
-            guard codingPath[1].intValue != nil else {
-                throw MultipartError.nesting
+    private static func namedParts(from data: MultipartFormData, path: String? = nil) -> [MultipartPart] {
+        switch data {
+        case .array(let array):
+            return array.flatMap { namedParts(from: $0, path: path.map { "\($0)[]" }) }
+        case .single(var part):
+            part.name = path
+            return [part]
+        case .keyed(let keysAndValues):
+            return keysAndValues.flatMap { key, value in
+                namedParts(from: value, path: path.map { "\($0)[\(key)]" } ?? key)
             }
-            part.name = codingPath[0].stringValue + "[]"
-        default:
-            throw MultipartError.nesting
         }
-        self.parts.append(part)
     }
 }
 
-private struct _FormDataEncoder: Encoder {
-    let codingPath: [CodingKey]
-    let multipart: FormDataEncoderContext
-    var userInfo: [CodingUserInfoKey: Any] {
-        return [:]
-    }
+// MARK: _Container
 
-    init(multipart: FormDataEncoderContext, codingPath: [CodingKey]) {
-        self.multipart = multipart
+private protocol _Container {
+    func getData() -> MultipartFormData
+}
+
+// MARK: _Encoder
+
+private final class _Encoder {
+    init(codingPath: [CodingKey]) {
         self.codingPath = codingPath
     }
+    private var container: _Container? = nil
+    var codingPath: [CodingKey]
+}
 
-    func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key : CodingKey {
-        return KeyedEncodingContainer(_FormDataKeyedEncoder(multipart: multipart, codingPath: codingPath))
+extension _Encoder: Encoder {
+    var userInfo: [CodingUserInfoKey: Any] { [:] }
+
+    func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key>
+        where Key: CodingKey
+    {
+        let container = KeyedContainer<Key>(codingPath: codingPath)
+        self.container = container
+        return .init(container)
     }
 
     func unkeyedContainer() -> UnkeyedEncodingContainer {
-        return _FormDataUnkeyedEncoder(multipart: multipart, codingPath: codingPath)
+        let container = UnkeyedContainer(codingPath: codingPath)
+        self.container = container
+        return container
     }
 
     func singleValueContainer() -> SingleValueEncodingContainer {
-        return _FormDataSingleValueEncoder(multipart: multipart, codingPath: codingPath)
+        let container = SingleValueContainer(codingPath: codingPath)
+        self.container = container
+        return container
     }
 }
 
-private struct _FormDataSingleValueEncoder: SingleValueEncodingContainer {
-    let multipart: FormDataEncoderContext
-    var codingPath: [CodingKey]
-
-    init(multipart: FormDataEncoderContext, codingPath: [CodingKey]) {
-        self.multipart = multipart
-        self.codingPath = codingPath
-    }
-
-    mutating func encodeNil() throws {
-        // do nothing
-    }
-
-    mutating func encode<T>(_ value: T) throws where T : Encodable {
-        try multipart.encode(value, at: codingPath)
+extension _Encoder: _Container {
+    func getData() -> MultipartFormData {
+        container?.getData() ?? .array([])
     }
 }
 
-private struct _FormDataKeyedEncoder<K>: KeyedEncodingContainerProtocol where K: CodingKey {
-    let multipart: FormDataEncoderContext
-    var codingPath: [CodingKey]
+// MARK: _Encoder.KeyedContainer
 
-    init(multipart: FormDataEncoderContext, codingPath: [CodingKey]) {
-        self.multipart = multipart
-        self.codingPath = codingPath
+private extension _Encoder {
+    final class KeyedContainer<Key> where Key: CodingKey {
+        var codingPath: [CodingKey]
+        var data: [(String, DataOrContainer)] = []
+
+        init(codingPath: [CodingKey]) {
+            self.codingPath = codingPath
+        }
+    }
+}
+
+extension _Encoder.KeyedContainer: KeyedEncodingContainerProtocol {
+    func encodeNil(forKey _: Key) throws {
+        // skip
     }
 
-    mutating func encodeNil(forKey key: K) throws {
-        // ignore
-    }
-
-    mutating func encode<T>(_ value: T, forKey key: K) throws where T : Encodable {
-        if value is MultipartPartConvertible {
-            try multipart.encode(value, at: codingPath + [key])
+    func encode<T>(_ value: T, forKey key: Key) throws
+        where T : Encodable
+    {
+        if let convertible = value as? MultipartPartConvertible {
+            if let part = convertible.multipart {
+                data.append((key.stringValue, .data(.single(part))))
+            }
         } else {
-            let encoder = _FormDataEncoder(multipart: multipart, codingPath: codingPath + [key])
+            let encoder = _Encoder(codingPath: codingPath + [key])
             try value.encode(to: encoder)
+            data.append((key.stringValue, .data(encoder.getData())))
         }
     }
 
-    mutating func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type, forKey key: K) -> KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey {
-        return KeyedEncodingContainer(_FormDataKeyedEncoder<NestedKey>(multipart: multipart, codingPath: codingPath + [key]))
+    func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type, forKey key: Key) -> KeyedEncodingContainer<NestedKey>
+        where NestedKey: CodingKey
+    {
+        let container = _Encoder.KeyedContainer<NestedKey>(codingPath: codingPath + [key])
+        data.append((key.stringValue, .container(container)))
+        return .init(container)
     }
 
-    mutating func nestedUnkeyedContainer(forKey key: K) -> UnkeyedEncodingContainer {
-        return _FormDataUnkeyedEncoder(multipart: multipart, codingPath: codingPath + [key])
+    /// See `KeyedEncodingContainerProtocol`
+    func nestedUnkeyedContainer(forKey key: Key) -> UnkeyedEncodingContainer {
+        let container = _Encoder.UnkeyedContainer(codingPath: codingPath + [key])
+        data.append((key.stringValue, .container(container)))
+        return container
     }
 
-    mutating func superEncoder() -> Encoder {
-        return _FormDataEncoder(multipart: multipart, codingPath: codingPath)
+    func superEncoder() -> Encoder {
+        fatalError()
     }
 
-    mutating func superEncoder(forKey key: K) -> Encoder {
-        return _FormDataEncoder(multipart: multipart, codingPath: codingPath + [key])
+    func superEncoder(forKey key: Key) -> Encoder {
+        fatalError()
     }
 }
 
-private struct _FormDataUnkeyedEncoder: UnkeyedEncodingContainer {
-    var count: Int
-    let multipart: FormDataEncoderContext
-    var codingPath: [CodingKey]
-    var index: CodingKey {
-        return BasicCodingKey.index(0)
+extension _Encoder.KeyedContainer: _Container {
+    func getData() -> MultipartFormData {
+        .keyed(data.map { key, value in (key, value.data) })
+    }
+}
+
+private enum DataOrContainer {
+    case data(MultipartFormData)
+    case container(_Container)
+
+    var data: MultipartFormData {
+        switch self {
+        case .container(let container):
+            return container.getData()
+        case .data(let data):
+            return data
+        }
+    }
+}
+
+// MARK: _Encoder.UnkeyedContainer
+
+private extension _Encoder {
+    final class UnkeyedContainer {
+        var codingPath: [CodingKey]
+        var data: [DataOrContainer] = []
+
+        init(codingPath: [CodingKey]) {
+            self.codingPath = codingPath
+        }
+    }
+}
+
+extension _Encoder.UnkeyedContainer: UnkeyedEncodingContainer {
+    var count: Int { data.count }
+
+    func encodeNil() throws {
+        // skip
     }
 
-    init(multipart: FormDataEncoderContext, codingPath: [CodingKey]) {
-        self.multipart = multipart
-        self.codingPath = codingPath
-        self.count = 0
+    func encode<T>(_ value: T) throws
+        where T : Encodable
+    {
+        if let convertible = value as? MultipartPartConvertible {
+            if let part = convertible.multipart {
+                data.append(.data(.single(part)))
+            }
+        } else {
+            let encoder = _Encoder(codingPath: codingPath)
+            try value.encode(to: encoder)
+            data.append(.data(encoder.getData()))
+        }
     }
 
-    mutating func encodeNil() throws {
-        // ignore
+    func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type) -> KeyedEncodingContainer<NestedKey>
+        where NestedKey: CodingKey
+    {
+        let container = _Encoder.KeyedContainer<NestedKey>(codingPath: codingPath)
+        data.append(.container(container))
+        return .init(container)
     }
 
-    mutating func encode<T>(_ value: T) throws where T : Encodable {
-        let encoder = _FormDataEncoder(multipart: multipart, codingPath: codingPath + [index])
-        try value.encode(to: encoder)
+    func nestedUnkeyedContainer() -> UnkeyedEncodingContainer {
+        let container = _Encoder.UnkeyedContainer(codingPath: codingPath)
+        data.append(.container(container))
+        return container
     }
 
-    mutating func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type) -> KeyedEncodingContainer<NestedKey> where NestedKey : CodingKey {
-        return KeyedEncodingContainer(_FormDataKeyedEncoder<NestedKey>(multipart: multipart, codingPath: codingPath + [index]))
+    func superEncoder() -> Encoder {
+        fatalError()
+    }
+}
+
+extension _Encoder.UnkeyedContainer: _Container {
+    func getData() -> MultipartFormData {
+        .array(data.map(\.data))
+    }
+}
+
+// MARK: _Encoder.SingleValueContainer
+
+private extension _Encoder {
+    final class SingleValueContainer {
+        var codingPath: [CodingKey]
+        var data: MultipartFormData?
+
+        init(codingPath: [CodingKey]) {
+            self.codingPath = codingPath
+        }
+    }
+}
+
+extension _Encoder.SingleValueContainer: SingleValueEncodingContainer {
+    func encodeNil() throws {
+        // skip
     }
 
-    mutating func nestedUnkeyedContainer() -> UnkeyedEncodingContainer {
-        return _FormDataUnkeyedEncoder(multipart: multipart, codingPath: codingPath + [index])
+    func encode<T>(_ value: T) throws
+        where T : Encodable
+    {
+        if let convertible = value as? MultipartPartConvertible {
+            if let part = convertible.multipart {
+                data = .single(part)
+            }
+        } else {
+            let encoder = _Encoder(codingPath: codingPath)
+            try value.encode(to: encoder)
+            data = encoder.getData()
+        }
     }
+}
 
-    mutating func superEncoder() -> Encoder {
-        return _FormDataEncoder(multipart: multipart, codingPath: codingPath + [index])
+extension _Encoder.SingleValueContainer: _Container {
+    func getData() -> MultipartFormData {
+        data ?? .keyed([])
     }
 }

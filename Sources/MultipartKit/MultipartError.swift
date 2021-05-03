@@ -3,6 +3,7 @@ public enum MultipartError: Error, CustomStringConvertible {
     case invalidFormat
     case convertibleType(Any.Type)
     case convertiblePart(Any.Type, MultipartPart)
+    @available(*, deprecated, message: "No longer needed since nested data is supported.")
     case nesting
     case missingPart(String)
     case missingFilename
