@@ -273,31 +273,29 @@ class MultipartTests: XCTestCase {
         }
     }
 
-    // TODO: reenable this test
-    // it currently throws a DecodingError which is more in line with how things _should_ work but to retain compatibility we'll need to capture and transform this error at least until we can bump the major version.
-//    func testFormDataDecoderMultipleWithMissingData() {
-//        /// Content-Type: multipart/form-data; boundary=hello
-//        let data = """
-//        --hello\r
-//        Content-Disposition: form-data; name="link"\r
-//        \r
-//        https://google.com\r
-//        --hello--\r\n
-//        """
-//
-//        struct Foo: Decodable {
-//            var link: URL
-//        }
-//
-//        XCTAssertThrowsError(try FormDataDecoder().decode(Foo.self, from: data, boundary: "hello")) { error in
-//            guard case let MultipartError.missingPart(array) = error else {
-//                XCTFail("Was expecting an error of type MultipartError.missingPart")
-//                return
-//            }
-//
-//            XCTAssertEqual(array, "relative")
-//        }
-//    }
+    func testFormDataDecoderMultipleWithMissingData() {
+        /// Content-Type: multipart/form-data; boundary=hello
+        let data = """
+        --hello\r
+        Content-Disposition: form-data; name="link"\r
+        \r
+        https://google.com\r
+        --hello--\r\n
+        """
+
+        struct Foo: Decodable {
+            var link: URL
+        }
+
+        XCTAssertThrowsError(try FormDataDecoder().decode(Foo.self, from: data, boundary: "hello")) { error in
+            guard case let DecodingError.typeMismatch(type, context) = error else {
+                XCTFail("Was expecting an error of type DecodingError.typeMismatch")
+                return
+            }
+            XCTAssertNotNil(type as? MultipartPart.Type)
+            XCTAssertEqual(context.codingPath.map(\.stringValue), ["link"])
+        }
+    }
 
     func testAllowedHeaderFieldNameCharacters() {
         let disallowedASCIICodes: [Int] = (0...127).compactMap {
@@ -437,6 +435,19 @@ class MultipartTests: XCTestCase {
         let foo = try decoder.decode(Foo.self, from: data, boundary: "-")
 
         XCTAssertEqual(foo, Foo(bar: .init(baz: 1), bars: [.init(baz: 2), .init(baz: 3)]))
+    }
+
+    func testDecodingSingleValue() throws {
+        let data = """
+        ---\r
+        \r
+        1\r
+        -----\r\n
+        """
+
+        let decoder = FormDataDecoder()
+        let foo = try decoder.decode(Int.self, from: data, boundary: "-")
+        XCTAssertEqual(foo, 1)
     }
 }
 

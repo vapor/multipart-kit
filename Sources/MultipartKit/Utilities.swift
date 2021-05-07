@@ -1,17 +1,5 @@
 import Foundation
 
-extension Array where Element == UInt8 {
-    mutating func write(string: String) {
-        if string.utf8.withContiguousStorageIfAvailable({ storage in
-            self.append(contentsOf: storage)
-        }) == nil {
-            (string + "").utf8.withContiguousStorageIfAvailable({ storage in
-                self.append(contentsOf: storage)
-            })!
-        }
-    }
-}
-
 extension HTTPHeaders {
     func getParameter(_ name: String, _ key: String) -> String? {
         return self.headerParts(name: name).flatMap {
@@ -56,12 +44,5 @@ extension HTTPHeaders {
 extension CharacterSet {
     static var quotes: CharacterSet {
         return .init(charactersIn: #""'"#)
-    }
-}
-
-extension Collection {
-    /// Returns the element at the specified index if it is within bounds, otherwise nil.
-    subscript (safe index: Index) -> Element? {
-        self.indices.contains(index) ? self[index] : nil
     }
 }

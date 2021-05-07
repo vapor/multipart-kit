@@ -61,6 +61,6 @@ extension Array where Element == MultipartPart {
 
     /// Returns all `MultipartPart`s with matching name attribute in `"Content-Disposition"` header.
     public func allParts(named name: String) -> [MultipartPart] {
-        return filter { $0.name == name }
+        filter { $0.name == name }
     }
 }
