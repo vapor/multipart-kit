@@ -1,4 +1,5 @@
 import XCTest
+import Foundation
 import MultipartKit
 
 class MultipartTests: XCTestCase {
@@ -45,6 +46,25 @@ class MultipartTests: XCTestCase {
 
         let serialized = try MultipartSerializer().serialize(parts: parts, boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
         XCTAssertEqual(serialized, data)
+    }
+    
+    func testNonAsciiHeader() throws {
+        let filename = "Non-ASCII filé namé.txt"
+        let data = """
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+        Content-Disposition: form-data; name="test"; filename="\(filename)"\r
+        \r
+        eqw-dd-sa----123;1[234\r
+        ------WebKitFormBoundaryPVOZifB9OqEwP2fn--\r\n
+        """
+
+        let parts = try MultipartParserOutputReceiver
+            .collectOutput(data, boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn")
+            .parts
+
+        let contentDisposition = parts.firstPart(named: "test")!.headers
+            .first(name: "Content-Disposition")!
+        XCTAssert(contentDisposition.contains(filename))
     }
 
     func testMultifile() throws {
@@ -115,7 +135,7 @@ class MultipartTests: XCTestCase {
         --hello--\r\n
         """)
     }
-
+    
     func testFormDataDecoderW3() throws {
         /// Content-Type: multipart/form-data; boundary=12345
         let data = """
