@@ -1,5 +1,4 @@
 import XCTest
-import Foundation
 import MultipartKit
 
 class MultipartTests: XCTestCase {
