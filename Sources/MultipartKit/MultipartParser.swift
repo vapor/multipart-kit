@@ -152,7 +152,7 @@ public final class MultipartParser {
                 guard readByte() == .lf else {
                     throw Error.syntax
                 }
-                onHeader(String(bytes: name, encoding: .ascii) ?? "", String(bytes: value, encoding: .ascii) ?? "")
+                onHeader(String(bytes: name, encoding: .utf8) ?? "", String(bytes: value, encoding: .utf8) ?? "")
                 headerState = .headerName([])
             case .postHeaders:
                 guard readByte() == .lf else {
