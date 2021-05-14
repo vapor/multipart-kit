@@ -449,6 +449,55 @@ class MultipartTests: XCTestCase {
         let foo = try decoder.decode(Int.self, from: data, boundary: "-")
         XCTAssertEqual(foo, 1)
     }
+
+    func testMultiPartConvertibleTakesPrecedenceOverDecodable() throws {
+        struct Foo: Decodable, MultipartPartConvertible {
+            var multipart: MultipartPart? { nil }
+
+            let success: Bool
+
+            init(from _: Decoder) throws {
+                success = false
+            }
+            init?(multipart: MultipartPart) {
+                success = true
+            }
+        }
+
+        let singleValue = """
+        ---\r
+        \r
+        \r
+        -----\r\n
+        """
+        let decoder = FormDataDecoder()
+        let singleFoo = try decoder.decode(Foo.self, from: singleValue, boundary: "-")
+        XCTAssertTrue(singleFoo.success)
+
+        let array = """
+        ---\r
+        Content-Disposition: form-data; name=""\r
+        \r
+        \r
+        -----\r\n
+        """
+
+        let fooArray = try decoder.decode([Foo].self, from: array, boundary: "-")
+        XCTAssertFalse(fooArray.isEmpty)
+        XCTAssertTrue(fooArray.allSatisfy(\.success))
+
+        let keyed = """
+        ---\r
+        Content-Disposition: form-data; name="a"\r
+        \r
+        \r
+        -----\r\n
+        """
+
+        let keyedFoos = try decoder.decode([String: Foo].self, from: keyed, boundary: "-")
+        XCTAssertFalse(keyedFoos.isEmpty)
+        XCTAssertTrue(keyedFoos.values.allSatisfy(\.success))
+    }
 }
 
 // https://stackoverflow.com/a/54524110/1041105
