@@ -9,7 +9,7 @@
 ///
 /// See [Wikipedia](https://en.wikipedia.org/wiki/MIME#Multipart_messages) for more information.
 ///
-/// Seealso `form-urlencoded` encoding where delimiter boundaries are not required.
+/// See also `form-urlencoded` encoding where delimiter boundaries are not required.
 public final class MultipartParser {
     private enum Error: Swift.Error {
         case syntax

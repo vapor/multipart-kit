@@ -29,4 +29,3 @@ internal enum BasicCodingKey: CodingKey {
         self = .index(intValue)
     }
 }
-
