@@ -67,28 +67,28 @@ extension OrderedSet {
     _appendNew(item, in: bucket)
     return (true, _elements.index(before: _elements.endIndex))
   }
-//
-//  /// Append a new member to the end of the set, if the set doesn't
-//  /// already contain it.
-//  ///
-//  /// - Parameter item: The element to add to the set.
-//  ///
-//  /// - Returns: A pair `(inserted, index)`, where `inserted` is a Boolean value
-//  ///    indicating whether the operation added a new element, and `index` is
-//  ///    the index of `item` in the resulting set.
-//  ///
-//  /// - Complexity: The operation is expected to perform O(1) copy, hash, and
-//  ///    compare operations on the `Element` type, if it implements high-quality
-//  ///    hashing.
-//  @inlinable
-//  @inline(__always)
-//  @discardableResult
-//  public mutating func append(_ item: Element) -> (inserted: Bool, index: Int) {
-//    let result = _append(item)
-//    _checkInvariants()
-//    return result
-//  }
-//
+
+  /// Append a new member to the end of the set, if the set doesn't
+  /// already contain it.
+  ///
+  /// - Parameter item: The element to add to the set.
+  ///
+  /// - Returns: A pair `(inserted, index)`, where `inserted` is a Boolean value
+  ///    indicating whether the operation added a new element, and `index` is
+  ///    the index of `item` in the resulting set.
+  ///
+  /// - Complexity: The operation is expected to perform O(1) copy, hash, and
+  ///    compare operations on the `Element` type, if it implements high-quality
+  ///    hashing.
+  @inlinable
+  @inline(__always)
+  @discardableResult
+  public mutating func append(_ item: Element) -> (inserted: Bool, index: Int) {
+    let result = _append(item)
+    _checkInvariants()
+    return result
+  }
+
 //  /// Append the contents of a sequence to the end of the set, excluding
 //  /// elements that are already members.
 //  ///

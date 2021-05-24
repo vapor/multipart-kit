@@ -359,61 +359,58 @@ extension OrderedDictionary {
   @inlinable
   public subscript(key: Key) -> Value? {
     get {
-        fatalError()
-//      guard let index = _keys.firstIndex(of: key) else { return nil }
-//      return _values[index]
+      guard let index = _keys.firstIndex(of: key) else { return nil }
+      return _values[index]
     }
     set {
-        fatalError()
-//      // We have a separate `set` in addition to `_modify` in hopes of getting
-//      // rid of `_modify`'s swapAt dance in the usua case where the calle just
-//      // wants to assign a new value.
-//      let (index, bucket) = _keys._find(key)
-//      switch (index, newValue) {
-//      case let (index?, newValue?): // Assign
-//        _values[index] = newValue
-//      case let (index?, nil): // Remove
-//        _keys._removeExistingMember(at: index, in: bucket)
-//        _values.remove(at: index)
-//      case let (nil, newValue?): // Insert
-//        _keys._appendNew(key, in: bucket)
-//        _values.append(newValue)
-//      case (nil, nil): // Noop
-//        break
-//      }
+      // We have a separate `set` in addition to `_modify` in hopes of getting
+      // rid of `_modify`'s swapAt dance in the usua case where the calle just
+      // wants to assign a new value.
+      let (index, bucket) = _keys._find(key)
+      switch (index, newValue) {
+      case let (index?, newValue?): // Assign
+        _values[index] = newValue
+      case let (index?, nil): // Remove
+        _keys._removeExistingMember(at: index, in: bucket)
+        _values.remove(at: index)
+      case let (nil, newValue?): // Insert
+        _keys._appendNew(key, in: bucket)
+        _values.append(newValue)
+      case (nil, nil): // Noop
+        break
+      }
     }
     _modify {
-        fatalError()
-//      let (index, bucket) = _keys._find(key)
-//
-//      // To support in-place mutations better, we swap the value to the end of
-//      // the array, pop it off, then put things back in place when we're done.
-//      var value: Value? = nil
-//      if let index = index {
-//        _values.swapAt(index, _values.count - 1)
-//        value = _values.removeLast()
-//      }
-//
-//      defer {
-//        switch (index, value) {
-//        case let (index?, value?): // Assign
-//          _values.append(value)
-//          _values.swapAt(index, _values.count - 1)
-//        case let (index?, nil): // Remove
-//          if index < _values.count {
-//            let standin = _values.remove(at: index)
-//            _values.append(standin)
-//          }
-//          _keys._removeExistingMember(at: index, in: bucket)
-//        case let (nil, value?): // Insert
-//          _keys._appendNew(key, in: bucket)
-//          _values.append(value)
-//        case (nil, nil): // Noop
-//          break
-//        }
-//      }
-//
-//      yield &value
+      let (index, bucket) = _keys._find(key)
+
+      // To support in-place mutations better, we swap the value to the end of
+      // the array, pop it off, then put things back in place when we're done.
+      var value: Value? = nil
+      if let index = index {
+        _values.swapAt(index, _values.count - 1)
+        value = _values.removeLast()
+      }
+
+      defer {
+        switch (index, value) {
+        case let (index?, value?): // Assign
+          _values.append(value)
+          _values.swapAt(index, _values.count - 1)
+        case let (index?, nil): // Remove
+          if index < _values.count {
+            let standin = _values.remove(at: index)
+            _values.append(standin)
+          }
+          _keys._removeExistingMember(at: index, in: bucket)
+        case let (nil, value?): // Insert
+          _keys._appendNew(key, in: bucket)
+          _values.append(value)
+        case (nil, nil): // Noop
+          break
+        }
+      }
+
+      yield &value
     }
   }
 
@@ -484,28 +481,26 @@ extension OrderedDictionary {
     default defaultValue: @autoclosure () -> Value
   ) -> Value {
     get {
-        fatalError()
-//      guard let offset = _keys.firstIndex(of: key) else { return defaultValue() }
-//      return _values[offset]
+      guard let offset = _keys.firstIndex(of: key) else { return defaultValue() }
+      return _values[offset]
     }
     _modify {
-        fatalError()
-//      let (inserted, index) = _keys.append(key)
-//      if inserted {
-//        assert(index == _values.count)
-//        _values.append(defaultValue())
-//      }
-//      var value: Value = _values.withUnsafeMutableBufferPointer { buffer in
-//        assert(index < buffer.count)
-//        return (buffer.baseAddress! + index).move()
-//      }
-//      defer {
-//        _values.withUnsafeMutableBufferPointer { buffer in
-//          assert(index < buffer.count)
-//          (buffer.baseAddress! + index).initialize(to: value)
-//        }
-//      }
-//      yield &value
+      let (inserted, index) = _keys.append(key)
+      if inserted {
+        assert(index == _values.count)
+        _values.append(defaultValue())
+      }
+      var value: Value = _values.withUnsafeMutableBufferPointer { buffer in
+        assert(index < buffer.count)
+        return (buffer.baseAddress! + index).move()
+      }
+      defer {
+        _values.withUnsafeMutableBufferPointer { buffer in
+          assert(index < buffer.count)
+          (buffer.baseAddress! + index).initialize(to: value)
+        }
+      }
+      yield &value
     }
   }
 

@@ -1,28 +1,28 @@
-////===----------------------------------------------------------------------===//
-////
-//// This source file is part of the Swift Collections open source project
-////
-//// Copyright (c) 2021 Apple Inc. and the Swift project authors
-//// Licensed under Apache License v2.0 with Runtime Library Exception
-////
-//// See https://swift.org/LICENSE.txt for license information
-////
-////===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
-//extension OrderedDictionary {
-//  /// Creates an empty dictionary.
-//  ///
-//  /// This initializer is equivalent to initializing with an empty dictionary
-//  /// literal.
-//  ///
-//  /// - Complexity: O(1)
-//  @inlinable
-//  @inline(__always)
-//  public init() {
-//    self._keys = OrderedSet()
-//    self._values = []
-//  }
+// This source file is part of the Swift Collections open source project
 //
+// Copyright (c) 2021 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+//
+//===----------------------------------------------------------------------===//
+
+extension OrderedDictionary {
+  /// Creates an empty dictionary.
+  ///
+  /// This initializer is equivalent to initializing with an empty dictionary
+  /// literal.
+  ///
+  /// - Complexity: O(1)
+  @inlinable
+  @inline(__always)
+  public init() {
+    self._keys = OrderedSet()
+    self._values = []
+  }
+
 //  /// Creates an empty dictionary with preallocated space for at least the
 //  /// specified number of elements.
 //  ///
@@ -54,7 +54,7 @@
 //    self._values = []
 //    _values.reserveCapacity(minimumCapacity)
 //  }
-//}
+}
 
 extension OrderedDictionary {
   /// Creates a new dictionary from the key-value pairs in the given sequence.

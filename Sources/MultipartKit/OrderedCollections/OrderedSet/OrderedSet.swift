@@ -303,11 +303,11 @@ extension OrderedSet {
     _table?.capacity ?? _HashTable.maximumUnhashedCount
   }
 
-//  @inlinable
-//  internal var _minimumCapacity: Int {
-//    if _scale == _reservedScale { return 0 }
-//    return _HashTable.minimumCapacity(forScale: _scale)
-//  }
+  @inlinable
+  internal var _minimumCapacity: Int {
+    if _scale == _reservedScale { return 0 }
+    return _HashTable.minimumCapacity(forScale: _scale)
+  }
 
   @inlinable
   internal var _scale: Int {
@@ -463,34 +463,34 @@ extension OrderedSet {
 //    return result
 //  }
 //}
-//
-//extension OrderedSet {
-//  @inlinable
-//  @discardableResult
-//  internal mutating func _removeExistingMember(
-//    at index: Int,
-//    in bucket: _Bucket
-//  ) -> Element {
-//    guard _elements.count - 1 >= _minimumCapacity else {
-//      let old = _elements.remove(at: index)
-//      _regenerateHashTable()
-//      return old
-//    }
-//    guard _table != nil else {
-//      return _elements.remove(at: index)
-//    }
-//
-//    defer { _checkInvariants() }
-//    _ensureUnique()
-//    _table!.update { hashTable in
-//      // Delete the entry for the removed member.
-//      hashTable.delete(
-//        bucket: bucket,
-//        hashValueGenerator: { offset, seed in
-//          _elements[offset]._rawHashValue(seed: seed)
-//        })
-//      hashTable.adjustContents(preparingForRemovalOf: index, in: _elements)
-//    }
-//    return _elements.remove(at: index)
-//  }
-//}
+
+extension OrderedSet {
+  @inlinable
+  @discardableResult
+  internal mutating func _removeExistingMember(
+    at index: Int,
+    in bucket: _Bucket
+  ) -> Element {
+    guard _elements.count - 1 >= _minimumCapacity else {
+      let old = _elements.remove(at: index)
+      _regenerateHashTable()
+      return old
+    }
+    guard _table != nil else {
+      return _elements.remove(at: index)
+    }
+
+    defer { _checkInvariants() }
+    _ensureUnique()
+    _table!.update { hashTable in
+      // Delete the entry for the removed member.
+      hashTable.delete(
+        bucket: bucket,
+        hashValueGenerator: { offset, seed in
+          _elements[offset]._rawHashValue(seed: seed)
+        })
+      hashTable.adjustContents(preparingForRemovalOf: index, in: _elements)
+    }
+    return _elements.remove(at: index)
+  }
+}
