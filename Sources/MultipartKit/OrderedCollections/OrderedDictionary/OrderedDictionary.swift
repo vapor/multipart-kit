@@ -231,31 +231,31 @@ extension OrderedDictionary {
   @inline(__always)
   public var keys: OrderedSet<Key> { _keys }
 
-  /// A mutable collection view containing the values in this dictionary.
-  ///
-  /// - Complexity: O(1)
-  @inlinable
-  @inline(__always)
-  public var values: Values {
-    get { Values(_base: self) }
-    _modify {
-      var values = Values(_base: self)
-      self = [:]
-      defer { self = values._base }
-      yield &values
-    }
-  }
+//  /// A mutable collection view containing the values in this dictionary.
+//  ///
+//  /// - Complexity: O(1)
+//  @inlinable
+//  @inline(__always)
+//  public var values: Values {
+//    get { Values(_base: self) }
+//    _modify {
+//      var values = Values(_base: self)
+//      self = [:]
+//      defer { self = values._base }
+//      yield &values
+//    }
+//  }
 }
 
 extension OrderedDictionary {
-  public typealias Index = Int
-
-  /// A Boolean value indicating whether the dictionary is empty.
-  ///
-  /// - Complexity: O(1)
-  @inlinable
-  @inline(__always)
-  public var isEmpty: Bool { _values.isEmpty }
+//  public typealias Index = Int
+//
+//  /// A Boolean value indicating whether the dictionary is empty.
+//  ///
+//  /// - Complexity: O(1)
+//  @inlinable
+//  @inline(__always)
+//  public var isEmpty: Bool { _values.isEmpty }
 
   /// The number of elements in the dictionary.
   ///
@@ -264,43 +264,43 @@ extension OrderedDictionary {
   @inline(__always)
   public var count: Int { _values.count }
 
-  /// Returns the index for the given key.
-  ///
-  /// If the given key is found in the dictionary, this method returns an index
-  /// into the dictionary that corresponds with the key-value pair.
-  ///
-  ///     let countryCodes: OrderedDictionary = ["BR": "Brazil", "GH": "Ghana", "JP": "Japan"]
-  ///     let index = countryCodes.index(forKey: "JP")
-  ///
-  ///     print("Country code for \(countryCodes[index!].value): '\(countryCodes[index!].key)'.")
-  ///     // Prints "Country code for Japan: 'JP'."
-  ///
-  /// - Parameter key: The key to find in the dictionary.
-  ///
-  /// - Returns: The index for `key` and its associated value if `key` is in
-  ///    the dictionary; otherwise, `nil`.
-  ///
-  /// - Complexity: Expected to be O(1) on average, if `Key` implements
-  ///    high-quality hashing.
-  @inlinable
-  @inline(__always)
-  public func index(forKey key: Key) -> Int? {
-    _keys.firstIndex(of: key)
-  }
-
-  /// Accesses the element at the specified index. This can be used to
-  /// perform in-place mutations on dictionary values.
-  ///
-  /// - Parameter offset: The offset of the element to access, measured from
-  ///   the start of the collection. `offset` must be greater than or equal to
-  ///   `0` and less than `count`.
-  ///
-  /// - Complexity: O(1)
-  @inlinable
-  @inline(__always)
-  public subscript(offset offset: Int) -> Element {
-    (_keys[offset], _values[offset])
-  }
+//  /// Returns the index for the given key.
+//  ///
+//  /// If the given key is found in the dictionary, this method returns an index
+//  /// into the dictionary that corresponds with the key-value pair.
+//  ///
+//  ///     let countryCodes: OrderedDictionary = ["BR": "Brazil", "GH": "Ghana", "JP": "Japan"]
+//  ///     let index = countryCodes.index(forKey: "JP")
+//  ///
+//  ///     print("Country code for \(countryCodes[index!].value): '\(countryCodes[index!].key)'.")
+//  ///     // Prints "Country code for Japan: 'JP'."
+//  ///
+//  /// - Parameter key: The key to find in the dictionary.
+//  ///
+//  /// - Returns: The index for `key` and its associated value if `key` is in
+//  ///    the dictionary; otherwise, `nil`.
+//  ///
+//  /// - Complexity: Expected to be O(1) on average, if `Key` implements
+//  ///    high-quality hashing.
+//  @inlinable
+//  @inline(__always)
+//  public func index(forKey key: Key) -> Int? {
+//    _keys.firstIndex(of: key)
+//  }
+//
+//  /// Accesses the element at the specified index. This can be used to
+//  /// perform in-place mutations on dictionary values.
+//  ///
+//  /// - Parameter offset: The offset of the element to access, measured from
+//  ///   the start of the collection. `offset` must be greater than or equal to
+//  ///   `0` and less than `count`.
+//  ///
+//  /// - Complexity: O(1)
+//  @inlinable
+//  @inline(__always)
+//  public subscript(offset offset: Int) -> Element {
+//    (_keys[offset], _values[offset])
+//  }
 }
 
 extension OrderedDictionary {
@@ -359,58 +359,61 @@ extension OrderedDictionary {
   @inlinable
   public subscript(key: Key) -> Value? {
     get {
-      guard let index = _keys.firstIndex(of: key) else { return nil }
-      return _values[index]
+        fatalError()
+//      guard let index = _keys.firstIndex(of: key) else { return nil }
+//      return _values[index]
     }
     set {
-      // We have a separate `set` in addition to `_modify` in hopes of getting
-      // rid of `_modify`'s swapAt dance in the usua case where the calle just
-      // wants to assign a new value.
-      let (index, bucket) = _keys._find(key)
-      switch (index, newValue) {
-      case let (index?, newValue?): // Assign
-        _values[index] = newValue
-      case let (index?, nil): // Remove
-        _keys._removeExistingMember(at: index, in: bucket)
-        _values.remove(at: index)
-      case let (nil, newValue?): // Insert
-        _keys._appendNew(key, in: bucket)
-        _values.append(newValue)
-      case (nil, nil): // Noop
-        break
-      }
+        fatalError()
+//      // We have a separate `set` in addition to `_modify` in hopes of getting
+//      // rid of `_modify`'s swapAt dance in the usua case where the calle just
+//      // wants to assign a new value.
+//      let (index, bucket) = _keys._find(key)
+//      switch (index, newValue) {
+//      case let (index?, newValue?): // Assign
+//        _values[index] = newValue
+//      case let (index?, nil): // Remove
+//        _keys._removeExistingMember(at: index, in: bucket)
+//        _values.remove(at: index)
+//      case let (nil, newValue?): // Insert
+//        _keys._appendNew(key, in: bucket)
+//        _values.append(newValue)
+//      case (nil, nil): // Noop
+//        break
+//      }
     }
     _modify {
-      let (index, bucket) = _keys._find(key)
-
-      // To support in-place mutations better, we swap the value to the end of
-      // the array, pop it off, then put things back in place when we're done.
-      var value: Value? = nil
-      if let index = index {
-        _values.swapAt(index, _values.count - 1)
-        value = _values.removeLast()
-      }
-
-      defer {
-        switch (index, value) {
-        case let (index?, value?): // Assign
-          _values.append(value)
-          _values.swapAt(index, _values.count - 1)
-        case let (index?, nil): // Remove
-          if index < _values.count {
-            let standin = _values.remove(at: index)
-            _values.append(standin)
-          }
-          _keys._removeExistingMember(at: index, in: bucket)
-        case let (nil, value?): // Insert
-          _keys._appendNew(key, in: bucket)
-          _values.append(value)
-        case (nil, nil): // Noop
-          break
-        }
-      }
-
-      yield &value
+        fatalError()
+//      let (index, bucket) = _keys._find(key)
+//
+//      // To support in-place mutations better, we swap the value to the end of
+//      // the array, pop it off, then put things back in place when we're done.
+//      var value: Value? = nil
+//      if let index = index {
+//        _values.swapAt(index, _values.count - 1)
+//        value = _values.removeLast()
+//      }
+//
+//      defer {
+//        switch (index, value) {
+//        case let (index?, value?): // Assign
+//          _values.append(value)
+//          _values.swapAt(index, _values.count - 1)
+//        case let (index?, nil): // Remove
+//          if index < _values.count {
+//            let standin = _values.remove(at: index)
+//            _values.append(standin)
+//          }
+//          _keys._removeExistingMember(at: index, in: bucket)
+//        case let (nil, value?): // Insert
+//          _keys._appendNew(key, in: bucket)
+//          _values.append(value)
+//        case (nil, nil): // Noop
+//          break
+//        }
+//      }
+//
+//      yield &value
     }
   }
 
@@ -481,26 +484,28 @@ extension OrderedDictionary {
     default defaultValue: @autoclosure () -> Value
   ) -> Value {
     get {
-      guard let offset = _keys.firstIndex(of: key) else { return defaultValue() }
-      return _values[offset]
+        fatalError()
+//      guard let offset = _keys.firstIndex(of: key) else { return defaultValue() }
+//      return _values[offset]
     }
     _modify {
-      let (inserted, index) = _keys.append(key)
-      if inserted {
-        assert(index == _values.count)
-        _values.append(defaultValue())
-      }
-      var value: Value = _values.withUnsafeMutableBufferPointer { buffer in
-        assert(index < buffer.count)
-        return (buffer.baseAddress! + index).move()
-      }
-      defer {
-        _values.withUnsafeMutableBufferPointer { buffer in
-          assert(index < buffer.count)
-          (buffer.baseAddress! + index).initialize(to: value)
-        }
-      }
-      yield &value
+        fatalError()
+//      let (inserted, index) = _keys.append(key)
+//      if inserted {
+//        assert(index == _values.count)
+//        _values.append(defaultValue())
+//      }
+//      var value: Value = _values.withUnsafeMutableBufferPointer { buffer in
+//        assert(index < buffer.count)
+//        return (buffer.baseAddress! + index).move()
+//      }
+//      defer {
+//        _values.withUnsafeMutableBufferPointer { buffer in
+//          assert(index < buffer.count)
+//          (buffer.baseAddress! + index).initialize(to: value)
+//        }
+//      }
+//      yield &value
     }
   }
 
@@ -547,19 +552,19 @@ extension OrderedDictionary {
   ///
   /// - Complexity: expected complexity is amortized O(1), if `Key` implements
   ///    high-quality hashing.
-  @inlinable
-  @discardableResult
-  public mutating func updateValue(_ value: Value, forKey key: Key) -> Value? {
-    let (index, bucket) = _keys._find(key)
-    if let index = index {
-      let old = _values[index]
-      _values[index] = value
-      return old
-    }
-    _keys._appendNew(key, in: bucket)
-    _values.append(value)
-    return nil
-  }
+//  @inlinable
+//  @discardableResult
+//  public mutating func updateValue(_ value: Value, forKey key: Key) -> Value? {
+//    let (index, bucket) = _keys._find(key)
+//    if let index = index {
+//      let old = _values[index]
+//      _values[index] = value
+//      return old
+//    }
+//    _keys._appendNew(key, in: bucket)
+//    _values.append(value)
+//    return nil
+//  }
 
   /// Updates the value stored in the dictionary for the given key, or inserts a
   /// new key-value pair at the specified index if the key does not exist.
@@ -611,23 +616,23 @@ extension OrderedDictionary {
   ///    is the index corresponding to the updated (or inserted) value.
   ///
   /// - Complexity: O(`count`)
-  @inlinable
-  @discardableResult
-  public mutating func updateValue(
-    _ value: Value,
-    forKey key: Key,
-    insertingAt index: Int
-  ) -> (originalMember: Value?, index: Int) {
-    let (inserted, offset) = _keys.insert(key, at: index)
-    if inserted {
-      assert(offset == index)
-      _values.insert(value, at: offset)
-      return (nil, offset)
-    }
-    let old = _values[offset]
-    _values[offset] = value
-    return (old, offset)
-  }
+//  @inlinable
+//  @discardableResult
+//  public mutating func updateValue(
+//    _ value: Value,
+//    forKey key: Key,
+//    insertingAt index: Int
+//  ) -> (originalMember: Value?, index: Int) {
+//    let (inserted, offset) = _keys.insert(key, at: index)
+//    if inserted {
+//      assert(offset == index)
+//      _values.insert(value, at: offset)
+//      return (nil, offset)
+//    }
+//    let old = _values[offset]
+//    _values[offset] = value
+//    return (old, offset)
+//  }
 
   /// Ensures that the specified key exists in the dictionary (by appending one
   /// with the supplied default value if necessary), then calls `body` to update
@@ -659,21 +664,21 @@ extension OrderedDictionary {
   ///
   /// - Complexity: expected complexity is amortized O(1), if `Key` implements
   ///    high-quality hashing. (Ignoring the complexity of calling `body`.)
-  @inlinable
-  public mutating func modifyValue<R>(
-    forKey key: Key,
-    default defaultValue: @autoclosure () -> Value,
-    _ body: (inout Value) throws -> R
-  ) rethrows -> R {
-    let (index, bucket) = _keys._find(key)
-    if let index = index {
-      return try body(&_values[index])
-    }
-    _keys._appendNew(key, in: bucket)
-    _values.append(defaultValue())
-    let i = _values.index(before: _values.endIndex)
-    return try body(&_values[i])
-  }
+//  @inlinable
+//  public mutating func modifyValue<R>(
+//    forKey key: Key,
+//    default defaultValue: @autoclosure () -> Value,
+//    _ body: (inout Value) throws -> R
+//  ) rethrows -> R {
+//    let (index, bucket) = _keys._find(key)
+//    if let index = index {
+//      return try body(&_values[index])
+//    }
+//    _keys._appendNew(key, in: bucket)
+//    _values.append(defaultValue())
+//    let i = _values.index(before: _values.endIndex)
+//    return try body(&_values[i])
+//  }
 
   /// Ensures that the specified key exists in the dictionary (by inserting one
   /// with the specified index and default value if necessary), then calls
@@ -705,21 +710,21 @@ extension OrderedDictionary {
   ///
   /// - Complexity: expected complexity is amortized O(1), if `Key` implements
   ///    high-quality hashing. (Ignoring the complexity of calling `body`.)
-  @inlinable
-  public mutating func modifyValue<R>(
-    forKey key: Key,
-    insertingDefault defaultValue: @autoclosure () -> Value,
-    at index: Int,
-    _ body: (inout Value) throws -> R
-  ) rethrows -> R {
-    let (existingIndex, bucket) = _keys._find(key)
-    if let existingIndex = existingIndex {
-      return try body(&_values[existingIndex])
-    }
-    _keys._insertNew(key, at: index, in: bucket)
-    _values.insert(defaultValue(), at: index)
-    return try body(&_values[index])
-  }
+//  @inlinable
+//  public mutating func modifyValue<R>(
+//    forKey key: Key,
+//    insertingDefault defaultValue: @autoclosure () -> Value,
+//    at index: Int,
+//    _ body: (inout Value) throws -> R
+//  ) rethrows -> R {
+//    let (existingIndex, bucket) = _keys._find(key)
+//    if let existingIndex = existingIndex {
+//      return try body(&_values[existingIndex])
+//    }
+//    _keys._insertNew(key, at: index, in: bucket)
+//    _values.insert(defaultValue(), at: index)
+//    return try body(&_values[index])
+//  }
 }
 
 extension OrderedDictionary {
@@ -752,14 +757,14 @@ extension OrderedDictionary {
   ///   present in the dictionary.
   ///
   /// - Complexity: O(`count`)
-  @inlinable
-  @discardableResult
-  public mutating func removeValue(forKey key: Key) -> Value? {
-    let (idx, bucket) = _keys._find(key)
-    guard let index = idx else { return nil }
-    _keys._removeExistingMember(at: index, in: bucket)
-    return _values.remove(at: index)
-  }
+//  @inlinable
+//  @discardableResult
+//  public mutating func removeValue(forKey key: Key) -> Value? {
+//    let (idx, bucket) = _keys._find(key)
+//    guard let index = idx else { return nil }
+//    _keys._removeExistingMember(at: index, in: bucket)
+//    return _values.remove(at: index)
+//  }
 }
 
 extension OrderedDictionary {
@@ -793,21 +798,21 @@ extension OrderedDictionary {
   ///
   /// - Complexity: Expected to be O(*n*) on average, where *n* is the number of
   ///    elements in `keysAndValues`, if `Key` implements high-quality hashing.
-  @inlinable
-  public mutating func merge<S: Sequence>(
-    _ keysAndValues: __owned S,
-    uniquingKeysWith combine: (Value, Value) throws -> Value
-  ) rethrows where S.Element == (key: Key, value: Value) {
-    for (key, value) in keysAndValues {
-      let (index, bucket) = _keys._find(key)
-      if let index = index {
-        try { $0 = try combine($0, value) }(&_values[index])
-      } else {
-        _keys._appendNew(key, in: bucket)
-        _values.append(value)
-      }
-    }
-  }
+//  @inlinable
+//  public mutating func merge<S: Sequence>(
+//    _ keysAndValues: __owned S,
+//    uniquingKeysWith combine: (Value, Value) throws -> Value
+//  ) rethrows where S.Element == (key: Key, value: Value) {
+//    for (key, value) in keysAndValues {
+//      let (index, bucket) = _keys._find(key)
+//      if let index = index {
+//        try { $0 = try combine($0, value) }(&_values[index])
+//      } else {
+//        _keys._appendNew(key, in: bucket)
+//        _values.append(value)
+//      }
+//    }
+//  }
 
   /// Merges the key-value pairs in the given sequence into the dictionary,
   /// using a combining closure to determine the value for any duplicate keys.
@@ -839,15 +844,15 @@ extension OrderedDictionary {
   ///
   /// - Complexity: Expected to be O(*n*) on average, where *n* is the number of
   ///    elements in `keysAndValues`, if `Key` implements high-quality hashing.
-  @inlinable
-  public mutating func merge<S: Sequence>(
-    _ keysAndValues: __owned S,
-    uniquingKeysWith combine: (Value, Value) throws -> Value
-  ) rethrows where S.Element == (Key, Value) {
-    let mapped: LazyMapSequence =
-      keysAndValues.lazy.map { (key: $0.0, value: $0.1) }
-    try merge(mapped, uniquingKeysWith: combine)
-  }
+//  @inlinable
+//  public mutating func merge<S: Sequence>(
+//    _ keysAndValues: __owned S,
+//    uniquingKeysWith combine: (Value, Value) throws -> Value
+//  ) rethrows where S.Element == (Key, Value) {
+//    let mapped: LazyMapSequence =
+//      keysAndValues.lazy.map { (key: $0.0, value: $0.1) }
+//    try merge(mapped, uniquingKeysWith: combine)
+//  }
 
   /// Creates a dictionary by merging key-value pairs in a sequence into this
   /// dictionary, using a combining closure to determine the value for
@@ -882,15 +887,15 @@ extension OrderedDictionary {
   /// - Complexity: Expected to be O(`count` + *n*) on average, where *n* is the
   ///    number of elements in `keysAndValues`, if `Key` implements high-quality
   ///    hashing.
-  @inlinable
-  public __consuming func merging<S: Sequence>(
-    _ other: __owned S,
-    uniquingKeysWith combine: (Value, Value) throws -> Value
-  ) rethrows -> Self where S.Element == (key: Key, value: Value) {
-    var copy = self
-    try copy.merge(other, uniquingKeysWith: combine)
-    return copy
-  }
+//  @inlinable
+//  public __consuming func merging<S: Sequence>(
+//    _ other: __owned S,
+//    uniquingKeysWith combine: (Value, Value) throws -> Value
+//  ) rethrows -> Self where S.Element == (key: Key, value: Value) {
+//    var copy = self
+//    try copy.merge(other, uniquingKeysWith: combine)
+//    return copy
+//  }
 
   /// Creates a dictionary by merging key-value pairs in a sequence into this
   /// dictionary, using a combining closure to determine the value for
@@ -925,15 +930,15 @@ extension OrderedDictionary {
   /// - Complexity: Expected to be O(`count` + *n*) on average, where *n* is the
   ///    number of elements in `keysAndValues`, if `Key` implements high-quality
   ///    hashing.
-  @inlinable
-  public __consuming func merging<S: Sequence>(
-    _ other: __owned S,
-    uniquingKeysWith combine: (Value, Value) throws -> Value
-  ) rethrows -> Self where S.Element == (Key, Value) {
-    var copy = self
-    try copy.merge(other, uniquingKeysWith: combine)
-    return copy
-  }
+//  @inlinable
+//  public __consuming func merging<S: Sequence>(
+//    _ other: __owned S,
+//    uniquingKeysWith combine: (Value, Value) throws -> Value
+//  ) rethrows -> Self where S.Element == (Key, Value) {
+//    var copy = self
+//    try copy.merge(other, uniquingKeysWith: combine)
+//    return copy
+//  }
 }
 
 extension OrderedDictionary {
@@ -947,17 +952,17 @@ extension OrderedDictionary {
   /// - Returns: A dictionary of the key-value pairs that `isIncluded` allows.
   ///
   /// - Complexity: O(`count`)
-  @inlinable
-  public func filter(
-    _ isIncluded: (Element) throws -> Bool
-  ) rethrows -> Self {
-    var result: OrderedDictionary = [:]
-    for element in self where try isIncluded(element) {
-      result._keys._appendNew(element.key)
-      result._values.append(element.value)
-    }
-    return result
-  }
+//  @inlinable
+//  public func filter(
+//    _ isIncluded: (Element) throws -> Bool
+//  ) rethrows -> Self {
+//    var result: OrderedDictionary = [:]
+//    for element in self where try isIncluded(element) {
+//      result._keys._appendNew(element.key)
+//      result._values.append(element.value)
+//    }
+//    return result
+//  }
 }
 
 extension OrderedDictionary {
@@ -1006,17 +1011,17 @@ extension OrderedDictionary {
   ///   values of this dictionary.
   ///
   /// - Complexity: O(`count`)
-  @inlinable
-  public func compactMapValues<T>(
-    _ transform: (Value) throws -> T?
-  ) rethrows -> OrderedDictionary<Key, T> {
-    var result: OrderedDictionary<Key, T> = [:]
-    for (key, value) in self {
-      if let value = try transform(value) {
-        result._keys._appendNew(key)
-        result._values.append(value)
-      }
-    }
-    return result
-  }
+//  @inlinable
+//  public func compactMapValues<T>(
+//    _ transform: (Value) throws -> T?
+//  ) rethrows -> OrderedDictionary<Key, T> {
+//    var result: OrderedDictionary<Key, T> = [:]
+//    for (key, value) in self {
+//      if let value = try transform(value) {
+//        result._keys._appendNew(key)
+//        result._values.append(value)
+//      }
+//    }
+//    return result
+//  }
 }

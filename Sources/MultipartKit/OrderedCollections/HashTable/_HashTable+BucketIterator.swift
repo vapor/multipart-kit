@@ -243,15 +243,15 @@ extension _HashTable.BucketIterator {
     return currentValue
   }
 
-  /// Advance this iterator until it points to an occupied bucket with the
-  /// specified value, or an unoccupied bucket -- whichever comes first.
-  @inlinable
-  @_effects(releasenone)
-  internal mutating func advance(until expected: Int) {
-    while isOccupied && currentValue != expected {
-      advance()
-    }
-  }
+//  /// Advance this iterator until it points to an occupied bucket with the
+//  /// specified value, or an unoccupied bucket -- whichever comes first.
+//  @inlinable
+//  @_effects(releasenone)
+//  internal mutating func advance(until expected: Int) {
+//    while isOccupied && currentValue != expected {
+//      advance()
+//    }
+//  }
 
   /// Advance this iterator until it points to an unoccupied bucket.
   /// Useful when inserting an element that we know isn't already in the table.

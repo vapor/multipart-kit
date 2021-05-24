@@ -1,41 +1,41 @@
-//===----------------------------------------------------------------------===//
+////===----------------------------------------------------------------------===//
+////
+//// This source file is part of the Swift Collections open source project
+////
+//// Copyright (c) 2021 Apple Inc. and the Swift project authors
+//// Licensed under Apache License v2.0 with Runtime Library Exception
+////
+//// See https://swift.org/LICENSE.txt for license information
+////
+////===----------------------------------------------------------------------===//
 //
-// This source file is part of the Swift Collections open source project
-//
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
-// Licensed under Apache License v2.0 with Runtime Library Exception
-//
-// See https://swift.org/LICENSE.txt for license information
-//
-//===----------------------------------------------------------------------===//
-
-extension OrderedSet {
-  /// Creates an empty set with preallocated space for at least the
-  /// specified number of elements.
-  ///
-  /// Use this initializer to avoid intermediate reallocations of a
-  /// set's storage buffer when you know in advance how many elements
-  /// you'll insert into the set after creation.
-  ///
-  /// If you have a good idea of the expected working size of the set, calling
-  /// this initializer with `persistent` set to true can sometimes improve
-  /// performance by eliminating churn due to repeated rehashings when the set
-  /// temporarily shrinks below its regular size.
-  ///
-  /// - Parameter minimumCapacity: The minimum number of elements that the newly
-  ///   created set should be able to store without reallocating its storage.
-  ///
-  /// - Parameter persistent: If set to true, prevent removals from shrinking
-  ///   storage below the specified capacity. By default, removals are allowed
-  ///   to shrink storage below any previously reserved capacity.
-  ///
-  /// - Complexity: O(`minimumCapacity`)
-  @inlinable
-  public init(minimumCapacity: Int, persistent: Bool = false) {
-    self.init()
-    self._reserveCapacity(minimumCapacity, persistent: persistent)
-  }
-}
+//extension OrderedSet {
+//  /// Creates an empty set with preallocated space for at least the
+//  /// specified number of elements.
+//  ///
+//  /// Use this initializer to avoid intermediate reallocations of a
+//  /// set's storage buffer when you know in advance how many elements
+//  /// you'll insert into the set after creation.
+//  ///
+//  /// If you have a good idea of the expected working size of the set, calling
+//  /// this initializer with `persistent` set to true can sometimes improve
+//  /// performance by eliminating churn due to repeated rehashings when the set
+//  /// temporarily shrinks below its regular size.
+//  ///
+//  /// - Parameter minimumCapacity: The minimum number of elements that the newly
+//  ///   created set should be able to store without reallocating its storage.
+//  ///
+//  /// - Parameter persistent: If set to true, prevent removals from shrinking
+//  ///   storage below the specified capacity. By default, removals are allowed
+//  ///   to shrink storage below any previously reserved capacity.
+//  ///
+//  /// - Complexity: O(`minimumCapacity`)
+//  @inlinable
+//  public init(minimumCapacity: Int, persistent: Bool = false) {
+//    self.init()
+//    self._reserveCapacity(minimumCapacity, persistent: persistent)
+//  }
+//}
 
 extension OrderedSet {
   /// Reserves enough space to store the specified number of elements.

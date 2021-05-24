@@ -76,12 +76,12 @@ extension _HashTable.UnsafeHandle {
   @inlinable
   @inline(__always)
   internal var scale: Int { _header.pointee.scale }
-
-  /// The scale corresponding to the last call to `reserveCapacity`.
-  /// We store this to make sure we don't shrink the table below its reserved size.
-  @inlinable
-  @inline(__always)
-  internal var reservedScale: Int { _header.pointee.reservedScale }
+//
+//  /// The scale corresponding to the last call to `reserveCapacity`.
+//  /// We store this to make sure we don't shrink the table below its reserved size.
+//  @inlinable
+//  @inline(__always)
+//  internal var reservedScale: Int { _header.pointee.reservedScale }
 
   /// The hasher seed to use within this hash table.
   @inlinable
@@ -124,26 +124,26 @@ extension _HashTable.UnsafeHandle {
   @inline(__always)
   internal var capacity: Int { _HashTable.maximumCapacity(forScale: scale) }
 
-  /// Return the bucket logically following `bucket` in this hash table.
-  /// The buckets form a cycle, so the last bucket is logically followed by the first.
-  @inlinable
-  @inline(__always)
-  func bucket(after bucket: Bucket) -> Bucket {
-    var offset = bucket.offset + 1
-    if offset == bucketCount {
-      offset = 0
-    }
-    return Bucket(offset: offset)
-  }
-
-  /// Return the bucket logically preceding `bucket` in this hash table.
-  /// The buckets form a cycle, so the first bucket is logically preceded by the last.
-  @inlinable
-  @inline(__always)
-  func bucket(before bucket: Bucket) -> Bucket {
-    let offset = (bucket.offset == 0 ? bucketCount : bucket.offset) - 1
-    return Bucket(offset: offset)
-  }
+//  /// Return the bucket logically following `bucket` in this hash table.
+//  /// The buckets form a cycle, so the last bucket is logically followed by the first.
+//  @inlinable
+//  @inline(__always)
+//  func bucket(after bucket: Bucket) -> Bucket {
+//    var offset = bucket.offset + 1
+//    if offset == bucketCount {
+//      offset = 0
+//    }
+//    return Bucket(offset: offset)
+//  }
+//
+//  /// Return the bucket logically preceding `bucket` in this hash table.
+//  /// The buckets form a cycle, so the first bucket is logically preceded by the last.
+//  @inlinable
+//  @inline(__always)
+//  func bucket(before bucket: Bucket) -> Bucket {
+//    let offset = (bucket.offset == 0 ? bucketCount : bucket.offset) - 1
+//    return Bucket(offset: offset)
+//  }
 
   /// Return the index of the word logically following `word` in this hash table.
   /// The buckets form a cycle, so the last word is logically followed by the first.
@@ -159,18 +159,18 @@ extension _HashTable.UnsafeHandle {
     return result
   }
 
-  /// Return the index of the word logically preceding `word` in this hash table.
-  /// The buckets form a cycle, so the first word is logically preceded by the first.
-  ///
-  /// Note that the last word may be only partially filled if `scale` is less than 6.
-  @inlinable
-  @inline(__always)
-  func word(before word: Int) -> Int {
-    if word == 0 {
-      return wordCount - 1
-    }
-    return word - 1
-  }
+//  /// Return the index of the word logically preceding `word` in this hash table.
+//  /// The buckets form a cycle, so the first word is logically preceded by the first.
+//  ///
+//  /// Note that the last word may be only partially filled if `scale` is less than 6.
+//  @inlinable
+//  @inline(__always)
+//  func word(before word: Int) -> Int {
+//    if word == 0 {
+//      return wordCount - 1
+//    }
+//    return word - 1
+//  }
 
   /// Return the index of the 64-bit storage word that holds the first bit
   /// corresponding to `bucket`, along with its bit position within the word.
@@ -305,188 +305,188 @@ extension _UnsafeHashTable {
   }
 }
 
-extension _UnsafeHashTable {
-  @usableFromInline
-  internal func firstOccupiedBucketInChain(with bucket: Bucket) -> Bucket {
-    var bucket = bucket
-    repeat {
-      bucket = self.bucket(before: bucket)
-    } while isOccupied(bucket)
-    return self.bucket(after: bucket)
-  }
-
-  @inlinable
-  internal func delete(
-    bucket: Bucket,
-    hashValueGenerator: (Int, Int) -> Int // (offset, seed) -> hashValue
-  ) {
-    assertMutable()
-    var it = bucketIterator(startingAt: bucket)
-    assert(it.isOccupied)
-    it.advance()
-    guard it.isOccupied else {
-      // Fast path: Don't get the start bucket when there's nothing to do.
-      self[bucket] = nil
-      return
-    }
-    // If we've put a hole in the middle of a collision chain, some element after
-    // the hole may belong where the new hole is.
-
-    // Find the first bucket in the collision chain that contains the entry we've just deleted.
-    let start = firstOccupiedBucketInChain(with: bucket)
-    var hole = bucket
-
-    while it.isOccupied {
-      let hash = hashValueGenerator(it.currentValue!, seed)
-      let candidate = idealBucket(forHashValue: hash)
-
-      // Does this element belong between start and hole?  We need two
-      // separate tests depending on whether [start, hole] wraps around the
-      // end of the storage.
-      let c0 = candidate.offset >= start.offset
-      let c1 = candidate.offset <= hole.offset
-      if start.offset <= hole.offset ? (c0 && c1) : (c0 || c1) {
-        // Fill the hole. Here we are mutating table contents behind the back of
-        // the iterator; this is okay since we know we are never going to revisit
-        // `hole` with it.
-        self[hole] = it.currentValue
-        hole = it.currentBucket
-      }
-      it.advance()
-    }
-    self[hole] = nil
-  }
-}
-
-extension _UnsafeHashTable {
-  @inlinable
-  internal func adjustContents<Base: RandomAccessCollection>(
-    preparingForInsertionOfElementAtOffset offset: Int,
-    in elements: Base
-  ) where Base.Element: Hashable {
-    assertMutable()
-    let index = elements._index(at: offset)
-    if offset < elements.count / 2 {
-      self.bias += 1
-      if offset <= capacity / 3 {
-        var i = 1
-        for item in elements[..<index] {
-          var it = bucketIterator(for: item)
-          it.advance(until: i)
-          it.currentValue! -= 1
-          i += 1
-        }
-      } else {
-        var it = bucketIterator(startingAt: Bucket(offset: 0))
-        repeat {
-          if let value = it.currentValue, value <= offset {
-            it.currentValue = value - 1
-          }
-          it.advance()
-        } while it.currentBucket.offset != 0
-      }
-    } else {
-      if elements.count - offset - 1 <= capacity / 3 {
-        var i = offset
-        for item in elements[index...] {
-          var it = bucketIterator(for: item)
-          it.advance(until: i)
-          it.currentValue! += 1
-          i += 1
-        }
-      } else {
-        var it = bucketIterator(startingAt: Bucket(offset: 0))
-        repeat {
-          if let value = it.currentValue, value >= offset {
-            it.currentValue = value + 1
-          }
-          it.advance()
-        } while it.currentBucket.offset != 0
-      }
-    }
-  }
-}
-
-extension _UnsafeHashTable {
-  @inlinable
-  @inline(__always)
-  internal func adjustContents<Base: RandomAccessCollection>(
-    preparingForRemovalOf index: Base.Index,
-    in elements: Base
-  ) where Base.Element: Hashable {
-    let next = elements.index(after: index)
-    adjustContents(preparingForRemovalOf: index ..< next, in: elements)
-  }
-
-  @inlinable
-  internal func adjustContents<Base: RandomAccessCollection>(
-    preparingForRemovalOf bounds: Range<Base.Index>,
-    in elements: Base
-  ) where Base.Element: Hashable {
-    assertMutable()
-    let startOffset = elements._offset(of: bounds.lowerBound)
-    let endOffset = elements._offset(of: bounds.upperBound)
-    let c = endOffset - startOffset
-    guard c > 0 else { return }
-    let remainingCount = elements.count - c
-
-    if startOffset >= remainingCount / 2 {
-      let tailCount = elements.count - endOffset
-      if tailCount < capacity / 3 {
-        var i = endOffset
-        for item in elements[bounds.upperBound...] {
-          var it = self.bucketIterator(for: item)
-          it.advance(until: i)
-          it.currentValue = i - c
-          i += 1
-        }
-      } else {
-        var it = bucketIterator(startingAt: Bucket(offset: 0))
-        repeat {
-          if let value = it.currentValue {
-            if value >= endOffset {
-              it.currentValue = value - c
-            } else {
-              assert(value < startOffset)
-            }
-          }
-          it.advance()
-        } while it.currentBucket.offset != 0
-      }
-    } else {
-      if startOffset < capacity / 3 {
-        var i = 0
-        for item in elements[..<bounds.lowerBound] {
-          var it = self.bucketIterator(for: item)
-          it.advance(until: i)
-          it.currentValue = i + c
-          i += 1
-        }
-      } else {
-        var it = bucketIterator(startingAt: Bucket(offset: 0))
-        repeat {
-          if let value = it.currentValue {
-            if value < startOffset {
-              it.currentValue = value + c
-            } else {
-              assert(value >= endOffset)
-            }
-          }
-          it.advance()
-        } while it.currentBucket.offset != 0
-      }
-      self.bias -= c
-    }
-  }
-}
-
-extension _UnsafeHashTable {
-  @usableFromInline
-  internal func clear() {
-    assertMutable()
-    _buckets.assign(repeating: 0, count: wordCount)
-  }
-}
+//extension _UnsafeHashTable {
+//  @usableFromInline
+//  internal func firstOccupiedBucketInChain(with bucket: Bucket) -> Bucket {
+//    var bucket = bucket
+//    repeat {
+//      bucket = self.bucket(before: bucket)
+//    } while isOccupied(bucket)
+//    return self.bucket(after: bucket)
+//  }
+//
+//  @inlinable
+//  internal func delete(
+//    bucket: Bucket,
+//    hashValueGenerator: (Int, Int) -> Int // (offset, seed) -> hashValue
+//  ) {
+//    assertMutable()
+//    var it = bucketIterator(startingAt: bucket)
+//    assert(it.isOccupied)
+//    it.advance()
+//    guard it.isOccupied else {
+//      // Fast path: Don't get the start bucket when there's nothing to do.
+//      self[bucket] = nil
+//      return
+//    }
+//    // If we've put a hole in the middle of a collision chain, some element after
+//    // the hole may belong where the new hole is.
+//
+//    // Find the first bucket in the collision chain that contains the entry we've just deleted.
+//    let start = firstOccupiedBucketInChain(with: bucket)
+//    var hole = bucket
+//
+//    while it.isOccupied {
+//      let hash = hashValueGenerator(it.currentValue!, seed)
+//      let candidate = idealBucket(forHashValue: hash)
+//
+//      // Does this element belong between start and hole?  We need two
+//      // separate tests depending on whether [start, hole] wraps around the
+//      // end of the storage.
+//      let c0 = candidate.offset >= start.offset
+//      let c1 = candidate.offset <= hole.offset
+//      if start.offset <= hole.offset ? (c0 && c1) : (c0 || c1) {
+//        // Fill the hole. Here we are mutating table contents behind the back of
+//        // the iterator; this is okay since we know we are never going to revisit
+//        // `hole` with it.
+//        self[hole] = it.currentValue
+//        hole = it.currentBucket
+//      }
+//      it.advance()
+//    }
+//    self[hole] = nil
+//  }
+//}
+//
+//extension _UnsafeHashTable {
+//  @inlinable
+//  internal func adjustContents<Base: RandomAccessCollection>(
+//    preparingForInsertionOfElementAtOffset offset: Int,
+//    in elements: Base
+//  ) where Base.Element: Hashable {
+//    assertMutable()
+//    let index = elements._index(at: offset)
+//    if offset < elements.count / 2 {
+//      self.bias += 1
+//      if offset <= capacity / 3 {
+//        var i = 1
+//        for item in elements[..<index] {
+//          var it = bucketIterator(for: item)
+//          it.advance(until: i)
+//          it.currentValue! -= 1
+//          i += 1
+//        }
+//      } else {
+//        var it = bucketIterator(startingAt: Bucket(offset: 0))
+//        repeat {
+//          if let value = it.currentValue, value <= offset {
+//            it.currentValue = value - 1
+//          }
+//          it.advance()
+//        } while it.currentBucket.offset != 0
+//      }
+//    } else {
+//      if elements.count - offset - 1 <= capacity / 3 {
+//        var i = offset
+//        for item in elements[index...] {
+//          var it = bucketIterator(for: item)
+//          it.advance(until: i)
+//          it.currentValue! += 1
+//          i += 1
+//        }
+//      } else {
+//        var it = bucketIterator(startingAt: Bucket(offset: 0))
+//        repeat {
+//          if let value = it.currentValue, value >= offset {
+//            it.currentValue = value + 1
+//          }
+//          it.advance()
+//        } while it.currentBucket.offset != 0
+//      }
+//    }
+//  }
+//}
+//
+//extension _UnsafeHashTable {
+//  @inlinable
+//  @inline(__always)
+//  internal func adjustContents<Base: RandomAccessCollection>(
+//    preparingForRemovalOf index: Base.Index,
+//    in elements: Base
+//  ) where Base.Element: Hashable {
+//    let next = elements.index(after: index)
+//    adjustContents(preparingForRemovalOf: index ..< next, in: elements)
+//  }
+//
+//  @inlinable
+//  internal func adjustContents<Base: RandomAccessCollection>(
+//    preparingForRemovalOf bounds: Range<Base.Index>,
+//    in elements: Base
+//  ) where Base.Element: Hashable {
+//    assertMutable()
+//    let startOffset = elements._offset(of: bounds.lowerBound)
+//    let endOffset = elements._offset(of: bounds.upperBound)
+//    let c = endOffset - startOffset
+//    guard c > 0 else { return }
+//    let remainingCount = elements.count - c
+//
+//    if startOffset >= remainingCount / 2 {
+//      let tailCount = elements.count - endOffset
+//      if tailCount < capacity / 3 {
+//        var i = endOffset
+//        for item in elements[bounds.upperBound...] {
+//          var it = self.bucketIterator(for: item)
+//          it.advance(until: i)
+//          it.currentValue = i - c
+//          i += 1
+//        }
+//      } else {
+//        var it = bucketIterator(startingAt: Bucket(offset: 0))
+//        repeat {
+//          if let value = it.currentValue {
+//            if value >= endOffset {
+//              it.currentValue = value - c
+//            } else {
+//              assert(value < startOffset)
+//            }
+//          }
+//          it.advance()
+//        } while it.currentBucket.offset != 0
+//      }
+//    } else {
+//      if startOffset < capacity / 3 {
+//        var i = 0
+//        for item in elements[..<bounds.lowerBound] {
+//          var it = self.bucketIterator(for: item)
+//          it.advance(until: i)
+//          it.currentValue = i + c
+//          i += 1
+//        }
+//      } else {
+//        var it = bucketIterator(startingAt: Bucket(offset: 0))
+//        repeat {
+//          if let value = it.currentValue {
+//            if value < startOffset {
+//              it.currentValue = value + c
+//            } else {
+//              assert(value >= endOffset)
+//            }
+//          }
+//          it.advance()
+//        } while it.currentBucket.offset != 0
+//      }
+//      self.bias -= c
+//    }
+//  }
+//}
+//
+//extension _UnsafeHashTable {
+//  @usableFromInline
+//  internal func clear() {
+//    assertMutable()
+//    _buckets.assign(repeating: 0, count: wordCount)
+//  }
+//}
 
 extension _UnsafeHashTable {
   /// Fill an empty hash table by populating it with data from `elements`.

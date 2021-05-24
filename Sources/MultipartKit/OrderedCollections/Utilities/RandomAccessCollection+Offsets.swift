@@ -16,11 +16,11 @@ extension RandomAccessCollection {
     index(startIndex, offsetBy: offset)
   }
 
-  @inlinable
-  @inline(__always)
-  internal func _offset(of index: Index) -> Int {
-    distance(from: startIndex, to: index)
-  }
+//  @inlinable
+//  @inline(__always)
+//  internal func _offset(of index: Index) -> Int {
+//    distance(from: startIndex, to: index)
+//  }
 
   @inlinable
   @inline(__always)

@@ -244,14 +244,14 @@ public struct OrderedSet<Element> where Element: Hashable
   @usableFromInline
   internal var _elements: ContiguousArray<Element>
 
-  @inlinable
-  internal init(
-    _uniqueElements: ContiguousArray<Element>,
-    _ table: _HashTable? = nil
-  ) {
-    self.__storage = table?._storage
-    self._elements = ContiguousArray(_uniqueElements)
-  }
+//  @inlinable
+//  internal init(
+//    _uniqueElements: ContiguousArray<Element>,
+//    _ table: _HashTable? = nil
+//  ) {
+//    self.__storage = table?._storage
+//    self._elements = ContiguousArray(_uniqueElements)
+//  }
 
   @inlinable
   @inline(__always)
@@ -278,21 +278,21 @@ extension OrderedSet {
   ///
   /// - Complexity: O(1) for the getter. Mutating this property has an expected
   ///    complexity of O(`count`), if `Element` implements high-quality hashing.
-  @inlinable
-  public var elements: [Element] {
-    get {
-      Array(_elements)
-    }
-    set {
-      self = .init(newValue)
-    }
-    _modify {
-      var members = Array(_elements)
-      _elements = []
-      defer { self = .init(members) }
-      yield &members
-    }
-  }
+//  @inlinable
+//  public var elements: [Element] {
+//    get {
+//      Array(_elements)
+//    }
+//    set {
+//      self = .init(newValue)
+//    }
+//    _modify {
+//      var members = Array(_elements)
+//      _elements = []
+//      defer { self = .init(members) }
+//      yield &members
+//    }
+//  }
 }
 
 extension OrderedSet {
@@ -303,11 +303,11 @@ extension OrderedSet {
     _table?.capacity ?? _HashTable.maximumUnhashedCount
   }
 
-  @inlinable
-  internal var _minimumCapacity: Int {
-    if _scale == _reservedScale { return 0 }
-    return _HashTable.minimumCapacity(forScale: _scale)
-  }
+//  @inlinable
+//  internal var _minimumCapacity: Int {
+//    if _scale == _reservedScale { return 0 }
+//    return _HashTable.minimumCapacity(forScale: _scale)
+//  }
 
   @inlinable
   internal var _scale: Int {
@@ -319,10 +319,10 @@ extension OrderedSet {
     _table?.reservedScale ?? 0
   }
 
-  @inlinable
-  internal var _bias: Int {
-    _table?.bias ?? 0
-  }
+//  @inlinable
+//  internal var _bias: Int {
+//    _table?.bias ?? 0
+//  }
 }
 
 extension OrderedSet {
@@ -350,26 +350,26 @@ extension OrderedSet {
     _regenerateHashTable(scale: scale, reservedScale: reservedScale)
   }
 
-  @inlinable
-  internal mutating func _regenerateExistingHashTable() {
-    assert(_capacity >= _elements.count)
-    guard _table != nil else {
-      return
-    }
-    _ensureUnique()
-    _table!.update { hashTable in
-      hashTable.clear()
-      hashTable.fill(uncheckedUniqueElements: _elements)
-    }
-  }
+//  @inlinable
+//  internal mutating func _regenerateExistingHashTable() {
+//    assert(_capacity >= _elements.count)
+//    guard _table != nil else {
+//      return
+//    }
+//    _ensureUnique()
+//    _table!.update { hashTable in
+//      hashTable.clear()
+//      hashTable.fill(uncheckedUniqueElements: _elements)
+//    }
+//  }
 }
 
 extension OrderedSet {
-  @inlinable
-  @inline(__always)
-  internal mutating func _isUnique() -> Bool {
-    isKnownUniquelyReferenced(&__storage)
-  }
+//  @inlinable
+//  @inline(__always)
+//  internal mutating func _isUnique() -> Bool {
+//    isKnownUniquelyReferenced(&__storage)
+//  }
 
   @inlinable
   internal mutating func _ensureUnique() {
@@ -398,16 +398,16 @@ extension OrderedSet {
     }
   }
 
-  @inlinable
-  internal func _bucket(for index: Int) -> _Bucket {
-    guard let table = _table else { return _Bucket(offset: 0) }
-    return table.read { hashTable in
-      var it = hashTable.bucketIterator(for: _elements[index])
-      it.advance(until: index)
-      precondition(it.isOccupied, "Corrupt hash table")
-      return it.currentBucket
-    }
-  }
+//  @inlinable
+//  internal func _bucket(for index: Int) -> _Bucket {
+//    guard let table = _table else { return _Bucket(offset: 0) }
+//    return table.read { hashTable in
+//      var it = hashTable.bucketIterator(for: _elements[index])
+//      it.advance(until: index)
+//      precondition(it.isOccupied, "Corrupt hash table")
+//      return it.currentBucket
+//    }
+//  }
 
   /// Returns the index of the given element in the set, or `nil` if the element
   /// is not a member of the set.
@@ -417,11 +417,11 @@ extension OrderedSet {
   ///
   /// - Complexity: This operation is expected to perform O(1) comparisons on
   ///    average, provided that `Element` implements high-quality hashing.
-  @inlinable
-  @inline(__always)
-  public func firstIndex(of element: Element) -> Int? {
-    _find(element).index
-  }
+//  @inlinable
+//  @inline(__always)
+//  public func firstIndex(of element: Element) -> Int? {
+//    _find(element).index
+//  }
 
   /// Returns the index of the given element in the set, or `nil` if the element
   /// is not a member of the set.
@@ -431,66 +431,66 @@ extension OrderedSet {
   ///
   /// - Complexity: This operation is expected to perform O(1) comparisons on
   ///    average, provided that `Element` implements high-quality hashing.
-  @inlinable
-  @inline(__always)
-  public func lastIndex(of element: Element) -> Int? {
-    _find(element).index
-  }
+//  @inlinable
+//  @inline(__always)
+//  public func lastIndex(of element: Element) -> Int? {
+//    _find(element).index
+//  }
 }
 
-extension OrderedSet {
-  @inlinable
-  @inline(never)
-  internal __consuming func _extractSubset(
-    using bitset: _UnsafeBitset,
-    extraCapacity: Int = 0
-  ) -> Self {
-    assert(bitset.count == 0 || bitset.max()! <= count)
-    if bitset.count == 0 { return Self(minimumCapacity: extraCapacity) }
-    if bitset.count == self.count {
-      if extraCapacity <= self._capacity - self.count {
-        return self
-      }
-      var copy = self
-      copy.reserveCapacity(count + extraCapacity)
-      return copy
-    }
-    var result = Self(minimumCapacity: bitset.count + extraCapacity)
-    for offset in bitset {
-      result._appendNew(_elements[offset])
-    }
-    assert(result.count == bitset.count)
-    return result
-  }
-}
-
-extension OrderedSet {
-  @inlinable
-  @discardableResult
-  internal mutating func _removeExistingMember(
-    at index: Int,
-    in bucket: _Bucket
-  ) -> Element {
-    guard _elements.count - 1 >= _minimumCapacity else {
-      let old = _elements.remove(at: index)
-      _regenerateHashTable()
-      return old
-    }
-    guard _table != nil else {
-      return _elements.remove(at: index)
-    }
-
-    defer { _checkInvariants() }
-    _ensureUnique()
-    _table!.update { hashTable in
-      // Delete the entry for the removed member.
-      hashTable.delete(
-        bucket: bucket,
-        hashValueGenerator: { offset, seed in
-          _elements[offset]._rawHashValue(seed: seed)
-        })
-      hashTable.adjustContents(preparingForRemovalOf: index, in: _elements)
-    }
-    return _elements.remove(at: index)
-  }
-}
+//extension OrderedSet {
+//  @inlinable
+//  @inline(never)
+//  internal __consuming func _extractSubset(
+//    using bitset: _UnsafeBitset,
+//    extraCapacity: Int = 0
+//  ) -> Self {
+//    assert(bitset.count == 0 || bitset.max()! <= count)
+//    if bitset.count == 0 { return Self(minimumCapacity: extraCapacity) }
+//    if bitset.count == self.count {
+//      if extraCapacity <= self._capacity - self.count {
+//        return self
+//      }
+//      var copy = self
+//      copy.reserveCapacity(count + extraCapacity)
+//      return copy
+//    }
+//    var result = Self(minimumCapacity: bitset.count + extraCapacity)
+//    for offset in bitset {
+//      result._appendNew(_elements[offset])
+//    }
+//    assert(result.count == bitset.count)
+//    return result
+//  }
+//}
+//
+//extension OrderedSet {
+//  @inlinable
+//  @discardableResult
+//  internal mutating func _removeExistingMember(
+//    at index: Int,
+//    in bucket: _Bucket
+//  ) -> Element {
+//    guard _elements.count - 1 >= _minimumCapacity else {
+//      let old = _elements.remove(at: index)
+//      _regenerateHashTable()
+//      return old
+//    }
+//    guard _table != nil else {
+//      return _elements.remove(at: index)
+//    }
+//
+//    defer { _checkInvariants() }
+//    _ensureUnique()
+//    _table!.update { hashTable in
+//      // Delete the entry for the removed member.
+//      hashTable.delete(
+//        bucket: bucket,
+//        hashValueGenerator: { offset, seed in
+//          _elements[offset]._rawHashValue(seed: seed)
+//        })
+//      hashTable.adjustContents(preparingForRemovalOf: index, in: _elements)
+//    }
+//    return _elements.remove(at: index)
+//  }
+//}

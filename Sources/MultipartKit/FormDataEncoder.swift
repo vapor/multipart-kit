@@ -1,5 +1,4 @@
 import struct NIO.ByteBufferAllocator
-import struct OrderedCollections.OrderedDictionary
 
 /// Encodes `Encodable` items to `multipart/form-data` encoded `Data`.
 ///

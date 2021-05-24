@@ -1,14 +1,14 @@
-//===----------------------------------------------------------------------===//
+////===----------------------------------------------------------------------===//
+////
+//// This source file is part of the Swift Collections open source project
+////
+//// Copyright (c) 2021 Apple Inc. and the Swift project authors
+//// Licensed under Apache License v2.0 with Runtime Library Exception
+////
+//// See https://swift.org/LICENSE.txt for license information
+////
+////===----------------------------------------------------------------------===//
 //
-// This source file is part of the Swift Collections open source project
-//
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
-// Licensed under Apache License v2.0 with Runtime Library Exception
-//
-// See https://swift.org/LICENSE.txt for license information
-//
-//===----------------------------------------------------------------------===//
-
 extension _HashTable {
   /// The minimum hash table scale.
   @usableFromInline
@@ -44,18 +44,18 @@ extension _HashTable {
   @inline(__always)
   internal static var maximumLoadFactor: Double { 3 / 4 }
 
-  /// The minimum hash table load factor.
-  @inline(__always)
-  internal static var minimumLoadFactor: Double { 1 / 4 }
-
-  /// The maximum number of items that can be held in a hash table of the given scale.
-  @usableFromInline
-  @_effects(readnone)
-  internal static func minimumCapacity(forScale scale: Int) -> Int {
-    guard scale >= minimumScale else { return 0 }
-    let bucketCount = 1 &<< scale
-    return Int(Double(bucketCount) * minimumLoadFactor)
-  }
+//  /// The minimum hash table load factor.
+//  @inline(__always)
+//  internal static var minimumLoadFactor: Double { 1 / 4 }
+//
+//  /// The maximum number of items that can be held in a hash table of the given scale.
+//  @usableFromInline
+//  @_effects(readnone)
+//  internal static func minimumCapacity(forScale scale: Int) -> Int {
+//    guard scale >= minimumScale else { return 0 }
+//    let bucketCount = 1 &<< scale
+//    return Int(Double(bucketCount) * minimumLoadFactor)
+//  }
 
   /// The maximum number of items that can be held in a hash table of the given scale.
   @usableFromInline

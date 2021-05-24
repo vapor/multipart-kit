@@ -1,14 +1,14 @@
-//===----------------------------------------------------------------------===//
+////===----------------------------------------------------------------------===//
+////
+//// This source file is part of the Swift Collections open source project
+////
+//// Copyright (c) 2021 Apple Inc. and the Swift project authors
+//// Licensed under Apache License v2.0 with Runtime Library Exception
+////
+//// See https://swift.org/LICENSE.txt for license information
+////
+////===----------------------------------------------------------------------===//
 //
-// This source file is part of the Swift Collections open source project
-//
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
-// Licensed under Apache License v2.0 with Runtime Library Exception
-//
-// See https://swift.org/LICENSE.txt for license information
-//
-//===----------------------------------------------------------------------===//
-
 @usableFromInline
 @frozen
 internal struct _HashTable {
@@ -167,22 +167,22 @@ extension _HashTable {
 }
 
 extension _HashTable {
-  @inlinable
-  internal var header: Header {
-    get { _storage.header }
-    nonmutating _modify { yield &_storage.header }
-  }
+//  @inlinable
+//  internal var header: Header {
+//    get { _storage.header }
+//    nonmutating _modify { yield &_storage.header }
+//  }
 
   @inlinable
   internal var capacity: Int {
     _storage.header.capacity
   }
 
-  @inlinable
-  internal var minimumCapacity: Int {
-    if scale == reservedScale { return 0 }
-    return Self.minimumCapacity(forScale: scale)
-  }
+//  @inlinable
+//  internal var minimumCapacity: Int {
+//    if scale == reservedScale { return 0 }
+//    return Self.minimumCapacity(forScale: scale)
+//  }
 
   @inlinable
   internal var scale: Int {
@@ -194,8 +194,8 @@ extension _HashTable {
     _storage.header.reservedScale
   }
 
-  @inlinable
-  internal var bias: Int {
-    _storage.header.bias
-  }
+//  @inlinable
+//  internal var bias: Int {
+//    _storage.header.bias
+//  }
 }

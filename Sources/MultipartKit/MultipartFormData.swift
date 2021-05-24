@@ -1,5 +1,3 @@
-import struct OrderedCollections.OrderedDictionary
-
 enum MultipartFormData: Equatable {
     typealias Keyed = OrderedDictionary<String, MultipartFormData>
 
