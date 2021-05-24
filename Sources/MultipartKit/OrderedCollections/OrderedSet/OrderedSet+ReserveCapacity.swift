@@ -27,7 +27,7 @@ extension OrderedSet {
   ///
   /// - Complexity: O(`max(count, minimumCapacity)`)
   @inlinable
-  public mutating func reserveCapacity(_ minimumCapacity: Int) {
+  internal mutating func reserveCapacity(_ minimumCapacity: Int) {
     self._reserveCapacity(minimumCapacity, persistent: false)
   }
 }

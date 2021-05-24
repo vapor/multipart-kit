@@ -11,7 +11,7 @@
 
 extension OrderedSet: Sequence {
   /// The type that allows iteration over an ordered set's elements.
-  public typealias Iterator = IndexingIterator<Self>
+  internal typealias Iterator = IndexingIterator<Self>
 }
 
 extension OrderedSet: RandomAccessCollection {
@@ -19,11 +19,11 @@ extension OrderedSet: RandomAccessCollection {
   ///
   /// `OrderedSet` indices are integer offsets from the start of the collection,
   /// starting at zero for the first element (if exists).
-  public typealias Index = Int
+  internal typealias Index = Int
 
   /// The type that represents the indices that are valid for subscripting an
   /// ordered set, in ascending order.
-  public typealias Indices = Range<Int>
+  internal typealias Indices = Range<Int>
 
   // For SubSequence, see OrderedSet+SubSequence.swift.
 
@@ -35,7 +35,7 @@ extension OrderedSet: RandomAccessCollection {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public var startIndex: Int { _elements.startIndex }
+  internal var startIndex: Int { _elements.startIndex }
 
   /// The set's "past the end" position---that is, the position one greater
   /// than the last valid subscript argument.
@@ -46,7 +46,7 @@ extension OrderedSet: RandomAccessCollection {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public var endIndex: Int { _elements.endIndex }
+  internal var endIndex: Int { _elements.endIndex }
 
   /// The indices that are valid for subscripting the collection, in ascending
   /// order.
@@ -54,7 +54,7 @@ extension OrderedSet: RandomAccessCollection {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public var indices: Indices { _elements.indices }
+  internal var indices: Indices { _elements.indices }
 
   /// Returns the position immediately after the given index.
   ///
@@ -68,7 +68,7 @@ extension OrderedSet: RandomAccessCollection {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public func index(after i: Int) -> Int { i + 1 }
+  internal func index(after i: Int) -> Int { i + 1 }
 
   /// Returns the position immediately before the given index.
   ///
@@ -82,7 +82,7 @@ extension OrderedSet: RandomAccessCollection {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public func index(before i: Int) -> Int { i - 1 }
+  internal func index(before i: Int) -> Int { i - 1 }
 
   /// Replaces the given index with its successor.
   ///
@@ -94,7 +94,7 @@ extension OrderedSet: RandomAccessCollection {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public func formIndex(after i: inout Int) { i += 1 }
+  internal func formIndex(after i: inout Int) { i += 1 }
 
   /// Replaces the given index with its predecessor.
   ///
@@ -106,7 +106,7 @@ extension OrderedSet: RandomAccessCollection {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public func formIndex(before i: inout Int) { i -= 1 }
+  internal func formIndex(before i: inout Int) { i -= 1 }
 
   /// Returns an index that is the specified distance from the given index.
   ///
@@ -125,7 +125,7 @@ extension OrderedSet: RandomAccessCollection {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public func index(_ i: Int, offsetBy distance: Int) -> Int {
+  internal func index(_ i: Int, offsetBy distance: Int) -> Int {
     i + distance
   }
 
@@ -151,7 +151,7 @@ extension OrderedSet: RandomAccessCollection {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public func index(
+  internal func index(
     _ i: Int,
     offsetBy distance: Int,
     limitedBy limit: Int
@@ -171,7 +171,7 @@ extension OrderedSet: RandomAccessCollection {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public func distance(from start: Int, to end: Int) -> Int {
+  internal func distance(from start: Int, to end: Int) -> Int {
     end - start
   }
 
@@ -183,7 +183,7 @@ extension OrderedSet: RandomAccessCollection {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public subscript(position: Int) -> Element {
+  internal subscript(position: Int) -> Element {
     _elements[position]
   }
 
@@ -200,7 +200,7 @@ extension OrderedSet: RandomAccessCollection {
   ///
   /// - Complexity: O(1)
   @inlinable
-  public subscript(bounds: Range<Int>) -> SubSequence {
+  internal subscript(bounds: Range<Int>) -> SubSequence {
     _failEarlyRangeCheck(bounds, bounds: startIndex ..< endIndex)
     return SubSequence(base: self, bounds: bounds)
   }
@@ -210,17 +210,17 @@ extension OrderedSet: RandomAccessCollection {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public var isEmpty: Bool { _elements.isEmpty }
+  internal var isEmpty: Bool { _elements.isEmpty }
 
   /// The number of elements in the set.
   ///
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public var count: Int { _elements.count }
+  internal var count: Int { _elements.count }
 
   @inlinable
-  public func _customIndexOfEquatableElement(_ element: Element) -> Int?? {
+  internal func _customIndexOfEquatableElement(_ element: Element) -> Int?? {
     guard let table = _table else {
       return _elements._customIndexOfEquatableElement(element)
     }
@@ -233,26 +233,26 @@ extension OrderedSet: RandomAccessCollection {
 
   @inlinable
   @inline(__always)
-  public func _customLastIndexOfEquatableElement(_ element: Element) -> Int?? {
+  internal func _customLastIndexOfEquatableElement(_ element: Element) -> Int?? {
     // OrderedSet holds unique elements.
     _customIndexOfEquatableElement(element)
   }
 
   @inlinable
   @inline(__always)
-  public func _failEarlyRangeCheck(_ index: Int, bounds: Range<Int>) {
+  internal func _failEarlyRangeCheck(_ index: Int, bounds: Range<Int>) {
     _elements._failEarlyRangeCheck(index, bounds: bounds)
   }
 
   @inlinable
   @inline(__always)
-  public func _failEarlyRangeCheck(_ index: Int, bounds: ClosedRange<Int>) {
+  internal func _failEarlyRangeCheck(_ index: Int, bounds: ClosedRange<Int>) {
     _elements._failEarlyRangeCheck(index, bounds: bounds)
   }
 
   @inlinable
   @inline(__always)
-  public func _failEarlyRangeCheck(_ range: Range<Int>, bounds: Range<Int>) {
+  internal func _failEarlyRangeCheck(_ range: Range<Int>, bounds: Range<Int>) {
     _elements._failEarlyRangeCheck(range, bounds: bounds)
   }
 }

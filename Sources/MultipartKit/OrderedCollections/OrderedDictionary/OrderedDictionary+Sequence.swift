@@ -12,11 +12,10 @@
 extension OrderedDictionary: Sequence {
   /// The element type of a dictionary: a tuple containing an individual
   /// key-value pair.
-  public typealias Element = (key: Key, value: Value)
+  internal typealias Element = (key: Key, value: Value)
 
   /// The type that allows iteration over an ordered dictionary's elements.
-  @frozen
-  public struct Iterator: IteratorProtocol {
+  internal struct Iterator: IteratorProtocol {
     @usableFromInline
     internal let _base: OrderedDictionary
 
@@ -35,7 +34,7 @@ extension OrderedDictionary: Sequence {
     ///
     /// - Complexity: O(1)
     @inlinable
-    public mutating func next() -> Element? {
+    internal mutating func next() -> Element? {
       guard _position < _base._values.count else { return nil }
       let result = (_base._keys[_position], _base._values[_position])
       _position += 1
@@ -48,7 +47,7 @@ extension OrderedDictionary: Sequence {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public var underestimatedCount: Int {
+  internal var underestimatedCount: Int {
     count
   }
 
@@ -57,7 +56,7 @@ extension OrderedDictionary: Sequence {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public func makeIterator() -> Iterator {
+  internal func makeIterator() -> Iterator {
     Iterator(_base: self)
   }
 }

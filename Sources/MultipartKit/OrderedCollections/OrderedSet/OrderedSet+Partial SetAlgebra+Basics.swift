@@ -26,7 +26,7 @@ extension OrderedSet {
   ///
   /// - Complexity: O(1)
   @inlinable
-  public init() {
+  internal init() {
     __storage = nil
     _elements = []
   }

@@ -49,6 +49,6 @@ extension OrderedSet {
   }
   #else
   @inline(__always) @inlinable
-  public func _checkInvariants() {}
+  internal func _checkInvariants() {}
   #endif // COLLECTIONS_INTERNAL_CHECKS
 }

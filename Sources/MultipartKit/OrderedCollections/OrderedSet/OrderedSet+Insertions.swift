@@ -83,7 +83,7 @@ extension OrderedSet {
   @inlinable
   @inline(__always)
   @discardableResult
-  public mutating func append(_ item: Element) -> (inserted: Bool, index: Int) {
+  internal mutating func append(_ item: Element) -> (inserted: Bool, index: Int) {
     let result = _append(item)
     _checkInvariants()
     return result

@@ -203,8 +203,7 @@
 ///
 /// An ordered dictionary consists of an ordered set of keys, alongside a
 /// regular `Array` value that contains their associated values.
-@frozen
-public struct OrderedDictionary<Key: Hashable, Value> {
+internal struct OrderedDictionary<Key: Hashable, Value> {
   @usableFromInline
   internal var _keys: OrderedSet<Key>
 
@@ -229,7 +228,7 @@ extension OrderedDictionary {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public var keys: OrderedSet<Key> { _keys }
+  internal var keys: OrderedSet<Key> { _keys }
 }
 
 extension OrderedDictionary {
@@ -238,7 +237,7 @@ extension OrderedDictionary {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public var count: Int { _values.count }
+  internal var count: Int { _values.count }
 }
 
 extension OrderedDictionary {
@@ -295,7 +294,7 @@ extension OrderedDictionary {
   ///    although individual updates may need to copy or resize the dictionary's
   ///    underlying storage.
   @inlinable
-  public subscript(key: Key) -> Value? {
+  internal subscript(key: Key) -> Value? {
     get {
       guard let index = _keys.firstIndex(of: key) else { return nil }
       return _values[index]
@@ -414,7 +413,7 @@ extension OrderedDictionary {
   ///    although individual updates may need to copy or resize the dictionary's
   ///    underlying storage.
   @inlinable
-  public subscript(
+  internal subscript(
     key: Key,
     default defaultValue: @autoclosure () -> Value
   ) -> Value {
@@ -455,7 +454,7 @@ extension OrderedDictionary {
   ///
   /// - Complexity: O(`count`)
   @inlinable
-  public func mapValues<T>(
+  internal func mapValues<T>(
     _ transform: (Value) throws -> T
   ) rethrows -> OrderedDictionary<Key, T> {
     OrderedDictionary<Key, T>(

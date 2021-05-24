@@ -232,8 +232,7 @@
 /// linear time at the front (or in the middle) of the set. (Note that this is
 /// different to the standard `Set`, where insertions and removals are expected
 /// to take amortized O(1) time.)
-@frozen
-public struct OrderedSet<Element> where Element: Hashable
+internal struct OrderedSet<Element> where Element: Hashable
 {
   @usableFromInline
   internal typealias _Bucket = _HashTable.Bucket

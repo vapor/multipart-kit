@@ -18,7 +18,7 @@ extension OrderedDictionary {
   /// - Complexity: O(1)
   @inlinable
   @inline(__always)
-  public init() {
+  internal init() {
     self._keys = OrderedSet()
     self._values = []
   }
@@ -44,7 +44,7 @@ extension OrderedDictionary {
   /// - Complexity: Expected O(*n*) on average, where *n* is the count if
   ///    key-value pairs, if `Key` implements high-quality hashing.
   @inlinable
-  public init<S: Sequence>(
+  internal init<S: Sequence>(
     uniqueKeysWithValues keysAndValues: S
   ) where S.Element == (key: Key, value: Value) {
     if S.self == Dictionary<Key, Value>.self {
@@ -80,7 +80,7 @@ extension OrderedDictionary {
   /// - Complexity: Expected O(*n*) on average, where *n* is the count if
   ///    key-value pairs, if `Key` implements high-quality hashing.
   @inlinable
-  public init<S: Sequence>(
+  internal init<S: Sequence>(
     uniqueKeysWithValues keysAndValues: S
   ) where S.Element == (Key, Value) {
     self.init()

@@ -30,7 +30,7 @@ extension OrderedDictionary {
   ///
   /// - Complexity: O(`max(count, minimumCapacity)`)
   @inlinable
-  public mutating func reserveCapacity(_ minimumCapacity: Int) {
+  internal mutating func reserveCapacity(_ minimumCapacity: Int) {
     self._keys.reserveCapacity(minimumCapacity)
     self._values.reserveCapacity(minimumCapacity)
   }
