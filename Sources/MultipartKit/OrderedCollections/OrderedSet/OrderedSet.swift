@@ -244,55 +244,12 @@ public struct OrderedSet<Element> where Element: Hashable
   @usableFromInline
   internal var _elements: ContiguousArray<Element>
 
-//  @inlinable
-//  internal init(
-//    _uniqueElements: ContiguousArray<Element>,
-//    _ table: _HashTable? = nil
-//  ) {
-//    self.__storage = table?._storage
-//    self._elements = ContiguousArray(_uniqueElements)
-//  }
-
   @inlinable
   @inline(__always)
   internal var _table: _HashTable? {
     get { __storage.map { _HashTable($0) } }
     set { __storage = newValue?._storage }
   }
-}
-
-extension OrderedSet {
-  /// A view of the members of this set, as a regular array value.
-  ///
-  /// It is possible to mutate the set by updating the value of this property.
-  /// This guarantees that direct mutations happen in place when possible (i.e.,
-  /// without spurious copy-on-write copies).
-  ///
-  /// However, the set needs to ensure the uniqueness of its members, so every
-  /// update to `elements` includes a postprocessing step to detect and remove
-  /// duplicates over the entire array. This can be slower than doing the
-  /// equivalent updates with direct `OrderedSet` operations, so updating
-  /// `elements` is best used in cases where direct implementations aren't
-  /// available -- for example, when you need to call a `MutableCollection`
-  /// algorithm that isn't directly implemented by `OrderedSet` itself.
-  ///
-  /// - Complexity: O(1) for the getter. Mutating this property has an expected
-  ///    complexity of O(`count`), if `Element` implements high-quality hashing.
-//  @inlinable
-//  public var elements: [Element] {
-//    get {
-//      Array(_elements)
-//    }
-//    set {
-//      self = .init(newValue)
-//    }
-//    _modify {
-//      var members = Array(_elements)
-//      _elements = []
-//      defer { self = .init(members) }
-//      yield &members
-//    }
-//  }
 }
 
 extension OrderedSet {
@@ -318,11 +275,6 @@ extension OrderedSet {
   internal var _reservedScale: Int {
     _table?.reservedScale ?? 0
   }
-
-//  @inlinable
-//  internal var _bias: Int {
-//    _table?.bias ?? 0
-//  }
 }
 
 extension OrderedSet {
@@ -349,28 +301,9 @@ extension OrderedSet {
     let scale = _HashTable.scale(forCapacity: _elements.count)
     _regenerateHashTable(scale: scale, reservedScale: reservedScale)
   }
-
-//  @inlinable
-//  internal mutating func _regenerateExistingHashTable() {
-//    assert(_capacity >= _elements.count)
-//    guard _table != nil else {
-//      return
-//    }
-//    _ensureUnique()
-//    _table!.update { hashTable in
-//      hashTable.clear()
-//      hashTable.fill(uncheckedUniqueElements: _elements)
-//    }
-//  }
 }
 
 extension OrderedSet {
-//  @inlinable
-//  @inline(__always)
-//  internal mutating func _isUnique() -> Bool {
-//    isKnownUniquelyReferenced(&__storage)
-//  }
-
   @inlinable
   internal mutating func _ensureUnique() {
     if __storage == nil { return }
@@ -397,72 +330,7 @@ extension OrderedSet {
       }
     }
   }
-
-//  @inlinable
-//  internal func _bucket(for index: Int) -> _Bucket {
-//    guard let table = _table else { return _Bucket(offset: 0) }
-//    return table.read { hashTable in
-//      var it = hashTable.bucketIterator(for: _elements[index])
-//      it.advance(until: index)
-//      precondition(it.isOccupied, "Corrupt hash table")
-//      return it.currentBucket
-//    }
-//  }
-
-  /// Returns the index of the given element in the set, or `nil` if the element
-  /// is not a member of the set.
-  ///
-  /// `OrderedSet` members are always unique, so the first index of an element
-  /// is always the same as its last index.
-  ///
-  /// - Complexity: This operation is expected to perform O(1) comparisons on
-  ///    average, provided that `Element` implements high-quality hashing.
-//  @inlinable
-//  @inline(__always)
-//  public func firstIndex(of element: Element) -> Int? {
-//    _find(element).index
-//  }
-
-  /// Returns the index of the given element in the set, or `nil` if the element
-  /// is not a member of the set.
-  ///
-  /// `OrderedSet` members are always unique, so the first index of an element
-  /// is always the same as its last index.
-  ///
-  /// - Complexity: This operation is expected to perform O(1) comparisons on
-  ///    average, provided that `Element` implements high-quality hashing.
-//  @inlinable
-//  @inline(__always)
-//  public func lastIndex(of element: Element) -> Int? {
-//    _find(element).index
-//  }
 }
-
-//extension OrderedSet {
-//  @inlinable
-//  @inline(never)
-//  internal __consuming func _extractSubset(
-//    using bitset: _UnsafeBitset,
-//    extraCapacity: Int = 0
-//  ) -> Self {
-//    assert(bitset.count == 0 || bitset.max()! <= count)
-//    if bitset.count == 0 { return Self(minimumCapacity: extraCapacity) }
-//    if bitset.count == self.count {
-//      if extraCapacity <= self._capacity - self.count {
-//        return self
-//      }
-//      var copy = self
-//      copy.reserveCapacity(count + extraCapacity)
-//      return copy
-//    }
-//    var result = Self(minimumCapacity: bitset.count + extraCapacity)
-//    for offset in bitset {
-//      result._appendNew(_elements[offset])
-//    }
-//    assert(result.count == bitset.count)
-//    return result
-//  }
-//}
 
 extension OrderedSet {
   @inlinable

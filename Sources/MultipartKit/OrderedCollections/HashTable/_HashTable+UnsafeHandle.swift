@@ -159,19 +159,6 @@ extension _HashTable.UnsafeHandle {
     return result
   }
 
-//  /// Return the index of the word logically preceding `word` in this hash table.
-//  /// The buckets form a cycle, so the first word is logically preceded by the first.
-//  ///
-//  /// Note that the last word may be only partially filled if `scale` is less than 6.
-//  @inlinable
-//  @inline(__always)
-//  func word(before word: Int) -> Int {
-//    if word == 0 {
-//      return wordCount - 1
-//    }
-//    return word - 1
-//  }
-
   /// Return the index of the 64-bit storage word that holds the first bit
   /// corresponding to `bucket`, along with its bit position within the word.
   @inlinable
@@ -479,14 +466,6 @@ extension _UnsafeHashTable {
     }
   }
 }
-
-//extension _UnsafeHashTable {
-//  @usableFromInline
-//  internal func clear() {
-//    assertMutable()
-//    _buckets.assign(repeating: 0, count: wordCount)
-//  }
-//}
 
 extension _UnsafeHashTable {
   /// Fill an empty hash table by populating it with data from `elements`.

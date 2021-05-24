@@ -28,10 +28,3 @@ extension _HashTable {
     }
   }
 }
-
-//extension _HashTable.Bucket: Equatable {
-//  @_transparent
-//  public static func == (left: Self, right: Self) -> Bool {
-//    left.offset == right.offset
-//  }
-//}
