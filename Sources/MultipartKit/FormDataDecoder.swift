@@ -4,9 +4,28 @@
 ///
 /// Seealso `MultipartParser` for more information about the `multipart` encoding.
 public struct FormDataDecoder {
-    /// Creates a new `FormDataDecoder`.
-    public init() { }
+    /// Maximum nesting depth to allow when decoding the input.
+    /// - 1 corresponds to a single value
+    /// - 2 corresponds to an an object with non-nested properties or an 1 dimensional array
+    /// - 3... corresponds to nested objects or multi-dimensional arrays or combinations thereof
+    let nestingDepth: Int
 
+    /// Creates a new `FormDataDecoder`.
+    /// - Parameter nestingDepth: maximum allowed nesting depth of the decoded structure. Defaults to 8.
+    public init(nestingDepth: Int = 8) {
+        self.nestingDepth = nestingDepth
+    }
+
+    /// Decodes a `Decodable` item from `String` using the supplied boundary.
+    ///
+    ///     let foo = try FormDataDecoder().decode(Foo.self, from: "...", boundary: "123")
+    ///
+    /// - Parameters:
+    ///   - decodable: Generic `Decodable` type.
+    ///   - data: String to decode.
+    ///   - boundary: Multipart boundary to used in the decoding.
+    /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
+    /// - Returns: An instance of the decoded type `D`.
     public func decode<D>(_ decodable: D.Type, from data: String, boundary: String) throws -> D
         where D: Decodable
     {
@@ -17,11 +36,12 @@ public struct FormDataDecoder {
     ///
     ///     let foo = try FormDataDecoder().decode(Foo.self, from: data, boundary: "123")
     ///
-    /// - parameters:
-    ///     - encodable: Generic `Decodable` type.
-    ///     - boundary: Multipart boundary to used in the encoding.
-    /// - throws: Any errors decoding the model with `Codable` or parsing the data.
-    /// - returns: An instance of the decoded type `D`.
+    /// - Parameters:
+    ///   - decodable: Generic `Decodable` type.
+    ///   - data: Data to decode.
+    ///   - boundary: Multipart boundary to used in the decoding.
+    /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
+    /// - Returns: An instance of the decoded type `D`.
     public func decode<D>(_ decodable: D.Type, from data: [UInt8], boundary: String) throws -> D
         where D: Decodable
     {
@@ -45,7 +65,7 @@ public struct FormDataDecoder {
         }
 
         try parser.execute(data)
-        let data = MultipartFormData(parts: parts)
+        let data = MultipartFormData(parts: parts, nestingDepth: nestingDepth)
         return try data.decode(codingPath: [])
     }
 }

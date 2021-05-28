@@ -5,9 +5,9 @@ enum MultipartFormData: Equatable {
     case array([MultipartFormData])
     case keyed(Keyed)
 
-    init(parts: [MultipartPart]) {
+    init(parts: [MultipartPart], nestingDepth: Int) {
         self = parts.reduce(into: .empty) { result, part in
-            result.insertingPart(part, at: part.name.map(path) ?? [])
+            result.insertingPart(part, at: part.name.map(path) ?? [], remainingNestingLevels: nestingDepth)
         }
     }
 
@@ -54,19 +54,22 @@ extension MultipartFormData {
 }
 
 private extension MultipartFormData {
-    mutating func insertingPart(_ part: MultipartPart, at path: ArraySlice<Substring>) {
-        self = insertPart(part, at: path)
+    mutating func insertingPart(_ part: MultipartPart, at path: ArraySlice<Substring>, remainingNestingLevels: Int) {
+        self = insertPart(part, at: path, remainingNestingLevels: remainingNestingLevels)
     }
 
-    func insertPart(_ part: MultipartPart, at path: ArraySlice<Substring>) -> MultipartFormData {
+    func insertPart(_ part: MultipartPart, at path: ArraySlice<Substring>, remainingNestingLevels: Int) -> MultipartFormData {
+        guard remainingNestingLevels > 0 else {
+            return self
+        }
         switch path.first {
         case .none:
             return .single(part)
         case "":
-            return .array((array ?? []) + [MultipartFormData.empty.insertPart(part, at: path.dropFirst())])
+            return .array((array ?? []) + [MultipartFormData.empty.insertPart(part, at: path.dropFirst(), remainingNestingLevels: remainingNestingLevels - 1)])
         case let .some(head):
             var dictionary = self.dictionary ?? [:]
-            dictionary[String(head), default: .empty].insertingPart(part, at: path.dropFirst())
+            dictionary[String(head), default: .empty].insertingPart(part, at: path.dropFirst(), remainingNestingLevels: remainingNestingLevels - 1)
             return .keyed(dictionary)
         }
     }

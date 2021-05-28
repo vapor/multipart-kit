@@ -498,6 +498,19 @@ class MultipartTests: XCTestCase {
         XCTAssertFalse(keyedFoos.isEmpty)
         XCTAssertTrue(keyedFoos.values.allSatisfy(\.success))
     }
+
+    func testNestingDepth() throws {
+        let nested = """
+        ---\r
+        Content-Disposition: form-data; name=a[]\r
+        \r
+        1\r
+        -----\r\n
+        """
+
+        XCTAssertNoThrow(try FormDataDecoder(nestingDepth: 3).decode([String: [Int]].self, from: nested, boundary: "-"))
+        XCTAssertThrowsError(try FormDataDecoder(nestingDepth: 2).decode([String: [Int]].self, from: nested, boundary: "-"))
+    }
 }
 
 // https://stackoverflow.com/a/54524110/1041105
