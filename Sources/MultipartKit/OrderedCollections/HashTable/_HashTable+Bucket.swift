@@ -1,3 +1,9 @@
+/* Changes for MultipartKit
+    - removed all functionality not needed by MultipartKit
+    - made all public APIs internal
+
+   DO NOT CHANGE THESE FILES, THEY ARE VENDORED FROM Swift Collections.
+*/
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the Swift Collections open source project
