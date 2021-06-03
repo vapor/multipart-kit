@@ -231,10 +231,11 @@ private extension MultipartPart {
             let Convertible = T.self as? MultipartPartConvertible.Type,
             let decoded = Convertible.init(multipart: self) as? T
         else {
+            let path = codingPath.map(\.stringValue).joined(separator: ".")
             throw DecodingError.dataCorrupted(
                 .init(
                     codingPath: codingPath,
-                    debugDescription: "Could not convert value at \(codingPath.map(\.stringValue).joined(separator: ".")) to type \(T.self) from multipart part."
+                    debugDescription: #"Could not convert value at "\#(path)" to type \#(T.self) from multipart part."#
                 )
             )
         }
