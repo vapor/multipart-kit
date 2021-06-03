@@ -229,6 +229,11 @@ private extension MultipartFormData {
         else {
             return try T(from: _FormDataDecoder(codingPath: codingPath, data: self))
         }
-        return Convertible.init(multipart: part) as! T
+        guard
+            let converted = Convertible.init(multipart: part) as! T?
+        else {
+            throw DecodingError.dataCorrupted(.init(codingPath: codingPath, debugDescription: "Could not initialize \(T.self) from MultipartPart"))
+        }
+        return converted
     }
 }

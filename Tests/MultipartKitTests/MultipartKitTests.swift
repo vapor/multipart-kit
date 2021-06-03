@@ -511,6 +511,22 @@ class MultipartTests: XCTestCase {
         XCTAssertNoThrow(try FormDataDecoder(nestingDepth: 3).decode([String: [Int]].self, from: nested, boundary: "-"))
         XCTAssertThrowsError(try FormDataDecoder(nestingDepth: 2).decode([String: [Int]].self, from: nested, boundary: "-"))
     }
+
+    func testFailingToInitializeMultipartConvertableDoesNotCrash() throws {
+        struct Foo: MultipartPartConvertible, Decodable {
+            init?(multipart: MultipartPart) { nil }
+            var multipart: MultipartPart? { nil }
+        }
+
+        let input = """
+        ---\r
+        \r
+        \r
+        null\r
+        -----\r\n
+        """
+        XCTAssertThrowsError(try FormDataDecoder().decode(Foo.self, from: input, boundary: "-"))
+    }
 }
 
 // https://stackoverflow.com/a/54524110/1041105
