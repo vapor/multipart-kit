@@ -288,11 +288,10 @@ class MultipartTests: XCTestCase {
         }
 
         XCTAssertThrowsError(try FormDataDecoder().decode(Foo.self, from: data, boundary: "hello")) { error in
-            guard case let DecodingError.typeMismatch(type, context) = error else {
-                XCTFail("Was expecting an error of type DecodingError.typeMismatch")
+            guard case let DecodingError.dataCorrupted(context) = error else {
+                XCTFail("Was expecting an error of type DecodingError.dataCorrupted")
                 return
             }
-            XCTAssertNotNil(type as? MultipartPart.Type)
             XCTAssertEqual(context.codingPath.map(\.stringValue), ["link"])
         }
     }

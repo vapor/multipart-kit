@@ -100,13 +100,7 @@ private struct _FormDataSingleValueDecoder: SingleValueDecodingContainer {
     }
 
     func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
-        guard
-            let Convertible = T.self as? MultipartPartConvertible.Type,
-            let decoded = Convertible.init(multipart: part) as? T
-        else {
-            throw DecodingError.dataCorruptedError(in: self, debugDescription: "Could not convert value at \(codingPath) from multipart part.")
-        }
-        return decoded
+        try part.decode(type, at: codingPath)
     }
 }
 
@@ -223,17 +217,27 @@ private extension MultipartFormData {
     }
 
     func decode<T>(codingPath: [CodingKey]) throws -> T where T: Decodable {
-        guard
-            let Convertible = T.self as? MultipartPartConvertible.Type,
-            let part = self.part
-        else {
+        guard let part = part else {
             return try T(from: _FormDataDecoder(codingPath: codingPath, data: self))
         }
+
+        return try part.decode(T.self, at: codingPath)
+    }
+}
+
+private extension MultipartPart {
+    func decode<T>(_ type: T.Type, at codingPath: [CodingKey]) throws -> T where T: Decodable {
         guard
-            let converted = Convertible.init(multipart: part) as! T?
+            let Convertible = T.self as? MultipartPartConvertible.Type,
+            let decoded = Convertible.init(multipart: self) as? T
         else {
-            throw DecodingError.dataCorrupted(.init(codingPath: codingPath, debugDescription: "Could not initialize \(T.self) from MultipartPart"))
+            throw DecodingError.dataCorrupted(
+                .init(
+                    codingPath: codingPath,
+                    debugDescription: "Could not convert value at \(codingPath.map(\.stringValue).joined(separator: ".")) to type \(T.self) from multipart part."
+                )
+            )
         }
-        return converted
+        return decoded
     }
 }
