@@ -291,7 +291,7 @@ class MultipartTests: XCTestCase {
             XCTAssertEqual(data, "--123\r\n\r\nfoo\r\n--123--\r\n")
         }
     }
-    
+
     func testFormDataDecoderMultipleWithMissingData() {
         /// Content-Type: multipart/form-data; boundary=hello
         let data = """
@@ -307,12 +307,11 @@ class MultipartTests: XCTestCase {
         }
 
         XCTAssertThrowsError(try FormDataDecoder().decode(Foo.self, from: data, boundary: "hello")) { error in
-            guard case let MultipartError.missingPart(array) = error else {
-                XCTFail("Was expecting an error of type MultipartError.missingPart")
+            guard case let DecodingError.dataCorrupted(context) = error else {
+                XCTFail("Was expecting an error of type DecodingError.dataCorrupted")
                 return
             }
-
-            XCTAssertEqual(array, "relative")
+            XCTAssertEqual(context.codingPath.map(\.stringValue), ["link"])
         }
     }
 
@@ -393,6 +392,158 @@ class MultipartTests: XCTestCase {
                 XCTFail(error.localizedDescription)
             }
         }
+    }
+
+    func testNestedEncode() throws {
+        struct Foo: Encodable {
+            struct Bar: Encodable {
+                let baz: Int
+            }
+            let bar: Bar
+            let bars: [Bar]
+        }
+
+        let encoder = FormDataEncoder()
+        let data = try encoder.encode(Foo(bar: .init(baz: 1), bars: [.init(baz: 2), .init(baz: 3)]), boundary: "-")
+        let expected = """
+        ---\r
+        Content-Disposition: form-data; name="bar[baz]"\r
+        \r
+        1\r
+        ---\r
+        Content-Disposition: form-data; name="bars[][baz]"\r
+        \r
+        2\r
+        ---\r
+        Content-Disposition: form-data; name="bars[][baz]"\r
+        \r
+        3\r
+        -----\r\n
+        """
+
+        XCTAssertEqual(data, expected)
+    }
+
+    func testNestedDecode() throws {
+        struct Foo: Decodable, Equatable {
+            struct Bar: Decodable, Equatable {
+                let baz: Int
+            }
+            let bar: Bar
+            let bars: [Bar]
+        }
+
+        let data = """
+        ---\r
+        Content-Disposition: form-data; name="bar[baz]"\r
+        \r
+        1\r
+        ---\r
+        Content-Disposition: form-data; name="bars[][baz]"\r
+        \r
+        2\r
+        ---\r
+        Content-Disposition: form-data; name="bars[][baz]"\r
+        \r
+        3\r
+        -----\r\n
+        """
+
+        let decoder = FormDataDecoder()
+        let foo = try decoder.decode(Foo.self, from: data, boundary: "-")
+
+        XCTAssertEqual(foo, Foo(bar: .init(baz: 1), bars: [.init(baz: 2), .init(baz: 3)]))
+    }
+
+    func testDecodingSingleValue() throws {
+        let data = """
+        ---\r
+        \r
+        1\r
+        -----\r\n
+        """
+
+        let decoder = FormDataDecoder()
+        let foo = try decoder.decode(Int.self, from: data, boundary: "-")
+        XCTAssertEqual(foo, 1)
+    }
+
+    func testMultiPartConvertibleTakesPrecedenceOverDecodable() throws {
+        struct Foo: Decodable, MultipartPartConvertible {
+            var multipart: MultipartPart? { nil }
+
+            let success: Bool
+
+            init(from _: Decoder) throws {
+                success = false
+            }
+            init?(multipart: MultipartPart) {
+                success = true
+            }
+        }
+
+        let singleValue = """
+        ---\r
+        \r
+        \r
+        -----\r\n
+        """
+        let decoder = FormDataDecoder()
+        let singleFoo = try decoder.decode(Foo.self, from: singleValue, boundary: "-")
+        XCTAssertTrue(singleFoo.success)
+
+        let array = """
+        ---\r
+        Content-Disposition: form-data; name=""\r
+        \r
+        \r
+        -----\r\n
+        """
+
+        let fooArray = try decoder.decode([Foo].self, from: array, boundary: "-")
+        XCTAssertFalse(fooArray.isEmpty)
+        XCTAssertTrue(fooArray.allSatisfy(\.success))
+
+        let keyed = """
+        ---\r
+        Content-Disposition: form-data; name="a"\r
+        \r
+        \r
+        -----\r\n
+        """
+
+        let keyedFoos = try decoder.decode([String: Foo].self, from: keyed, boundary: "-")
+        XCTAssertFalse(keyedFoos.isEmpty)
+        XCTAssertTrue(keyedFoos.values.allSatisfy(\.success))
+    }
+
+    func testNestingDepth() throws {
+        let nested = """
+        ---\r
+        Content-Disposition: form-data; name=a[]\r
+        \r
+        1\r
+        -----\r\n
+        """
+
+        XCTAssertNoThrow(try FormDataDecoder(nestingDepth: 3).decode([String: [Int]].self, from: nested, boundary: "-"))
+        XCTAssertThrowsError(try FormDataDecoder(nestingDepth: 2).decode([String: [Int]].self, from: nested, boundary: "-"))
+    }
+
+    func testFailingToInitializeMultipartConvertableDoesNotCrash() throws {
+        struct Foo: MultipartPartConvertible, Decodable {
+            init?(multipart: MultipartPart) { nil }
+            var multipart: MultipartPart? { nil }
+        }
+
+        let input = """
+        ---\r
+        \r
+        \r
+        null\r
+        -----\r\n
+        """
+        XCTAssertThrowsError(try FormDataDecoder().decode(Foo.self, from: input, boundary: "-"))
     }
 }
 

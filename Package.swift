@@ -10,7 +10,7 @@ let package = Package(
         .library(name: "MultipartKit", targets: ["MultipartKit"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.2.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.2.0")
     ],
     targets: [
         .target(name: "MultipartKit", dependencies: [

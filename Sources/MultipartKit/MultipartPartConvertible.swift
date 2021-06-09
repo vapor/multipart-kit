@@ -49,7 +49,6 @@ extension UInt16: MultipartPartConvertible { }
 extension UInt32: MultipartPartConvertible { }
 extension UInt64: MultipartPartConvertible { }
 
-
 extension Float: MultipartPartConvertible {
     public var multipart: MultipartPart? {
         return MultipartPart(body: self.description)
