@@ -1,4 +1,5 @@
 import struct Foundation.Data
+import struct Foundation.UUID
 
 public protocol MultipartPartConvertible {
     var multipart: MultipartPart? { get }
@@ -95,5 +96,18 @@ extension Data: MultipartPartConvertible {
     
     public init?(multipart: MultipartPart) {
         self.init(multipart.body.readableBytesView)
+    }
+}
+
+extension UUID: MultipartPartConvertible {
+    public var multipart: MultipartPart? {
+        .init(body: uuidString)
+    }
+
+    public init?(multipart: MultipartPart) {
+        guard let string = String(multipart: multipart) else {
+            return nil
+        }
+        self.init(uuidString: string)
     }
 }
