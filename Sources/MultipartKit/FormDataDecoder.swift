@@ -228,7 +228,12 @@ private extension MultipartFormData {
 private extension MultipartPart {
     func decode<T>(_ type: T.Type, at codingPath: [CodingKey]) throws -> T where T: Decodable {
         guard
-            let Convertible = T.self as? MultipartPartConvertible.Type,
+            let Convertible = T.self as? MultipartPartConvertible.Type
+        else {
+            return try T(from: _FormDataDecoder(codingPath: codingPath, data: .single(self)))
+        }
+
+        guard
             let decoded = Convertible.init(multipart: self) as? T
         else {
             let path = codingPath.map(\.stringValue).joined(separator: ".")

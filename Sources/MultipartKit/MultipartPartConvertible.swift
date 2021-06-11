@@ -20,7 +20,7 @@ extension String: MultipartPartConvertible {
     public var multipart: MultipartPart? {
         return MultipartPart(body: self)
     }
-    
+
     public init?(multipart: MultipartPart) {
         self.init(decoding: multipart.body.readableBytesView, as: UTF8.self)
     }
@@ -30,7 +30,7 @@ extension FixedWidthInteger {
     public var multipart: MultipartPart? {
         return MultipartPart(body: self.description)
     }
-    
+
     public init?(multipart: MultipartPart) {
         guard let string = String(multipart: multipart) else {
             return nil
@@ -54,7 +54,7 @@ extension Float: MultipartPartConvertible {
     public var multipart: MultipartPart? {
         return MultipartPart(body: self.description)
     }
-    
+
     public init?(multipart: MultipartPart) {
         guard let string = String(multipart: multipart) else {
             return nil
@@ -67,7 +67,7 @@ extension Double: MultipartPartConvertible {
     public var multipart: MultipartPart? {
         return MultipartPart(body: self.description)
     }
-    
+
     public init?(multipart: MultipartPart) {
         guard let string = String(multipart: multipart) else {
             return nil
@@ -80,7 +80,7 @@ extension Bool: MultipartPartConvertible {
     public var multipart: MultipartPart? {
         return MultipartPart(body: self.description)
     }
-    
+
     public init?(multipart: MultipartPart) {
         guard let string = String(multipart: multipart) else {
             return nil
@@ -96,18 +96,5 @@ extension Data: MultipartPartConvertible {
     
     public init?(multipart: MultipartPart) {
         self.init(multipart.body.readableBytesView)
-    }
-}
-
-extension UUID: MultipartPartConvertible {
-    public var multipart: MultipartPart? {
-        .init(body: uuidString)
-    }
-
-    public init?(multipart: MultipartPart) {
-        guard let string = String(multipart: multipart) else {
-            return nil
-        }
-        self.init(uuidString: string)
     }
 }
