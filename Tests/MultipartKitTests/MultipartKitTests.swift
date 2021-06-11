@@ -545,6 +545,20 @@ class MultipartTests: XCTestCase {
         """
         XCTAssertThrowsError(try FormDataDecoder().decode(Foo.self, from: input, boundary: "-"))
     }
+
+    func testEncodingAndDecodingUUID() throws {
+        let uuid = try XCTUnwrap(UUID(uuidString: "c0bdd551-0684-4f34-a72e-ed553b4c9732"))
+        let multipart = """
+        ---\r
+        Content-Disposition: form-data\r
+        \r
+        \(uuid.uuidString)\r
+        -----\r\n
+        """
+
+        XCTAssertEqual(try FormDataEncoder().encode(uuid, boundary: "-"), multipart)
+        XCTAssertEqual(try FormDataDecoder().decode(UUID.self, from: multipart, boundary: "-"), uuid)
+    }
 }
 
 // https://stackoverflow.com/a/54524110/1041105
