@@ -307,8 +307,8 @@ class MultipartTests: XCTestCase {
         }
 
         XCTAssertThrowsError(try FormDataDecoder().decode(Foo.self, from: data, boundary: "hello")) { error in
-            guard case let DecodingError.dataCorrupted(context) = error else {
-                XCTFail("Was expecting an error of type DecodingError.dataCorrupted")
+            guard case let DecodingError.typeMismatch(_, context) = error else {
+                XCTFail("Was expecting an error of type DecodingError.typeMismatch")
                 return
             }
             XCTAssertEqual(context.codingPath.map(\.stringValue), ["link"])
@@ -558,6 +558,23 @@ class MultipartTests: XCTestCase {
 
         XCTAssertEqual(try FormDataEncoder().encode(uuid, boundary: "-"), multipart)
         XCTAssertEqual(try FormDataDecoder().decode(UUID.self, from: multipart, boundary: "-"), uuid)
+    }
+
+    // https://github.com/vapor/multipart-kit/issues/65
+    func testEncodingAndDecodingNonMultipartPartConvertibleCodableTypes() throws {
+        enum License: String, Codable, CaseIterable, Equatable {
+            case dme1
+        }
+        let license = License.dme1
+        let multipart = """
+        ---\r
+        Content-Disposition: form-data\r
+        \r
+        \(license.rawValue)\r
+        -----\r\n
+        """
+        XCTAssertEqual(try FormDataEncoder().encode(license, boundary: "-"), multipart)
+        XCTAssertEqual(try FormDataDecoder().decode(License.self, from: multipart, boundary: "-"), license)
     }
 }
 
