@@ -423,11 +423,12 @@ class MultipartTests: XCTestCase {
 
         XCTAssertEqual(data, expected)
     }
-
+    
     func testNestedDecode() throws {
         struct Foo: Decodable, Equatable {
             struct Bar: Decodable, Equatable {
                 let baz: Int
+                let bazString: String
             }
             let bar: Bar
             let bars: [Bar]
@@ -439,11 +440,23 @@ class MultipartTests: XCTestCase {
         \r
         1\r
         ---\r
+        Content-Disposition: form-data; name="bar[bazString]"\r
+        \r
+        1\r
+        ---\r
         Content-Disposition: form-data; name="bars[][baz]"\r
         \r
         2\r
         ---\r
+        Content-Disposition: form-data; name="bars[][bazString]"\r
+        \r
+        2\r
+        ---\r
         Content-Disposition: form-data; name="bars[][baz]"\r
+        \r
+        3\r
+        ---\r
+        Content-Disposition: form-data; name="bars[][bazString]"\r
         \r
         3\r
         -----\r\n
@@ -452,7 +465,7 @@ class MultipartTests: XCTestCase {
         let decoder = FormDataDecoder()
         let foo = try decoder.decode(Foo.self, from: data, boundary: "-")
 
-        XCTAssertEqual(foo, Foo(bar: .init(baz: 1), bars: [.init(baz: 2), .init(baz: 3)]))
+        XCTAssertEqual(foo, Foo(bar: .init(baz: 1, bazString: "1"), bars: [.init(baz: 2, bazString: "2"), .init(baz: 3, bazString: "3")]))
     }
 
     func testDecodingSingleValue() throws {
