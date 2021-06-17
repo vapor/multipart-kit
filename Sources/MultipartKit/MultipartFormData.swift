@@ -7,8 +7,10 @@ enum MultipartFormData: Equatable {
 
     init(parts: [MultipartPart], nestingDepth: Int) {
         self = parts.reduce(into: .empty) { result, part in
+            print(part.name.map(path))
             result.insertingPart(part, at: part.name.map(path) ?? [], remainingNestingLevels: nestingDepth)
         }
+        print(self)
     }
 
     static let empty = MultipartFormData.keyed([:])
@@ -58,7 +60,9 @@ private extension MultipartFormData {
         self = insertPart(part, at: path, remainingNestingLevels: remainingNestingLevels)
     }
 
-    func insertPart(_ part: MultipartPart, at path: ArraySlice<Substring>, remainingNestingLevels: Int) -> MultipartFormData {
+    func insertPart(_ part: MultipartPart,
+                    at path: ArraySlice<Substring>,
+                    remainingNestingLevels: Int) -> MultipartFormData {
         guard remainingNestingLevels > 0 else {
             return self
         }
@@ -66,7 +70,17 @@ private extension MultipartFormData {
         case .none:
             return .single(part)
         case "":
-            return .array((array ?? []) + [MultipartFormData.empty.insertPart(part, at: path.dropFirst(), remainingNestingLevels: remainingNestingLevels - 1)])
+            switch path.dropFirst().first {
+            case .none, "":
+                return .array((array ?? []) + [MultipartFormData.empty.insertPart(part, at: path.dropFirst(), remainingNestingLevels: remainingNestingLevels - 1)])
+            case let .some(head):
+                if array == nil || array!.last!.dictionary!.keys.contains(String(head)) {
+                    return .array((array ?? []) + [MultipartFormData.empty.insertPart(part, at: path.dropFirst(), remainingNestingLevels: remainingNestingLevels - 1)])
+                } else {
+                    return .array(array!.dropLast() + [array!.last!.insertPart(part, at: path.dropFirst(), remainingNestingLevels: remainingNestingLevels - 1)])
+                }
+            }
+            
         case let .some(head):
             var dictionary = self.dictionary ?? [:]
             dictionary[String(head), default: .empty].insertingPart(part, at: path.dropFirst(), remainingNestingLevels: remainingNestingLevels - 1)
