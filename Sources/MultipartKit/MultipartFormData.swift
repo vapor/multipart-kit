@@ -7,10 +7,8 @@ enum MultipartFormData: Equatable {
 
     init(parts: [MultipartPart], nestingDepth: Int) {
         self = parts.reduce(into: .empty) { result, part in
-            print(part.name.map(path))
             result.insertingPart(part, at: part.name.map(path) ?? [], remainingNestingLevels: nestingDepth)
         }
-        print(self)
     }
 
     static let empty = MultipartFormData.keyed([:])
