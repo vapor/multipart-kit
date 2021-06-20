@@ -394,7 +394,68 @@ class MultipartTests: XCTestCase {
         }
     }
 
-    func testNestedDecode() throws {
+    func testNestedEncode() throws {
+        struct Foo: Encodable {
+            struct Bar: Encodable {
+                let baz: Int
+            }
+            let bar: Bar
+            let bars: [Bar]
+        }
+
+        let encoder = FormDataEncoder()
+        let data = try encoder.encode(Foo(bar: .init(baz: 1), bars: [.init(baz: 2), .init(baz: 3)]), boundary: "-")
+        let expected = """
+        ---\r
+        Content-Disposition: form-data; name="bar[baz]"\r
+        \r
+        1\r
+        ---\r
+        Content-Disposition: form-data; name="bars[][baz]"\r
+        \r
+        2\r
+        ---\r
+        Content-Disposition: form-data; name="bars[][baz]"\r
+        \r
+        3\r
+        -----\r\n
+        """
+
+        XCTAssertEqual(data, expected)
+    }
+    
+    func testNestedDecode1() throws {
+        struct Foo: Decodable, Equatable {
+            struct Bar: Decodable, Equatable {
+                let baz: Int
+            }
+            let bar: Bar
+            let bars: [Bar]
+        }
+
+        let data = """
+        ---\r
+        Content-Disposition: form-data; name="bar[baz]"\r
+        \r
+        1\r
+        ---\r
+        Content-Disposition: form-data; name="bars[][baz]"\r
+        \r
+        2\r
+        ---\r
+        Content-Disposition: form-data; name="bars[][baz]"\r
+        \r
+        3\r
+        -----\r\n
+        """
+
+        let decoder = FormDataDecoder()
+        let foo = try decoder.decode(Foo.self, from: data, boundary: "-")
+
+        XCTAssertEqual(foo, (Foo(bar: .init(baz: 1), bars: [.init(baz: 2), .init(baz: 3)])))
+    }
+    
+    func testNestedDecode2() throws {
         struct Formdata: Decodable, Equatable {
             struct NestedFormdata: Decodable, Equatable {
                 struct AnotherNestedFormdata: Decodable, Equatable {
@@ -494,6 +555,69 @@ class MultipartTests: XCTestCase {
         ]))
     }
     
+//    func testNestedDecode() throws {
+//        struct Foo: Decodable, Equatable {
+//            struct Bar: Decodable, Equatable {
+//                let bazA: Int
+//                let bazB: String
+//            }
+//            let bar: Bar
+//            let bars: [Bar]
+//        }
+//
+//        let data = """
+//        ---\r
+//        Content-Disposition: form-data; name="bar[bazA]"\r
+//        \r
+//        1\r
+//        ---\r
+//        Content-Disposition: form-data; name="bar[bazB]"\r
+//        \r
+//        1\r
+//        ---\r
+//        Content-Disposition: form-data; name="bars[][bazA]"\r
+//        \r
+//        2\r
+//        ---\r
+//        Content-Disposition: form-data; name="bars[][bazB]"\r
+//        \r
+//        2\r
+//        ---\r
+//        Content-Disposition: form-data; name="bars[][bazA]"\r
+//        \r
+//        3\r
+//        ---\r
+//        Content-Disposition: form-data; name="bars[][bazB]"\r
+//        \r
+//        3\r
+//        -----\r\n
+//        """
+//
+//        let decoder = FormDataDecoder()
+//        let foo = try decoder.decode(Foo.self, from: data, boundary: "-")
+//
+//        XCTAssertEqual(foo, Foo(bar: .init(bazA: 1, bazB: "1"), bars: [.init(bazA: 2, bazB: "2"), .init(bazA: 3, bazB: "3")]))
+//    }
+    
+//    func testNestedDecodeFromEncoder() throws {
+//        struct Foo: Codable, Equatable {
+//            struct Bar: Codable, Equatable {
+//                let baz: Int
+//                let bazString: String
+//            }
+//            let bar: Bar
+//            let bars: [Bar]
+//        }
+//        let encoder = FormDataEncoder()
+//        let data = try encoder.encode(Foo.self, boundary: "-")
+//
+//        let decoder = FormDataDecoder()
+//        let foo = try decoder.decode(Foo.self, from: data, boundary: "-")
+//
+//        XCTAssertEqual(foo, Foo(bar: .init(baz: 1, bazString: "1"), bars: [.init(baz: 2, bazString: "2"), .init(baz: 3, bazString: "3")]))
+//    }
+//
+
     func testDecodingSingleValue() throws {
         let data = """
         ---\r
