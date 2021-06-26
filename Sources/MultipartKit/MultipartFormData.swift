@@ -41,15 +41,14 @@ extension MultipartFormData {
     private static func namedParts(from data: MultipartFormData, path: String? = nil) -> [MultipartPart] {
         switch data {
         case .array(let array):
-            switch array.first {
-            case .keyed:
-                return array.enumerated().flatMap { i, part in
-                    namedParts(from: part, path: path.map { "\($0)[\(i)]" })
-                }
-            default:
-                return array.flatMap {
-                    namedParts(from: $0, path: path.map { "\($0)[]" })
-                }
+            return array.enumerated().flatMap { i, part in
+                namedParts(from: part,
+                           path: {
+                            if case .keyed = part {
+                                return path.map { "\($0)[\(i)]" }
+                            }
+                            return path.map { "\($0)[]" }
+                           }())
             }
         case .single(var part):
             part.name = path
