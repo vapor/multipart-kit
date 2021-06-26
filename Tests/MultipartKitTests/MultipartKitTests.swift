@@ -397,27 +397,39 @@ class MultipartTests: XCTestCase {
     func testNestedEncode() throws {
         struct Foo: Encodable {
             struct Bar: Encodable {
-                let baz: Int
+                let bazs: [Int]
             }
             let bar: Bar
             let bars: [Bar]
         }
 
         let encoder = FormDataEncoder()
-        let data = try encoder.encode(Foo(bar: .init(baz: 1), bars: [.init(baz: 2), .init(baz: 3)]), boundary: "-")
+        let data = try encoder.encode(Foo(bar: .init(bazs: [1, 11]), bars: [.init(bazs: [2, 22]), .init(bazs: [3, 33])]), boundary: "-")
         let expected = """
         ---\r
-        Content-Disposition: form-data; name="bar[baz]"\r
+        Content-Disposition: form-data; name="bar[bazs][]"\r
         \r
         1\r
         ---\r
-        Content-Disposition: form-data; name="bars[][baz]"\r
+        Content-Disposition: form-data; name="bar[bazs][]"\r
+        \r
+        11\r
+        ---\r
+        Content-Disposition: form-data; name="bars[0][bazs][]"\r
         \r
         2\r
         ---\r
-        Content-Disposition: form-data; name="bars[][baz]"\r
+        Content-Disposition: form-data; name="bars[0][bazs][]"\r
+        \r
+        22\r
+        ---\r
+        Content-Disposition: form-data; name="bars[1][bazs][]"\r
         \r
         3\r
+        ---\r
+        Content-Disposition: form-data; name="bars[1][bazs][]"\r
+        \r
+        33\r
         -----\r\n
         """
 
@@ -523,6 +535,80 @@ class MultipartTests: XCTestCase {
                   ])
         ]))
     }
+    
+    func testNestedDecodeWithIndices() throws {
+        struct Formdata: Decodable, Equatable {
+            struct NestedFormdata: Decodable, Equatable {
+                struct AnotherNestedFormdata: Decodable, Equatable {
+                    let strings: [String]
+                }
+                let int: String
+                let anotherNestedFormdataList: [AnotherNestedFormdata]
+            }
+            let nestedFormdata: [NestedFormdata]
+        }
+
+        let data = """
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][int]"\r
+        \r
+        1\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][0][strings][]"\r
+        \r
+        11\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][0][strings][]"\r
+        \r
+        12\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][1][strings][]"\r
+        \r
+        111\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][1][strings][]"\r
+        \r
+        112\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[1][int]"\r
+        \r
+        2\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[1][anotherNestedFormdataList][0][strings][]"\r
+        \r
+        21\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[1][anotherNestedFormdataList][0][strings][]"\r
+        \r
+        22\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[1][anotherNestedFormdataList][1][strings][]"\r
+        \r
+        211\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[1][anotherNestedFormdataList][1][strings][]"\r
+        \r
+        212\r
+        -----\r
+        """
+
+        let decoder = FormDataDecoder()
+        let formdata = try decoder.decode(Formdata.self, from: data, boundary: "-")
+
+        XCTAssertEqual(formdata, Formdata(nestedFormdata: [
+            .init(int: "1",
+                  anotherNestedFormdataList: [
+                    .init(strings: ["11", "12"]),
+                    .init(strings: ["111", "112"])
+                  ]),
+            .init(int: "2",
+                  anotherNestedFormdataList: [
+                    .init(strings: ["21", "22"]),
+                    .init(strings: ["211", "212"])
+                  ])
+        ]))
+    }
+    
     
     func testDecodingSingleValue() throws {
         let data = """
