@@ -159,8 +159,8 @@ class MultipartTests: XCTestCase {
         """
 
         struct Foo: Decodable {
-            var sometext: String
-            var files: String
+            let sometext: String
+            let files: String
         }
 
         let foo = try FormDataDecoder().decode(Foo.self, from: data, boundary: "12345")
