@@ -168,6 +168,26 @@ class MultipartTests: XCTestCase {
         XCTAssert(foo.files.contains("picture.jpg"))
     }
 
+    func testDecodeOptional() throws {
+        struct Bar: Decodable {
+            struct Foo: Decodable {
+                let int: Int?
+            }
+            let foo: Foo?
+        }
+        let data = """
+        ---\r
+        Content-Disposition: form-data; name="foo[int]"\r
+        \r
+        1\r
+        -----\r\n
+        """
+
+        let decoder = FormDataDecoder()
+        let bar = try decoder.decode(Bar?.self, from: data, boundary: "-")
+        XCTAssertEqual(bar?.foo?.int, 1)
+    }
+
     func testFormDataDecoderW3Streaming() throws {
         /// Content-Type: multipart/form-data; boundary=12345
         let data = """
