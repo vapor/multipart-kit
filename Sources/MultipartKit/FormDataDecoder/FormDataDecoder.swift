@@ -4,6 +4,7 @@
 ///
 /// Seealso `MultipartParser` for more information about the `multipart` encoding.
 public struct FormDataDecoder {
+
     /// Maximum nesting depth to allow when decoding the input.
     /// - 1 corresponds to a single value
     /// - 2 corresponds to an an object with non-nested properties or an 1 dimensional array
@@ -29,10 +30,8 @@ public struct FormDataDecoder {
     ///   - boundary: Multipart boundary to used in the decoding.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
-    public func decode<D>(_ decodable: D.Type, from data: String, boundary: String) throws -> D
-        where D: Decodable
-    {
-        return try decode(D.self, from: [UInt8](data.utf8), boundary: boundary)
+    public func decode<D: Decodable>(_ decodable: D.Type, from data: String, boundary: String) throws -> D {
+        try decode(D.self, from: [UInt8](data.utf8), boundary: boundary)
     }
 
     /// Decodes a `Decodable` item from `Data` using the supplied boundary.
@@ -45,9 +44,7 @@ public struct FormDataDecoder {
     ///   - boundary: Multipart boundary to used in the decoding.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
-    public func decode<D>(_ decodable: D.Type, from data: [UInt8], boundary: String) throws -> D
-        where D: Decodable
-    {
+    public func decode<D: Decodable>(_ decodable: D.Type, from data: [UInt8], boundary: String) throws -> D {
         let parser = MultipartParser(boundary: boundary)
 
         var parts: [MultipartPart] = []

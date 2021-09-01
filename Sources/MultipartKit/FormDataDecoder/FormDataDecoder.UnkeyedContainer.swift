@@ -1,6 +1,5 @@
 extension FormDataDecoder {
     struct UnkeyedContainer {
-        let codingPath: [CodingKey]
         var currentIndex: Int = 0
         let data: [MultipartFormData]
         let decoder: FormDataDecoder.Decoder
@@ -8,32 +7,49 @@ extension FormDataDecoder {
 }
 
 extension FormDataDecoder.UnkeyedContainer: UnkeyedDecodingContainer {
+    var codingPath: [CodingKey] {
+        decoder.codingPath
+    }
+    var count: Int? { data.count }
     var index: CodingKey { BasicCodingKey.index(currentIndex) }
     var isAtEnd: Bool { currentIndex >= data.count }
-    var count: Int? { data.count }
 
     mutating func decodeNil() throws -> Bool {
         false
     }
 
-    mutating func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
-        try decoderForIndex().decode(T.self)
+    mutating func decode<T: Decodable>(_ type: T.Type) throws -> T {
+        try decoderAtIndex().decode(T.self)
     }
 
-    mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
-        try decoderForIndex().container(keyedBy: type)
+    mutating func nestedContainer<NestedKey: CodingKey>(keyedBy keyType: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> {
+        try decoderAtIndex().container(keyedBy: keyType)
     }
 
     mutating func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer {
-        try decoderForIndex().unkeyedContainer()
+        try decoderAtIndex().unkeyedContainer()
     }
 
     mutating func superDecoder() throws -> Decoder {
-        decoderForIndex()
+        try decoderAtIndex()
     }
 
-    mutating func decoderForIndex() -> FormDataDecoder.Decoder {
+    mutating func decoderAtIndex() throws -> FormDataDecoder.Decoder {
         defer { currentIndex += 1 }
-        return decoder.nested(at: index, with: data[currentIndex])
+        return try decoder.nested(at: index, with: getValue())
+    }
+
+    mutating func getValue() throws -> MultipartFormData {
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(
+                FormDataDecoder.Decoder.self,
+                .init(
+                    codingPath: codingPath,
+                    debugDescription: "Unkeyed container is at end.",
+                    underlyingError: nil
+                )
+            )
+        }
+        return data[currentIndex]
     }
 }

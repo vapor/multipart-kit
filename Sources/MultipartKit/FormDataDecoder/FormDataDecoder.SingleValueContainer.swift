@@ -8,10 +8,11 @@ extension FormDataDecoder.Decoder: SingleValueDecodingContainer {
             let part = data.part,
             let Convertible = T.self as? MultipartPartConvertible.Type
         else {
-            if data.dictionary?.keys.isEmpty == true {
-                throw DecodingError.valueNotFound(T.self, .init(codingPath: codingPath, debugDescription: "encountered empty dictionary"))
-            }
             return try T(from: self)
+        }
+
+        guard !data.hasExceededNestingDepth else {
+            throw DecodingError.dataCorrupted(.init(codingPath: codingPath, debugDescription: "Nesting depth exceeded.", underlyingError: nil))
         }
 
         guard
@@ -21,7 +22,7 @@ extension FormDataDecoder.Decoder: SingleValueDecodingContainer {
             throw DecodingError.dataCorrupted(
                 .init(
                     codingPath: codingPath,
-                    debugDescription: #"could not convert value at "\#(path)" to type \#(T.self) from multipart part"#
+                    debugDescription: #"Could not convert value at "\#(path)" to type \#(T.self) from multipart part."#
                 )
             )
         }

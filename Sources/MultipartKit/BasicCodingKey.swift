@@ -28,4 +28,6 @@ internal enum BasicCodingKey: CodingKey {
     init?(intValue: Int) {
         self = .index(intValue)
     }
+
+    static let `super` = Self.key("super")
 }
