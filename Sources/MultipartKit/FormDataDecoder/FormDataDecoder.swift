@@ -12,7 +12,7 @@ public struct FormDataDecoder {
     let nestingDepth: Int
 
     /// Any contextual information set by the user for decoding.
-    var userInfo: [CodingUserInfoKey: Any] = [:]
+    public var userInfo: [CodingUserInfoKey: Any] = [:]
 
     /// Creates a new `FormDataDecoder`.
     /// - Parameter nestingDepth: maximum allowed nesting depth of the decoded structure. Defaults to 8.

@@ -8,7 +8,7 @@ import struct NIO.ByteBufferAllocator
 public struct FormDataEncoder {
 
     /// Any contextual information set by the user for encoding.
-    var userInfo: [CodingUserInfoKey: Any] = [:]
+    public var userInfo: [CodingUserInfoKey: Any] = [:]
 
     /// Creates a new `FormDataEncoder`.
     public init() { }
