@@ -35,7 +35,7 @@ extension FormDataEncoder.UnkeyedContainer: UnkeyedEncodingContainer {
     }
 
     func nextEncoder() -> FormDataEncoder.Encoder {
-        let encoder = encoder.nested(at: BasicCodingKey.index(count))
+        let encoder = self.encoder.nested(at: BasicCodingKey.index(count))
         dataContainer.value.append(encoder.storage)
         return encoder
     }

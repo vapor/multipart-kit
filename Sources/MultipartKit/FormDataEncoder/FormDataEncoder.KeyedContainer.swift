@@ -35,7 +35,7 @@ extension FormDataEncoder.KeyedContainer: KeyedEncodingContainerProtocol {
     }
 
     func encoderForKey(_ key: CodingKey) -> FormDataEncoder.Encoder {
-        let encoder = encoder.nested(at: key)
+        let encoder = self.encoder.nested(at: key)
         dataContainer.value[key.stringValue] = encoder.storage
         return encoder
     }
