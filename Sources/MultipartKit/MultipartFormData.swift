@@ -65,9 +65,6 @@ extension MultipartFormData {
             return []
         }
     }
-
-private enum MultipartFormDataError: Error {
-    case nestingLevelExceeded
 }
 
 private extension MultipartFormData {
