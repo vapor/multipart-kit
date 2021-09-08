@@ -45,7 +45,7 @@ Use the SPM string to easily include the dependency in your `Package.swift` file
 
 MultipartKit supports the following platforms:
 
-- Ubuntu 16.04+
+- Ubuntu 18.04+
 - macOS 10.15+
 
 ## Overview
