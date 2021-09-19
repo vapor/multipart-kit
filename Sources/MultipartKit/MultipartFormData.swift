@@ -4,10 +4,15 @@ enum MultipartFormData: Equatable {
     case single(MultipartPart)
     case array([MultipartFormData])
     case keyed(Keyed)
+    case nestingDepthExceeded
 
     init(parts: [MultipartPart], nestingDepth: Int) {
         self = parts.reduce(into: .empty) { result, part in
-            result.insertingPart(part, at: part.name.map(path) ?? [], remainingNestingLevels: nestingDepth)
+            result.insert(
+                part,
+                at: part.name.map(makePath) ?? [],
+                remainingNestingDepth: nestingDepth
+            )
         }
     }
 
@@ -27,10 +32,17 @@ enum MultipartFormData: Equatable {
         guard case let .single(part) = self else { return nil }
         return part
     }
+
+    var hasExceededNestingDepth: Bool {
+        guard case .nestingDepthExceeded = self else {
+            return false
+        }
+        return true
+    }
 }
 
-private func path(from string: String) -> ArraySlice<Substring> {
-    ArraySlice(string.replacingOccurrences(of: "]", with: "").split(omittingEmptySubsequences: false, whereSeparator: { $0 == "[" }))
+private func makePath(from string: String) -> ArraySlice<Substring> {
+    ArraySlice(string.replacingOccurrences(of: "]", with: "").split(omittingEmptySubsequences: false) { $0 == "[" })
 }
 
 extension MultipartFormData {
@@ -49,27 +61,37 @@ extension MultipartFormData {
             return dictionary.flatMap { key, value in
                 namedParts(from: value, path: path.map { "\($0)[\(key)]" } ?? key)
             }
+        case .nestingDepthExceeded:
+            return []
         }
     }
 }
 
 private extension MultipartFormData {
-    mutating func insertingPart(_ part: MultipartPart, at path: ArraySlice<Substring>, remainingNestingLevels: Int) {
-        self = insertPart(part, at: path, remainingNestingLevels: remainingNestingLevels)
+    mutating func insert(_ part: MultipartPart, at path: ArraySlice<Substring>, remainingNestingDepth: Int) {
+        self = inserting(part, at: path, remainingNestingDepth: remainingNestingDepth)
     }
 
-    func insertPart(_ part: MultipartPart, at path: ArraySlice<Substring>, remainingNestingLevels: Int) -> MultipartFormData {
-        guard remainingNestingLevels > 0 else {
-            return self
-        }
-        switch path.first {
-        case .none:
+    func inserting(_ part: MultipartPart, at path: ArraySlice<Substring>, remainingNestingDepth: Int) -> MultipartFormData {
+        guard let head = path.first else {
             return .single(part)
-        case "":
-            return .array((array ?? []) + [MultipartFormData.empty.insertPart(part, at: path.dropFirst(), remainingNestingLevels: remainingNestingLevels - 1)])
-        case let .some(head):
+        }
+
+        guard remainingNestingDepth > 1 else {
+            return .nestingDepthExceeded
+        }
+
+        func insertPart(into data: inout MultipartFormData) {
+            data.insert(part, at: path.dropFirst(), remainingNestingDepth: remainingNestingDepth - 1)
+        }
+
+        if head.isEmpty {
+            var tail = MultipartFormData.empty
+            insertPart(into: &tail)
+            return .array((array ?? []) + [tail])
+        } else {
             var dictionary = self.dictionary ?? [:]
-            dictionary[String(head), default: .empty].insertingPart(part, at: path.dropFirst(), remainingNestingLevels: remainingNestingLevels - 1)
+            insertPart(into: &dictionary[String(head), default: .empty])
             return .keyed(dictionary)
         }
     }

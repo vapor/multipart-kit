@@ -4,7 +4,7 @@ internal enum BasicCodingKey: CodingKey {
     case index(Int)
 
     /// See `CodingKey`.
-    public var stringValue: String {
+    var stringValue: String {
         switch self {
         case .index(let index): return index.description
         case .key(let key): return key
@@ -12,7 +12,7 @@ internal enum BasicCodingKey: CodingKey {
     }
 
     /// See `CodingKey`.
-    public var intValue: Int? {
+    var intValue: Int? {
         switch self {
         case .index(let index): return index
         case .key(let key): return Int(key)
@@ -20,12 +20,14 @@ internal enum BasicCodingKey: CodingKey {
     }
 
     /// See `CodingKey`.
-    public init?(stringValue: String) {
+    init?(stringValue: String) {
         self = .key(stringValue)
     }
 
     /// See `CodingKey`.
-    public init?(intValue: Int) {
+    init?(intValue: Int) {
         self = .index(intValue)
     }
+
+    static let `super` = Self.key("super")
 }
