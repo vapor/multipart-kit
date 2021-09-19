@@ -116,15 +116,15 @@ class MultipartTests: XCTestCase {
         \r
         3.14\r
         --hello\r
-        Content-Disposition: form-data; name="array[]"\r
+        Content-Disposition: form-data; name="array[0]"\r
         \r
         1\r
         --hello\r
-        Content-Disposition: form-data; name="array[]"\r
+        Content-Disposition: form-data; name="array[1]"\r
         \r
         2\r
         --hello\r
-        Content-Disposition: form-data; name="array[]"\r
+        Content-Disposition: form-data; name="array[2]"\r
         \r
         3\r
         --hello\r
@@ -415,29 +415,99 @@ class MultipartTests: XCTestCase {
     }
 
     func testNestedEncode() throws {
-        struct Foo: Encodable {
-            struct Bar: Encodable {
-                let baz: Int
+        struct Formdata: Encodable, Equatable {
+            struct NestedFormdata: Encodable, Equatable {
+                struct AnotherNestedFormdata: Encodable, Equatable {
+                    let int: Int
+                    let string: String
+                    let strings: [String]
+                }
+                let int: String
+                let string: Int
+                let strings: [String]
+                let anotherNestedFormdata: AnotherNestedFormdata
+                let anotherNestedFormdataList: [AnotherNestedFormdata]
             }
-            let bar: Bar
-            let bars: [Bar]
+            let nestedFormdata: [NestedFormdata]
         }
 
         let encoder = FormDataEncoder()
-        let data = try encoder.encode(Foo(bar: .init(baz: 1), bars: [.init(baz: 2), .init(baz: 3)]), boundary: "-")
+        let data = try encoder.encode(Formdata(nestedFormdata: [
+            .init(
+                int: "1",
+                string: 1,
+                strings: ["2", "3"],
+                anotherNestedFormdata: .init(int: 4, string: "5", strings: ["6", "7"]),
+                anotherNestedFormdataList: [
+                    .init(int: 10, string: "11", strings: ["12", "13"]),
+                    .init(int: 20, string: "21", strings: ["22", "33"])
+                ])
+        ]), boundary: "-")
         let expected = """
         ---\r
-        Content-Disposition: form-data; name="bar[baz]"\r
+        Content-Disposition: form-data; name="nestedFormdata[0][int]"\r
         \r
         1\r
         ---\r
-        Content-Disposition: form-data; name="bars[][baz]"\r
+        Content-Disposition: form-data; name="nestedFormdata[0][string]"\r
+        \r
+        1\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][strings][0]"\r
         \r
         2\r
         ---\r
-        Content-Disposition: form-data; name="bars[][baz]"\r
+        Content-Disposition: form-data; name="nestedFormdata[0][strings][1]"\r
         \r
         3\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdata][int]"\r
+        \r
+        4\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdata][string]"\r
+        \r
+        5\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdata][strings][0]"\r
+        \r
+        6\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdata][strings][1]"\r
+        \r
+        7\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][0][int]"\r
+        \r
+        10\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][0][string]"\r
+        \r
+        11\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][0][strings][0]"\r
+        \r
+        12\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][0][strings][1]"\r
+        \r
+        13\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][1][int]"\r
+        \r
+        20\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][1][string]"\r
+        \r
+        21\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][1][strings][0]"\r
+        \r
+        22\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][1][strings][1]"\r
+        \r
+        33\r
         -----\r\n
         """
 
@@ -445,34 +515,104 @@ class MultipartTests: XCTestCase {
     }
 
     func testNestedDecode() throws {
-        struct Foo: Decodable, Equatable {
-            struct Bar: Decodable, Equatable {
-                let baz: Int
+        struct Formdata: Decodable, Equatable {
+            struct NestedFormdata: Decodable, Equatable {
+                struct AnotherNestedFormdata: Decodable, Equatable {
+                    let int: Int
+                    let string: String
+                    let strings: [String]
+                }
+                let int: String
+                let string: Int
+                let strings: [String]
+                let anotherNestedFormdata: AnotherNestedFormdata
+                let anotherNestedFormdataList: [AnotherNestedFormdata]
             }
-            let bar: Bar
-            let bars: [Bar]
+            let nestedFormdata: [NestedFormdata]
         }
 
         let data = """
         ---\r
-        Content-Disposition: form-data; name="bar[baz]"\r
+        Content-Disposition: form-data; name="nestedFormdata[0][int]"\r
         \r
         1\r
         ---\r
-        Content-Disposition: form-data; name="bars[][baz]"\r
+        Content-Disposition: form-data; name="nestedFormdata[0][string]"\r
+        \r
+        1\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][strings][0]"\r
         \r
         2\r
         ---\r
-        Content-Disposition: form-data; name="bars[][baz]"\r
+        Content-Disposition: form-data; name="nestedFormdata[0][strings][1]"\r
         \r
         3\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdata][int]"\r
+        \r
+        4\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdata][string]"\r
+        \r
+        5\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdata][strings][0]"\r
+        \r
+        6\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdata][strings][1]"\r
+        \r
+        7\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][0][int]"\r
+        \r
+        10\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][0][string]"\r
+        \r
+        11\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][0][strings][0]"\r
+        \r
+        12\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][0][strings][1]"\r
+        \r
+        13\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][1][int]"\r
+        \r
+        20\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][1][string]"\r
+        \r
+        21\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][1][strings][0]"\r
+        \r
+        22\r
+        ---\r
+        Content-Disposition: form-data; name="nestedFormdata[0][anotherNestedFormdataList][1][strings][1]"\r
+        \r
+        33\r
         -----\r\n
         """
 
         let decoder = FormDataDecoder()
-        let foo = try decoder.decode(Foo.self, from: data, boundary: "-")
+        let formdata = try decoder.decode(Formdata.self, from: data, boundary: "-")
 
-        XCTAssertEqual(foo, Foo(bar: .init(baz: 1), bars: [.init(baz: 2), .init(baz: 3)]))
+        XCTAssertEqual(formdata, Formdata(nestedFormdata: [
+            .init(
+                int: "1",
+                string: 1,
+                strings: ["2", "3"],
+                anotherNestedFormdata: .init(int: 4, string: "5", strings: ["6", "7"]),
+                anotherNestedFormdataList: [
+                    .init(int: 10, string: "11", strings: ["12", "13"]),
+                    .init(int: 20, string: "21", strings: ["22", "33"])
+                ])
+        ]))
     }
 
     func testDecodingSingleValue() throws {

@@ -53,7 +53,8 @@ extension MultipartFormData {
     private static func namedParts(from data: MultipartFormData, path: String? = nil) -> [MultipartPart] {
         switch data {
         case .array(let array):
-            return array.flatMap { namedParts(from: $0, path: path.map { "\($0)[]" }) }
+            return array.enumerated().flatMap { offset, element in
+                namedParts(from: element, path: path.map { "\($0)[\(offset)]" }) }
         case .single(var part):
             part.name = path
             return [part]
@@ -85,10 +86,29 @@ private extension MultipartFormData {
             data.insert(part, at: path.dropFirst(), remainingNestingDepth: remainingNestingDepth - 1)
         }
 
+        func insertingPart(at index: Int?) -> MultipartFormData {
+            var array = self.array ?? []
+            let count = array.count
+            let index = index ?? count
+
+            switch index {
+            case count:
+                array.append(.empty)
+            case 0..<count:
+                break
+            default:
+                // ignore indices outside the range of 0...count
+                return self
+            }
+
+            insertPart(into: &array[index])
+            return .array(array)
+        }
+
         if head.isEmpty {
-            var tail = MultipartFormData.empty
-            insertPart(into: &tail)
-            return .array((array ?? []) + [tail])
+            return insertingPart(at: nil)
+        } else if let index = Int(head) {
+            return insertingPart(at: index)
         } else {
             var dictionary = self.dictionary ?? [:]
             insertPart(into: &dictionary[String(head), default: .empty])
