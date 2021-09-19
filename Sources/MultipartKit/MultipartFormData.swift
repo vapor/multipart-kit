@@ -1,3 +1,5 @@
+import OrderedCollections
+
 enum MultipartFormData: Equatable {
     typealias Keyed = OrderedDictionary<String, MultipartFormData>
 
