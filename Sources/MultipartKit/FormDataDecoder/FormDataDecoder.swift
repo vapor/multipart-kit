@@ -31,7 +31,7 @@ public struct FormDataDecoder {
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
     public func decode<D: Decodable>(_ decodable: D.Type, from data: String, boundary: String) throws -> D {
-        try decode(D.self, from: [UInt8](data.utf8), boundary: boundary)
+        try decode(D.self, from: ByteBuffer(string: data), boundary: boundary)
     }
 
     /// Decodes a `Decodable` item from `Data` using the supplied boundary.
@@ -45,6 +45,20 @@ public struct FormDataDecoder {
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
     public func decode<D: Decodable>(_ decodable: D.Type, from data: [UInt8], boundary: String) throws -> D {
+        try decode(D.self, from: ByteBuffer(bytes: data), boundary: boundary)
+    }
+
+    /// Decodes a `Decodable` item from `Data` using the supplied boundary.
+    ///
+    ///     let foo = try FormDataDecoder().decode(Foo.self, from: data, boundary: "123")
+    ///
+    /// - Parameters:
+    ///   - decodable: Generic `Decodable` type.
+    ///   - data: Data to decode.
+    ///   - boundary: Multipart boundary to used in the decoding.
+    /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
+    /// - Returns: An instance of the decoded type `D`.
+    public func decode<D: Decodable>(_ decodable: D.Type, from buffer: ByteBuffer, boundary: String) throws -> D {
         let parser = MultipartParser(boundary: boundary)
 
         var parts: [MultipartPart] = []
@@ -64,7 +78,7 @@ public struct FormDataDecoder {
             parts.append(part)
         }
 
-        try parser.execute(data)
+        try parser.execute(buffer)
         let data = MultipartFormData(parts: parts, nestingDepth: nestingDepth)
         let decoder = Decoder(codingPath: [], data: data, userInfo: userInfo)
         return try decoder.decode()
