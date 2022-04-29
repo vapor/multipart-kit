@@ -133,5 +133,3 @@ false
 Note that the array elements always include the index (as opposed to just `[]`) in order to support complex nesting.
 
 ### Attribution
-
-This library contains code from the `OrderedCollection` module from https://github.com/apple/swift-collections. See: NOTICE.txt.
