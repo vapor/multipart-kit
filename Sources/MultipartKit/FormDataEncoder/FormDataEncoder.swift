@@ -1,4 +1,4 @@
-import struct NIO.ByteBufferAllocator
+import NIOCore
 
 /// Encodes `Encodable` items to `multipart/form-data` encoded `Data`.
 ///

@@ -1,4 +1,4 @@
-import struct NIO.ByteBufferAllocator
+import NIOCore
 
 /// Serializes `MultipartForm`s to `Data`.
 ///

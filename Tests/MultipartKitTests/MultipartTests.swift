@@ -1,5 +1,7 @@
 import XCTest
 import MultipartKit
+import NIOCore
+import NIOHTTP1
 
 class MultipartTests: XCTestCase {
     let named = """

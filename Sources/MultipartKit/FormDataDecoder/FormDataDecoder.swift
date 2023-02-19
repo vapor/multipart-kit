@@ -1,3 +1,6 @@
+import NIOCore
+import NIOHTTP1
+
 /// Decodes `Decodable` types from `multipart/form-data` encoded `Data`.
 ///
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
