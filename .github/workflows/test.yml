@@ -27,7 +27,18 @@ jobs:
           xcode-version: ${{ matrix.env.toolchain }}
         if: ${{ matrix.env.toolchain != '' }}
       - name: Check out Vapor
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Run tests with Thread Sanitizer
         timeout-minutes: 20
         run: swift test --enable-test-discovery --sanitize=thread
+
+  test-exports:
+       name: Test exports
+       runs-on: ubuntu-latest
+       steps:
+         - name: Check out source
+           uses: actions/checkout@v3
+           with:
+             fetch-depth: 0
+         - name: Build
+           run: swift build -Xswiftc -DBUILDING_DOCC

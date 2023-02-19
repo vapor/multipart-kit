@@ -1,4 +1,5 @@
 import Foundation
+import NIOHTTP1
 
 extension HTTPHeaders {
     func getParameter(_ name: String, _ key: String) -> String? {
