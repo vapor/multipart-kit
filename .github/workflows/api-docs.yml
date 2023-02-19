@@ -10,5 +10,5 @@ jobs:
      secrets: inherit
      with:
        package_name: multipart-kit
-       modules: MultiPartKit
+       modules: MultipartKit
        pathsToInvalidate: /multipartkit
