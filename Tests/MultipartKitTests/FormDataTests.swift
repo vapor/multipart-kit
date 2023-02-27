@@ -493,4 +493,23 @@ class FormDataTests: XCTestCase {
         XCTAssertEqual(try FormDataEncoder().encode(license, boundary: "-"), multipart)
         XCTAssertEqual(try FormDataDecoder().decode(License.self, from: multipart, boundary: "-"), license)
     }
+
+    func testIncorrectlyNestedData() throws {
+        struct TestData : Codable {
+            var x: String
+        }
+        let multipart = """
+                   ---\r
+                   Content-Disposition: form-data; name="x[not-present]"\r
+                   \r
+                   foo\r
+                   -----\r
+                   """
+        do {
+            let _ = try FormDataDecoder().decode(TestData.self, from: multipart, boundary: "-")
+            XCTFail("This data should not decode successfully")
+        } catch {
+            // Do nothing, as long as the code did not crash
+        }
+    }
 }

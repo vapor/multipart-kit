@@ -3,6 +3,16 @@ extension FormDataDecoder {
         let codingPath: [CodingKey]
         let data: MultipartFormData
         let userInfo: [CodingUserInfoKey: Any]
+        let previousCodingPath : [CodingKey]?
+        let previousType: Decodable.Type?
+
+        init(codingPath: [CodingKey], data: MultipartFormData, userInfo: [CodingUserInfoKey: Any], previousCodingPath: [CodingKey]? = nil, previousType: Decodable.Type? = nil) {
+            self.codingPath = codingPath
+            self.data = data
+            self.userInfo = userInfo
+            self.previousCodingPath = previousCodingPath
+            self.previousType = previousType
+        }
     }
 }
 

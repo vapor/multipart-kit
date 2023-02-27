@@ -8,7 +8,10 @@ extension FormDataDecoder.Decoder: SingleValueDecodingContainer {
             let part = data.part,
             let Convertible = T.self as? MultipartPartConvertible.Type
         else {
-            return try T(from: self)
+            guard previousCodingPath?.count != codingPath.count || previousType != T.self else {
+                throw DecodingError.dataCorrupted(.init(codingPath: codingPath, debugDescription: "Decoding caught in recursion loop"))
+            }
+            return try T(from: FormDataDecoder.Decoder(codingPath: codingPath, data: data, userInfo: userInfo, previousCodingPath: codingPath, previousType: T.self))
         }
 
         guard !data.hasExceededNestingDepth else {
