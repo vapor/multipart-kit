@@ -505,11 +505,6 @@ class FormDataTests: XCTestCase {
                    foo\r
                    -----\r
                    """
-        do {
-            let _ = try FormDataDecoder().decode(TestData.self, from: multipart, boundary: "-")
-            XCTFail("This data should not decode successfully")
-        } catch {
-            // Do nothing, as long as the code did not crash
-        }
+        XCTAssertThrowsError (try FormDataDecoder().decode(TestData.self, from: multipart, boundary: "-"))
     }
 }
