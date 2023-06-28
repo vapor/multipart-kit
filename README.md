@@ -11,11 +11,11 @@
     <a href="LICENSE">
         <img src="http://img.shields.io/badge/license-MIT-brightgreen.svg" alt="MIT License">
     </a>
-    <a href="https://github.com/vapor/multipart-kit/actions">
-        <img src="https://github.com/vapor/multipart-kit/workflows/test/badge.svg" alt="Continuous Integration">
+    <a href="https://github.com/vapor/multipart-kit/actions/workflows/test.yml">
+        <img src="https://github.com/vapor/multipart-kit/actions/workflows/test.yml/badge.svg" alt="Continuous Integration">
     </a>
     <a href="https://swift.org">
-        <img src="http://img.shields.io/badge/swift-5.2-brightgreen.svg" alt="Swift 5.2">
+        <img src="http://img.shields.io/badge/swift-5.4-brightgreen.svg" alt="Swift 5.4">
     </a>
     <a href="https://twitter.com/codevapor">
         <img src="https://img.shields.io/badge/twitter-codevapor-5AA9E7.svg" alt="Twitter">
@@ -30,7 +30,7 @@ The table below shows a list of MultipartKit major releases alongside their comp
 
 |Version|NIO|Swift|SPM|
 |---|---|---|---|
-|4.0|2.2|5.2+|`from: "4.0.0"`|
+|4.0|2.2|5.4+|`from: "4.0.0"`|
 |3.0|1.0|4.0+|`from: "3.0.0"`|
 |2.0|N/A|3.1+|`from: "2.0.0"`|
 |1.0|N/A|3.1+|`from: "1.0.0"`|
@@ -45,7 +45,7 @@ Use the SPM string to easily include the dependency in your `Package.swift` file
 
 MultipartKit supports the following platforms:
 
-- Ubuntu 18.04+
+- All Linux distributions supported by Swift
 - macOS 10.15+
 
 ## Overview
