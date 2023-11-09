@@ -3,7 +3,7 @@ import NIOCore
 /// Serializes `MultipartForm`s to `Data`.
 ///
 /// See `MultipartParser` for more information about the multipart encoding.
-public final class MultipartSerializer {
+public final class MultipartSerializer: Sendable {
 
     /// Creates a new `MultipartSerializer`.
     public init() { }

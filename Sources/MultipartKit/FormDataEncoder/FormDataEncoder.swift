@@ -5,10 +5,10 @@ import NIOCore
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
 ///
 /// Seealso `MultipartParser` for more information about the `multipart` encoding.
-public struct FormDataEncoder {
+public struct FormDataEncoder: Sendable {
 
     /// Any contextual information set by the user for encoding.
-    public var userInfo: [CodingUserInfoKey: Any] = [:]
+    public var userInfo: [CodingUserInfoKey: Sendable] = [:]
 
     /// Creates a new `FormDataEncoder`.
     public init() { }
