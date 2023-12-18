@@ -6,7 +6,7 @@ import NIOHTTP1
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
 ///
 /// Seealso `MultipartParser` for more information about the `multipart` encoding.
-public struct FormDataDecoder {
+public struct FormDataDecoder: Sendable {
 
     /// Maximum nesting depth to allow when decoding the input.
     /// - 1 corresponds to a single value
@@ -15,7 +15,7 @@ public struct FormDataDecoder {
     let nestingDepth: Int
 
     /// Any contextual information set by the user for decoding.
-    public var userInfo: [CodingUserInfoKey: Any] = [:]
+    public var userInfo: [CodingUserInfoKey: Sendable] = [:]
 
     /// Creates a new `FormDataDecoder`.
     /// - Parameter nestingDepth: maximum allowed nesting depth of the decoded structure. Defaults to 8.
