@@ -15,7 +15,7 @@
         <img src="https://github.com/vapor/multipart-kit/actions/workflows/test.yml/badge.svg" alt="Continuous Integration">
     </a>
     <a href="https://swift.org">
-        <img src="http://img.shields.io/badge/swift-5.4-brightgreen.svg" alt="Swift 5.4">
+        <img src="http://img.shields.io/badge/swift-5.7-brightgreen.svg" alt="Swift 5.7">
     </a>
     <a href="https://twitter.com/codevapor">
         <img src="https://img.shields.io/badge/twitter-codevapor-5AA9E7.svg" alt="Twitter">
@@ -24,7 +24,7 @@
 
 🏞 Multipart parser and serializer with `Codable` support for Multipart Form Data.
 
-### Major Releases
+### Installation
 
 The table below shows a list of MultipartKit major releases alongside their compatible NIO and Swift versions. 
 
@@ -37,15 +37,31 @@ The table below shows a list of MultipartKit major releases alongside their comp
 
 Use the SPM string to easily include the dependency in your `Package.swift` file.
 
+Add MultiPartKit to your package dependencies:
+
 ```swift
-.package(url: "https://github.com/vapor/multipart-kit.git", from: ...)
+dependencies: [
+    // ...
+    .package(url: "https://github.com/vapor/multipart-kit.git", from: "4.0.0"),
+]
+```
+
+Add MultiPartKit to your target's dependencies:
+
+```swift
+targets: [
+    .target(name: "MyAppTarget", dependencies: [
+        // ...
+        .product(name: "MultiPartKit", package: "multipart-kit"),
+    ])
+]
 ```
 
 ### Supported Platforms
 
 MultipartKit supports the following platforms:
 
-- All Linux distributions supported by Swift
+- All Linux distributions supported by Swift 5.7+
 - macOS 10.15+
 
 ## Overview
