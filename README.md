@@ -1,30 +1,22 @@
 <p align="center">
-    <img src="https://user-images.githubusercontent.com/1049951/105351980-94fe4280-5bed-11eb-876e-ae60df0f41f0.png" height="64" alt="Multipart">
-    <br>
-    <br>
-    <a href="https://docs.vapor.codes/4.0/">
-        <img src="http://img.shields.io/badge/read_the-docs-2196f3.svg" alt="Documentation">
-    </a>
-    <a href="https://discord.gg/vapor">
-        <img src="https://img.shields.io/discord/431917998102675485.svg" alt="Team Chat">
-    </a>
-    <a href="LICENSE">
-        <img src="http://img.shields.io/badge/license-MIT-brightgreen.svg" alt="MIT License">
-    </a>
-    <a href="https://github.com/vapor/multipart-kit/actions/workflows/test.yml">
-        <img src="https://github.com/vapor/multipart-kit/actions/workflows/test.yml/badge.svg" alt="Continuous Integration">
-    </a>
-    <a href="https://swift.org">
-        <img src="http://img.shields.io/badge/swift-5.4-brightgreen.svg" alt="Swift 5.4">
-    </a>
-    <a href="https://twitter.com/codevapor">
-        <img src="https://img.shields.io/badge/twitter-codevapor-5AA9E7.svg" alt="Twitter">
-    </a>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/vapor/multipart-kit/assets/1130717/4b3aed4e-2b18-4689-80c8-d31ccf169947">
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/vapor/multipart-kit/assets/1130717/5c60750b-ef11-4137-9f9e-917ebcc49ca6">
+  <img src="https://github.com/vapor/multipart-kit/assets/1130717/5c60750b-ef11-4137-9f9e-917ebcc49ca6" height="96" alt="MultipartKit">
+</picture> 
+<br>
+<br>
+<a href="https://docs.vapor.codes/4.0/"><img src="https://design.vapor.codes/images/readthedocs.svg" alt="Documentation"></a>
+<a href="https://discord.gg/vapor"><img src="https://design.vapor.codes/images/discordchat.svg" alt="Team Chat"></a>
+<a href="LICENSE"><img src="https://design.vapor.codes/images/mitlicense.svg" alt="MIT License"></a>
+<a href="https://github.com/vapor/multipart-kit/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/vapor/multipart-kit/test.yml?event=push&style=plastic&logo=github&label=test&logoColor=%23ccc" alt="Continuous Integration"></a>
+<a href="https://codecov.io/github/vapor/multipart-kit"><img src="https://img.shields.io/codecov/c/github/vapor/multipart-kit?style=plastic&logo=codecov&label=Codecov&token=yDzzHja8lt"></a>
+<a href="https://swift.org"><img src="https://design.vapor.codes/images/swift57up.svg" alt="Swift 5.7+"></a>
 </p>
 
 🏞 Multipart parser and serializer with `Codable` support for Multipart Form Data.
 
-### Major Releases
+### Installation
 
 The table below shows a list of MultipartKit major releases alongside their compatible NIO and Swift versions. 
 
@@ -37,15 +29,31 @@ The table below shows a list of MultipartKit major releases alongside their comp
 
 Use the SPM string to easily include the dependency in your `Package.swift` file.
 
+Add MultiPartKit to your package dependencies:
+
 ```swift
-.package(url: "https://github.com/vapor/multipart-kit.git", from: ...)
+dependencies: [
+    // ...
+    .package(url: "https://github.com/vapor/multipart-kit.git", from: "4.0.0"),
+]
+```
+
+Add MultiPartKit to your target's dependencies:
+
+```swift
+targets: [
+    .target(name: "MyAppTarget", dependencies: [
+        // ...
+        .product(name: "MultiPartKit", package: "multipart-kit"),
+    ])
+]
 ```
 
 ### Supported Platforms
 
 MultipartKit supports the following platforms:
 
-- All Linux distributions supported by Swift
+- All Linux distributions supported by Swift 5.7+
 - macOS 10.15+
 
 ## Overview
