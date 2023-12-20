@@ -11,4 +11,4 @@ jobs:
      with:
        package_name: multipart-kit
        modules: MultipartKit
-       pathsToInvalidate: /multipartkit
+       pathsToInvalidate: /multipartkit/*
