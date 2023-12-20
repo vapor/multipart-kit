@@ -13,15 +13,23 @@ let package = Package(
         .library(name: "MultipartKit", targets: ["MultipartKit"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.2.0"),
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.2")
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.61.1"),
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.5"),
     ],
     targets: [
-        .target(name: "MultipartKit", dependencies: [
-            .product(name: "NIO", package: "swift-nio"),
-            .product(name: "NIOHTTP1", package: "swift-nio"),
-            .product(name: "Collections", package: "swift-collections")
-        ]),
-        .testTarget(name: "MultipartKitTests", dependencies: ["MultipartKit"]),
+        .target(
+            name: "MultipartKit",
+            dependencies: [
+                .product(name: "NIO", package: "swift-nio"),
+                .product(name: "NIOHTTP1", package: "swift-nio"),
+                .product(name: "Collections", package: "swift-collections"),
+            ]
+        ),
+        .testTarget(
+            name: "MultipartKitTests",
+            dependencies: [
+                .target(name: "MultipartKit"),
+            ]
+        ),
     ]
 )
