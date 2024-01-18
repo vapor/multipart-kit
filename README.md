@@ -44,7 +44,7 @@ Add MultiPartKit to your target's dependencies:
 targets: [
     .target(name: "MyAppTarget", dependencies: [
         // ...
-        .product(name: "MultiPartKit", package: "multipart-kit"),
+        .product(name: "MultipartKit", package: "multipart-kit"),
     ])
 ]
 ```
