@@ -1,3 +1,4 @@
+import Foundation
 import NIOCore
 import NIOHTTP1
 
@@ -35,6 +36,22 @@ public struct FormDataDecoder: Sendable {
     /// - Returns: An instance of the decoded type `D`.
     public func decode<D: Decodable>(_ decodable: D.Type, from data: String, boundary: String) throws -> D {
         try decode(D.self, from: ByteBuffer(string: data), boundary: boundary)
+    }
+
+    /// Decodes a `Decodable` item from `Data` using the supplied boundary.
+    ///
+    ///     let foo = try FormDataDecoder().decode(Foo.self, from: "...", boundary: "123")
+    ///
+    /// - Parameters:
+    ///   - decodable: Generic `Decodable` type.
+    ///   - data: String to decode.
+    ///   - boundary: Multipart boundary to used in the decoding.
+    /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
+    /// - Returns: An instance of the decoded type `D`.
+    public func decode<D: Decodable>(_ decodable: D.Type, from data: Data, boundary: String) throws -> D {
+        var buffer = ByteBufferAllocator().buffer(capacity: data.count)
+        buffer.writeBytes(data)
+        return try decode(D.self, from: buffer, boundary: boundary)
     }
 
     /// Decodes a `Decodable` item from `Data` using the supplied boundary.
