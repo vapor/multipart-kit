@@ -1,3 +1,4 @@
+import Foundation
 import NIOCore
 
 /// Serializes `MultipartForm`s to `Data`.
@@ -14,7 +15,7 @@ public final class MultipartSerializer: Sendable {
     ///     print(data) // multipart-encoded
     ///
     /// - parameters:
-    ///     - parts: One or more `MultipartPart`s to serialize into `Data`.
+    ///     - parts: One or more `MultipartPart`s to serialize into `String`.
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     /// - throws: Any errors that may occur during serialization.
     /// - returns: `multipart`-encoded `Data`.
@@ -22,6 +23,22 @@ public final class MultipartSerializer: Sendable {
         var buffer = ByteBufferAllocator().buffer(capacity: 0)
         try self.serialize(parts: parts, boundary: boundary, into: &buffer)
         return String(decoding: buffer.readableBytesView, as: UTF8.self)
+    }
+    
+    /// Serializes the `MultipartForm` to data.
+    ///
+    ///     let data = try MultipartSerializer().serializeToData(parts: [part], boundary: "123")
+    ///     print(data) // multipart-encoded
+    ///
+    /// - parameters:
+    ///     - parts: One or more `MultipartPart`s to serialize into `Data`.
+    ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
+    /// - throws: Any errors that may occur during serialization.
+    /// - returns: `multipart`-encoded `Data`.
+    public func serializeToData(parts: [MultipartPart], boundary: String) throws -> Data {
+        var buffer = ByteBufferAllocator().buffer(capacity: 0)
+        try self.serialize(parts: parts, boundary: boundary, into: &buffer)
+        return Data(buffer.readableBytesView)
     }
 
     /// Serializes the `MultipartForm` into a `ByteBuffer`.
