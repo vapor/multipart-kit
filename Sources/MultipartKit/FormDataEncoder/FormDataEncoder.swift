@@ -1,3 +1,4 @@
+import Foundation
 import NIOCore
 
 /// Encodes `Encodable` items to `multipart/form-data` encoded `Data`.
@@ -25,6 +26,20 @@ public struct FormDataEncoder: Sendable {
     /// - returns: `multipart/form-data`-encoded `String`.
     public func encode<E: Encodable>(_ encodable: E, boundary: String) throws -> String {
         try MultipartSerializer().serialize(parts: parts(from: encodable), boundary: boundary)
+    }
+    
+    /// Encodes an `Encodable` item to `Data` using the supplied boundary.
+    ///
+    ///     let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
+    ///     let data = try FormDataEncoder().encodeToData(a, boundary: "123")
+    ///
+    /// - parameters:
+    ///     - encodable: Generic `Encodable` item.
+    ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
+    /// - throws: Any errors encoding the model with `Codable` or serializing the data.
+    /// - returns: `multipart/form-data`-encoded `String`.
+    public func encodeToData<E: Encodable>(_ encodable: E, boundary: String) throws -> Data {
+        try MultipartSerializer().serializeToData(parts: parts(from: encodable), boundary: boundary)
     }
 
     /// Encodes an `Encodable` item into a `ByteBuffer` using the supplied boundary.
