@@ -29,6 +29,8 @@ let package = Package(
             name: "MultipartKitTests",
             dependencies: [
                 .target(name: "MultipartKit"),
+            ], resources: [
+                .copy("Utilities/image.jpeg"),
             ]
         ),
     ]

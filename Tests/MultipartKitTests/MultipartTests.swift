@@ -141,6 +141,42 @@ class MultipartTests: XCTestCase {
         }
     }
 
+    func testFormDataCodingToFromStringWithJPEG() throws {
+        let folder = #filePath.split(separator: "/").dropLast().joined(separator: "/")
+        let path = "/" + folder + "/Utilities/image.jpeg"
+        let originalData = try Data(contentsOf: URL(fileURLWithPath: path))
+        
+        struct ObjectToEncode: Codable {
+            let data: Data
+        }
+        
+        let object = ObjectToEncode(data: originalData)
+        let boundary = UUID().uuidString
+        
+        let encoded = try FormDataEncoder().encode(object, boundary: boundary)
+        let decoded = try FormDataDecoder().decode(ObjectToEncode.self, from: encoded, boundary: boundary)
+        
+        XCTAssertEqual(originalData, decoded.data)
+    }
+
+    func testFormDataCodingToFromDataWithJPEG() throws {
+        let folder = #filePath.split(separator: "/").dropLast().joined(separator: "/")
+        let path = "/" + folder + "/Utilities/image.jpeg"
+        let originalData = try Data(contentsOf: URL(fileURLWithPath: path))
+        
+        struct ObjectToEncode: Codable {
+            let data: Data
+        }
+        
+        let object = ObjectToEncode(data: originalData)
+        let boundary = UUID().uuidString
+        
+        let encoded = try FormDataEncoder().encodeToData(object, boundary: boundary)
+        let decoded = try FormDataDecoder().decode(ObjectToEncode.self, from: encoded, boundary: boundary)
+        
+        XCTAssertEqual(originalData, decoded.data)
+    }
+
     func testDocBlocks() throws {
         do {
             /// Content-Type: multipart/form-data; boundary=123
