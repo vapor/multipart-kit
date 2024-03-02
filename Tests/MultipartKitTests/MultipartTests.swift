@@ -142,9 +142,11 @@ class MultipartTests: XCTestCase {
     }
 
     func testFormDataCodingToFromStringWithJPEG() throws {
-        let folder = #filePath.split(separator: "/").dropLast().joined(separator: "/")
-        let path = "/" + folder + "/Utilities/image.jpeg"
-        let originalData = try Data(contentsOf: URL(fileURLWithPath: path))
+        guard let resourceURL = Bundle.module.url(forResource: "image", withExtension: "jpeg") else {
+            XCTFail("image.jpeg file missing from package resource")
+            return
+        }
+        let originalData = try Data(contentsOf: resourceURL)
         
         struct ObjectToEncode: Codable {
             let data: Data
@@ -160,9 +162,11 @@ class MultipartTests: XCTestCase {
     }
 
     func testFormDataCodingToFromDataWithJPEG() throws {
-        let folder = #filePath.split(separator: "/").dropLast().joined(separator: "/")
-        let path = "/" + folder + "/Utilities/image.jpeg"
-        let originalData = try Data(contentsOf: URL(fileURLWithPath: path))
+        guard let resourceURL = Bundle.module.url(forResource: "image", withExtension: "jpeg") else {
+            XCTFail("image.jpeg file missing from package resource")
+            return
+        }
+        let originalData = try Data(contentsOf: resourceURL)
         
         struct ObjectToEncode: Codable {
             let data: Data
