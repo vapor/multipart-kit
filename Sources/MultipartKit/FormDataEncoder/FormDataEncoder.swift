@@ -38,7 +38,7 @@ public struct FormDataEncoder: Sendable {
     ///     - boundary: The multipart boundary to use for encoding. This string must not appear in the encoded data.
     /// - Throws: Any errors encoding the model or serializing the data.
     /// - Returns: A `multipart/form-data`-encoded `String`.
-    public func encodeToData<E: Encodable>(_ encodable: E, boundary: String) throws -> Data {
+    public func encodeToData(_ encodable: some Encodable, boundary: String) throws -> Data {
         try MultipartSerializer().serializeToData(parts: parts(from: encodable), boundary: boundary)
     }
 
