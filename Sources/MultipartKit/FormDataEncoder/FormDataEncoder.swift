@@ -33,11 +33,11 @@ public struct FormDataEncoder: Sendable {
     ///     let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
     ///     let data = try FormDataEncoder().encodeToData(a, boundary: "123")
     ///
-    /// - parameters:
-    ///     - encodable: Generic `Encodable` item.
-    ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
-    /// - throws: Any errors encoding the model with `Codable` or serializing the data.
-    /// - returns: `multipart/form-data`-encoded `String`.
+    /// - Parameters:
+    ///     - encodable: An `Encodable` item.
+    ///     - boundary: The multipart boundary to use for encoding. This string must not appear in the encoded data.
+    /// - Throws: Any errors encoding the model or serializing the data.
+    /// - Returns: A `multipart/form-data`-encoded `String`.
     public func encodeToData<E: Encodable>(_ encodable: E, boundary: String) throws -> Data {
         try MultipartSerializer().serializeToData(parts: parts(from: encodable), boundary: boundary)
     }
