@@ -30,9 +30,9 @@ public struct FormDataDecoder: Sendable {
     ///     let foo = try FormDataDecoder().decode(Foo.self, from: "...", boundary: "123")
     ///
     /// - Parameters:
-    ///   - decodable: Generic `Decodable` type.
+    ///   - decodable: A `Decodable` item.
     ///   - data: String to decode.
-    ///   - boundary: Multipart boundary to used in the decoding.
+    ///   - boundary: The multipart boundary to use for decoding. This string must not appear in the decoded data.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
     public func decode<D: Decodable>(_ decodable: D.Type, from data: String, boundary: String) throws -> D {
@@ -41,12 +41,12 @@ public struct FormDataDecoder: Sendable {
 
     /// Decodes a `Decodable` item from `Data` using the supplied boundary.
     ///
-    ///     let foo = try FormDataDecoder().decode(Foo.self, from: "...", boundary: "123")
+    ///     let foo = try FormDataDecoder().decode(Foo.self, from: Data(), boundary: "123")
     ///
     /// - Parameters:
-    ///   - decodable: Generic `Decodable` type.
+    ///   - decodable: A `Decodable` item.
     ///   - data: String to decode.
-    ///   - boundary: Multipart boundary to used in the decoding.
+    ///   - boundary: The multipart boundary to use for decoding. This string must not appear in the decoded data.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
     public func decode<D: Decodable>(_ decodable: D.Type, from data: Data, boundary: String) throws -> D {
@@ -58,9 +58,9 @@ public struct FormDataDecoder: Sendable {
     ///     let foo = try FormDataDecoder().decode(Foo.self, from: data, boundary: "123")
     ///
     /// - Parameters:
-    ///   - decodable: Generic `Decodable` type.
+    ///   - decodable: A `Decodable` item.
     ///   - data: Data to decode.
-    ///   - boundary: Multipart boundary to used in the decoding.
+    ///   - boundary: The multipart boundary to use for decoding. This string must not appear in the decoded data.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
     public func decode<D: Decodable>(_ decodable: D.Type, from data: [UInt8], boundary: String) throws -> D {
@@ -72,9 +72,9 @@ public struct FormDataDecoder: Sendable {
     ///     let foo = try FormDataDecoder().decode(Foo.self, from: data, boundary: "123")
     ///
     /// - Parameters:
-    ///   - decodable: Generic `Decodable` type.
+    ///   - decodable: A `Decodable` item.
     ///   - data: Data to decode.
-    ///   - boundary: Multipart boundary to used in the decoding.
+    ///   - boundary: The multipart boundary to use for decoding. This string must not appear in the decoded data.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
     public func decode<D: Decodable>(_ decodable: D.Type, from buffer: ByteBuffer, boundary: String) throws -> D {
