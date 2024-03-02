@@ -1,6 +1,7 @@
 import Foundation
 import NIOCore
 import NIOHTTP1
+import NIOFoundationCompat
 
 /// Decodes `Decodable` types from `multipart/form-data` encoded `Data`.
 ///
@@ -49,9 +50,7 @@ public struct FormDataDecoder: Sendable {
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
     public func decode<D: Decodable>(_ decodable: D.Type, from data: Data, boundary: String) throws -> D {
-        var buffer = ByteBufferAllocator().buffer(capacity: data.count)
-        buffer.writeBytes(data)
-        return try decode(D.self, from: buffer, boundary: boundary)
+        try decode(D.self, from: ByteBuffer(data: data), boundary: boundary)
     }
 
     /// Decodes a `Decodable` item from `Data` using the supplied boundary.

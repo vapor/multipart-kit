@@ -1,5 +1,6 @@
 import Foundation
 import NIOCore
+import NIOFoundationCompat
 
 /// Serializes `MultipartForm`s to `Data`.
 ///
@@ -22,7 +23,7 @@ public final class MultipartSerializer: Sendable {
     public func serialize(parts: [MultipartPart], boundary: String) throws -> String {
         var buffer = ByteBufferAllocator().buffer(capacity: 0)
         try self.serialize(parts: parts, boundary: boundary, into: &buffer)
-        return String(decoding: buffer.readableBytesView, as: UTF8.self)
+        return String(buffer: buffer)
     }
     
     /// Serializes the `MultipartForm` to data.
@@ -38,7 +39,7 @@ public final class MultipartSerializer: Sendable {
     public func serializeToData(parts: [MultipartPart], boundary: String) throws -> Data {
         var buffer = ByteBufferAllocator().buffer(capacity: 0)
         try self.serialize(parts: parts, boundary: boundary, into: &buffer)
-        return Data(buffer.readableBytesView)
+        return Data(buffer: buffer, byteTransferStrategy: .automatic)
     }
 
     /// Serializes the `MultipartForm` into a `ByteBuffer`.
