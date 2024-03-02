@@ -19,12 +19,12 @@ public struct FormDataEncoder: Sendable {
     ///     let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
     ///     let data = try FormDataEncoder().encode(a, boundary: "123")
     ///
-    public func encode<E: Encodable>(_ encodable: E, boundary: String) throws -> String {
     /// - Parameters:
     ///     - encodable: An `Encodable` item.
     ///     - boundary: The multipart boundary to use for encoding. This string must not appear in the encoded data.
     /// - Throws: Any errors encoding the model with `Codable` or serializing the data.
     /// - Returns: A `multipart/form-data`-encoded `String`.
+    public func encode(_ encodable: some Encodable, boundary: String) throws -> String {
         try MultipartSerializer().serialize(parts: parts(from: encodable), boundary: boundary)
     }
     
@@ -38,7 +38,7 @@ public struct FormDataEncoder: Sendable {
     ///     - boundary: The multipart boundary to use for encoding. This string must not appear in the encoded data.
     /// - Throws: Any errors encoding the model or serializing the data.
     /// - Returns: A `multipart/form-data`-encoded `String`.
-    public func encodeToData<E: Encodable>(_ encodable: E, boundary: String) throws -> Data {
+    public func encodeToData(_ encodable: some Encodable, boundary: String) throws -> Data {
         try MultipartSerializer().serializeToData(parts: parts(from: encodable), boundary: boundary)
     }
 
@@ -52,12 +52,12 @@ public struct FormDataEncoder: Sendable {
     ///     - encodable: An `Encodable` item.
     ///     - boundary: The multipart boundary to use for encoding. This string must not appear in the encoded data.
     ///     - buffer: Buffer to write to.
-    public func encode<E: Encodable>(_ encodable: E, boundary: String, into buffer: inout ByteBuffer) throws {
     /// - Throws: Any errors encoding the model with `Codable` or serializing the data.
+    public func encode(_ encodable: some Encodable, boundary: String, into buffer: inout ByteBuffer) throws {
         try MultipartSerializer().serialize(parts: parts(from: encodable), boundary: boundary, into: &buffer)
     }
 
-    private func parts<E: Encodable>(from encodable: E) throws -> [MultipartPart] {
+    private func parts(from encodable: some Encodable) throws -> [MultipartPart] {
         let encoder = Encoder(codingPath: [], userInfo: userInfo)
         try encodable.encode(to: encoder)
         return encoder.storage.data?.namedParts() ?? []
