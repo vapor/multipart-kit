@@ -141,6 +141,46 @@ class MultipartTests: XCTestCase {
         }
     }
 
+    func testFormDataCodingToFromStringWithJPEG() throws {
+        guard let resourceURL = Bundle.module.url(forResource: "image", withExtension: "jpeg") else {
+            XCTFail("image.jpeg file missing from package resource")
+            return
+        }
+        let originalData = try Data(contentsOf: resourceURL)
+        
+        struct ObjectToEncode: Codable {
+            let data: Data
+        }
+        
+        let object = ObjectToEncode(data: originalData)
+        let boundary = UUID().uuidString
+        
+        let encoded = try FormDataEncoder().encode(object, boundary: boundary)
+        let decoded = try FormDataDecoder().decode(ObjectToEncode.self, from: encoded, boundary: boundary)
+        
+        XCTAssertEqual(originalData, decoded.data)
+    }
+
+    func testFormDataCodingToFromDataWithJPEG() throws {
+        guard let resourceURL = Bundle.module.url(forResource: "image", withExtension: "jpeg") else {
+            XCTFail("image.jpeg file missing from package resource")
+            return
+        }
+        let originalData = try Data(contentsOf: resourceURL)
+        
+        struct ObjectToEncode: Codable {
+            let data: Data
+        }
+        
+        let object = ObjectToEncode(data: originalData)
+        let boundary = UUID().uuidString
+        
+        let encoded = try FormDataEncoder().encodeToData(object, boundary: boundary)
+        let decoded = try FormDataDecoder().decode(ObjectToEncode.self, from: encoded, boundary: boundary)
+        
+        XCTAssertEqual(originalData, decoded.data)
+    }
+
     func testDocBlocks() throws {
         do {
             /// Content-Type: multipart/form-data; boundary=123
