@@ -1,4 +1,4 @@
-@preconcurrency import Collections
+import Collections
 
 enum MultipartFormData: Equatable, Sendable {
     typealias Keyed = OrderedDictionary<String, MultipartFormData>
