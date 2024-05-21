@@ -1,7 +1,7 @@
 import XCTest
 import MultipartKit
 
-class FormDataTests: XCTestCase {
+final class FormDataTests: XCTestCase {
     func testFormDataEncoder() throws {
         struct Foo: Encodable {
             var string: String

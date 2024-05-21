@@ -1,14 +1,17 @@
 import struct Foundation.Data
-import struct Foundation.UUID
 
+/// A protocol to provide custom behaviors for parsing and serializing types from and to multipart data.
 public protocol MultipartPartConvertible {
     var multipart: MultipartPart? { get }
+    
     init?(multipart: MultipartPart)
 }
 
+// MARK: MultipartPart self-conformance
+
 extension MultipartPart: MultipartPartConvertible {
     public var multipart: MultipartPart? {
-        return self
+        self
     }
     
     public init?(multipart: MultipartPart) {
@@ -16,9 +19,11 @@ extension MultipartPart: MultipartPartConvertible {
     }
 }
 
+// MARK: String
+
 extension String: MultipartPartConvertible {
     public var multipart: MultipartPart? {
-        return MultipartPart(body: self)
+        .init(body: self)
     }
 
     public init?(multipart: MultipartPart) {
@@ -26,16 +31,15 @@ extension String: MultipartPartConvertible {
     }
 }
 
+// MARK: Numbers
+
 extension FixedWidthInteger {
     public var multipart: MultipartPart? {
-        return MultipartPart(body: self.description)
+        .init(body: self.description)
     }
 
     public init?(multipart: MultipartPart) {
-        guard let string = String(multipart: multipart) else {
-            return nil
-        }
-        self.init(string)
+        self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
     }
 }
 
@@ -52,46 +56,41 @@ extension UInt64: MultipartPartConvertible { }
 
 extension Float: MultipartPartConvertible {
     public var multipart: MultipartPart? {
-        return MultipartPart(body: self.description)
+        .init(body: self.description)
     }
 
     public init?(multipart: MultipartPart) {
-        guard let string = String(multipart: multipart) else {
-            return nil
-        }
-        self.init(string)
+        self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
     }
 }
 
 extension Double: MultipartPartConvertible {
     public var multipart: MultipartPart? {
-        return MultipartPart(body: self.description)
+        .init(body: self.description)
     }
 
     public init?(multipart: MultipartPart) {
-        guard let string = String(multipart: multipart) else {
-            return nil
-        }
-        self.init(string)
+        self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
     }
 }
+
+// MARK: Bool
 
 extension Bool: MultipartPartConvertible {
     public var multipart: MultipartPart? {
-        return MultipartPart(body: self.description)
+        .init(body: self.description)
     }
 
     public init?(multipart: MultipartPart) {
-        guard let string = String(multipart: multipart) else {
-            return nil
-        }
-        self.init(string)
+        self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
     }
 }
 
+// MARK: Foundation types
+
 extension Data: MultipartPartConvertible {
     public var multipart: MultipartPart? {
-        return MultipartPart(body: self)
+        .init(body: self)
     }
     
     public init?(multipart: MultipartPart) {
