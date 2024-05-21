@@ -1,7 +1,7 @@
 import Collections
 
 final class Storage {
-    var dataContainer: DataContainer? = nil
+    var dataContainer: (any DataContainer)? = nil
     var data: MultipartFormData? {
         dataContainer?.data
     }

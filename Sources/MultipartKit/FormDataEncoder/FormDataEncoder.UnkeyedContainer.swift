@@ -6,7 +6,7 @@ extension FormDataEncoder {
 }
 
 extension FormDataEncoder.UnkeyedContainer: UnkeyedEncodingContainer {
-    var codingPath: [CodingKey] {
+    var codingPath: [any CodingKey] {
         encoder.codingPath
     }
 
@@ -26,11 +26,11 @@ extension FormDataEncoder.UnkeyedContainer: UnkeyedEncodingContainer {
         nextEncoder().container(keyedBy: keyType)
     }
 
-    func nestedUnkeyedContainer() -> UnkeyedEncodingContainer {
+    func nestedUnkeyedContainer() -> any UnkeyedEncodingContainer {
         nextEncoder().unkeyedContainer()
     }
 
-    func superEncoder() -> Encoder {
+    func superEncoder() -> any Encoder {
         nextEncoder()
     }
 

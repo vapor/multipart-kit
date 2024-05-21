@@ -391,7 +391,7 @@ class FormDataTests: XCTestCase {
 
             let success: Bool
 
-            init(from _: Decoder) throws {
+            init(from _: any Decoder) throws {
                 success = false
             }
             init?(multipart: MultipartPart) {
