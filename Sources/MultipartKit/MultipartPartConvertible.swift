@@ -1,4 +1,5 @@
 import struct Foundation.Data
+import struct Foundation.URL
 
 /// A protocol to provide custom behaviors for parsing and serializing types from and to multipart data.
 public protocol MultipartPartConvertible {
@@ -95,5 +96,15 @@ extension Data: MultipartPartConvertible {
     
     public init?(multipart: MultipartPart) {
         self.init(multipart.body.readableBytesView)
+    }
+}
+
+extension URL: MultipartPartConvertible {
+    public var multipart: MultipartPart? {
+        .init(body: self.absoluteString)
+    }
+    
+    public init?(multipart: MultipartPart) {
+        self.init(string: String(multipart: multipart)!) // String.init(multipart:) never returns nil
     }
 }

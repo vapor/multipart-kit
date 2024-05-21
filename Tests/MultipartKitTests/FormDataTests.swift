@@ -159,7 +159,11 @@ final class FormDataTests: XCTestCase {
         """
 
         struct Foo: Decodable {
-            var link: URL
+            struct Bar: Decodable {
+                var relative: String
+                var base: String?
+            }
+            var link: Bar
         }
 
         XCTAssertThrowsError(try FormDataDecoder().decode(Foo.self, from: data, boundary: "hello")) { error in
@@ -506,5 +510,47 @@ final class FormDataTests: XCTestCase {
                    -----\r
                    """
         XCTAssertThrowsError (try FormDataDecoder().decode(TestData.self, from: multipart, boundary: "-"))
+    }
+    
+    func testCodingDataTypes() throws {
+        struct AllTypes: Codable, Equatable {
+            let string: String
+            let int: Int, int8: Int8, int16: Int16, int32: Int32, int64: Int64
+            let uint: UInt, uint8: UInt8, uint16: UInt16, uint32: UInt32, uint64: UInt64
+            let float: Float, double: Double
+            let bool: Bool
+            let data: Data, url: URL
+        }
+        let value = AllTypes(
+            string: "string",
+            int: 1, int8: 2, int16: 3, int32: 4, int64: 5,
+            uint: 6, uint8: 7, uint16: 8, uint32: 9, uint64: 0,
+            float: 1.0, double: -1.0,
+            bool: false,
+            data: .init([.init(ascii: "A")]), url: .init(string: "https://apple.com/")!
+        )
+        let multipart = """
+        ---\r\nContent-Disposition: form-data; name="string"\r\n\r\nstring\r
+        ---\r\nContent-Disposition: form-data; name="int"\r\n\r\n1\r
+        ---\r\nContent-Disposition: form-data; name="int8"\r\n\r\n2\r
+        ---\r\nContent-Disposition: form-data; name="int16"\r\n\r\n3\r
+        ---\r\nContent-Disposition: form-data; name="int32"\r\n\r\n4\r
+        ---\r\nContent-Disposition: form-data; name="int64"\r\n\r\n5\r
+        ---\r\nContent-Disposition: form-data; name="uint"\r\n\r\n6\r
+        ---\r\nContent-Disposition: form-data; name="uint8"\r\n\r\n7\r
+        ---\r\nContent-Disposition: form-data; name="uint16"\r\n\r\n8\r
+        ---\r\nContent-Disposition: form-data; name="uint32"\r\n\r\n9\r
+        ---\r\nContent-Disposition: form-data; name="uint64"\r\n\r\n0\r
+        ---\r\nContent-Disposition: form-data; name="float"\r\n\r\n1.0\r
+        ---\r\nContent-Disposition: form-data; name="double"\r\n\r\n-1.0\r
+        ---\r\nContent-Disposition: form-data; name="bool"\r\n\r\nfalse\r
+        ---\r\nContent-Disposition: form-data; name="data"\r\n\r\nA\r
+        ---\r\nContent-Disposition: form-data; name="url"\r\n\r\nhttps://apple.com/\r
+        -----\r\n
+        """
+        
+        XCTAssertEqual(try FormDataEncoder().encode(value, boundary: "-"), multipart)
+        XCTAssertEqual(try FormDataDecoder().decode(AllTypes.self, from: multipart, boundary: "-"), value)
+        
     }
 }
