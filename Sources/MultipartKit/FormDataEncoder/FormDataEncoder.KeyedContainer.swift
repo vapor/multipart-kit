@@ -6,7 +6,7 @@ extension FormDataEncoder {
 }
 
 extension FormDataEncoder.KeyedContainer: KeyedEncodingContainerProtocol {
-    var codingPath: [CodingKey] {
+    var codingPath: [any CodingKey] {
         encoder.codingPath
     }
 
@@ -22,19 +22,19 @@ extension FormDataEncoder.KeyedContainer: KeyedEncodingContainerProtocol {
         encoderForKey(key).container(keyedBy: keyType)
     }
 
-    func nestedUnkeyedContainer(forKey key: Key) -> UnkeyedEncodingContainer {
+    func nestedUnkeyedContainer(forKey key: Key) -> any UnkeyedEncodingContainer {
         encoderForKey(key).unkeyedContainer()
     }
 
-    func superEncoder() -> Encoder {
+    func superEncoder() -> any Encoder {
         encoderForKey(BasicCodingKey.super)
     }
 
-    func superEncoder(forKey key: Key) -> Encoder {
+    func superEncoder(forKey key: Key) -> any Encoder {
         encoderForKey(key)
     }
 
-    func encoderForKey(_ key: CodingKey) -> FormDataEncoder.Encoder {
+    func encoderForKey(_ key: any CodingKey) -> FormDataEncoder.Encoder {
         let encoder = self.encoder.nested(at: key)
         dataContainer.value[key.stringValue] = encoder.storage
         return encoder

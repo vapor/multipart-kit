@@ -1,12 +1,12 @@
 extension FormDataDecoder {
     struct Decoder {
-        let codingPath: [CodingKey]
+        let codingPath: [any CodingKey]
         let data: MultipartFormData
         let userInfo: [CodingUserInfoKey: Any]
-        let previousCodingPath : [CodingKey]?
-        let previousType: Decodable.Type?
+        let previousCodingPath: [any CodingKey]?
+        let previousType: (any Decodable.Type)?
 
-        init(codingPath: [CodingKey], data: MultipartFormData, userInfo: [CodingUserInfoKey: Any], previousCodingPath: [CodingKey]? = nil, previousType: Decodable.Type? = nil) {
+        init(codingPath: [any CodingKey], data: MultipartFormData, userInfo: [CodingUserInfoKey: Any], previousCodingPath: [any CodingKey]? = nil, previousType: (any Decodable.Type)? = nil) {
             self.codingPath = codingPath
             self.data = data
             self.userInfo = userInfo
@@ -24,26 +24,26 @@ extension FormDataDecoder.Decoder: Decoder {
         return KeyedDecodingContainer(FormDataDecoder.KeyedContainer(data: dictionary, decoder: self))
     }
 
-    func unkeyedContainer() throws -> UnkeyedDecodingContainer {
+    func unkeyedContainer() throws -> any UnkeyedDecodingContainer {
         guard let array = data.array else {
             throw decodingError(expectedType: "array")
         }
         return FormDataDecoder.UnkeyedContainer(data: array, decoder: self)
     }
 
-    func singleValueContainer() throws -> SingleValueDecodingContainer {
+    func singleValueContainer() throws -> any SingleValueDecodingContainer {
         self
     }
 }
 
 extension FormDataDecoder.Decoder {
-    func nested(at key: CodingKey, with data: MultipartFormData) -> Self {
+    func nested(at key: any CodingKey, with data: MultipartFormData) -> Self {
         .init(codingPath: codingPath + [key], data: data, userInfo: userInfo)
     }
 }
 
 private extension FormDataDecoder.Decoder {
-    func decodingError(expectedType: String) -> Error {
+    func decodingError(expectedType: String) -> any Error {
         let encounteredType: Any.Type
         let encounteredTypeDescription: String
 

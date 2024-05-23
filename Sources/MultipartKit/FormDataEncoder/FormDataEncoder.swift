@@ -8,7 +8,7 @@ import NIOCore
 public struct FormDataEncoder: Sendable {
 
     /// Any contextual information set by the user for encoding.
-    public var userInfo: [CodingUserInfoKey: Sendable] = [:]
+    public var userInfo: [CodingUserInfoKey: any Sendable] = [:]
 
     /// Creates a new `FormDataEncoder`.
     public init() { }

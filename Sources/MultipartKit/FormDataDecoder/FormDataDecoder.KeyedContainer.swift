@@ -10,7 +10,7 @@ extension FormDataDecoder.KeyedContainer: KeyedDecodingContainerProtocol {
         data.keys.compactMap(K.init(stringValue:))
     }
 
-    var codingPath: [CodingKey] {
+    var codingPath: [any CodingKey] {
         decoder.codingPath
     }
 
@@ -18,7 +18,7 @@ extension FormDataDecoder.KeyedContainer: KeyedDecodingContainerProtocol {
         data.keys.contains(key.stringValue)
     }
 
-    func getValue(forKey key: CodingKey) throws -> MultipartFormData {
+    func getValue(forKey key: any CodingKey) throws -> MultipartFormData {
         guard let value = data[key.stringValue] else {
             throw DecodingError.keyNotFound(
                 key, .init(
@@ -42,19 +42,19 @@ extension FormDataDecoder.KeyedContainer: KeyedDecodingContainerProtocol {
         try decoderForKey(key).container(keyedBy: keyType)
     }
 
-    func nestedUnkeyedContainer(forKey key: K) throws -> UnkeyedDecodingContainer {
+    func nestedUnkeyedContainer(forKey key: K) throws -> any UnkeyedDecodingContainer {
         try decoderForKey(key).unkeyedContainer()
     }
 
-    func superDecoder() throws -> Decoder {
+    func superDecoder() throws -> any Decoder {
         try decoderForKey(BasicCodingKey.super)
     }
 
-    func superDecoder(forKey key: K) throws -> Decoder {
+    func superDecoder(forKey key: K) throws -> any Decoder {
         try decoderForKey(key)
     }
 
-    func decoderForKey(_ key: CodingKey) throws -> FormDataDecoder.Decoder {
+    func decoderForKey(_ key: any CodingKey) throws -> FormDataDecoder.Decoder {
         decoder.nested(at: key, with: try getValue(forKey: key))
     }
 }

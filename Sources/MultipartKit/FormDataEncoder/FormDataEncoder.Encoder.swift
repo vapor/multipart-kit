@@ -1,6 +1,6 @@
 extension FormDataEncoder {
     struct Encoder {
-        let codingPath: [CodingKey]
+        let codingPath: [any CodingKey]
         let storage = Storage()
         let userInfo: [CodingUserInfoKey: Any]
     }
@@ -13,19 +13,19 @@ extension FormDataEncoder.Encoder: Encoder {
         return .init(container)
     }
 
-    func unkeyedContainer() -> UnkeyedEncodingContainer {
+    func unkeyedContainer() -> any UnkeyedEncodingContainer {
         let container = FormDataEncoder.UnkeyedContainer(encoder: self)
         storage.dataContainer = container.dataContainer
         return container
     }
 
-    func singleValueContainer() -> SingleValueEncodingContainer {
+    func singleValueContainer() -> any SingleValueEncodingContainer {
         self
     }
 }
 
 extension FormDataEncoder.Encoder {
-    func nested(at key: CodingKey) -> FormDataEncoder.Encoder {
+    func nested(at key: any CodingKey) -> FormDataEncoder.Encoder {
         .init(codingPath: codingPath + [key], userInfo: userInfo)
     }
 }

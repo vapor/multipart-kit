@@ -25,6 +25,7 @@ let package = Package(
                 .product(name: "Collections", package: "swift-collections"),
             ],
             swiftSettings: [
+                .enableUpcomingFeature("ExistentialAny"),
                 .enableExperimentalFeature("StrictConcurrency=complete"),
             ]
         ),
@@ -34,6 +35,7 @@ let package = Package(
                 .target(name: "MultipartKit"),
             ],
             swiftSettings: [
+                .enableUpcomingFeature("ExistentialAny"),
                 .enableExperimentalFeature("StrictConcurrency=complete"),
             ]
         ),
