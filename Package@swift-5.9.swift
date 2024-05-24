@@ -22,6 +22,7 @@ let package = Package(
             dependencies: [
                 .product(name: "NIO", package: "swift-nio"),
                 .product(name: "NIOHTTP1", package: "swift-nio"),
+                .product(name: "NIOFoundationCompat", package: "swift-nio"),
                 .product(name: "Collections", package: "swift-collections"),
             ],
             swiftSettings: [
@@ -33,6 +34,8 @@ let package = Package(
             name: "MultipartKitTests",
             dependencies: [
                 .target(name: "MultipartKit"),
+            ], resources: [
+                .copy("Utilities/image.jpeg"),
             ],
             swiftSettings: [
                 .enableUpcomingFeature("ExistentialAny"),
