@@ -1,318 +1,165 @@
-import NIOCore
+import HTTPTypes
 
-/// Parses multipart-encoded `Data` into `MultipartPart`s. Multipart encoding is a widely-used format for encoding
-/// web-form data that includes rich content like files. It allows for arbitrary data to be encoded
-/// in each part thanks to a unique delimiter "boundary" that is defined separately. This
-/// boundary is guaranteed by the client to not appear anywhere in the data.
-///
-/// `multipart/form-data` is a special case of `multipart` encoding where each part contains a `Content-Disposition`
-/// header and name. This is used by the `FormDataEncoder` and `FormDataDecoder` to convert `Codable` types to/from
-/// multipart data.
-///
-/// See [Wikipedia](https://en.wikipedia.org/wiki/MIME#Multipart_messages) for more information.
-///
-/// See also `form-urlencoded` encoding where delimiter boundaries are not required.
-public final class MultipartParser {
-    private enum Error: Swift.Error {
-        case syntax
+struct MultipartParser {
+    enum Error: Swift.Error {
+        case invalidBoundary
+        case invalidHeader(reason: String)
+        case invalidBody(reason: String)
     }
 
-    private enum CRLF {
-        case cr, lf
+    enum State {
+        enum Part {
+            case boundary
+            case header(HTTPFields)
+            case body(ArraySlice<UInt8>)
+        }
+        case idle
+        case parsing(Part, ArraySlice<UInt8>)
+        case finished
+        case error(Error)
     }
 
-    private enum HeaderState {
-        case preHeaders(CRLF = .cr)
-        case headerName([UInt8] = [])
-        case headerValue([UInt8] = [], name: [UInt8])
-        case postHeaderValue([UInt8], name: [UInt8])
-        case postHeaders
-    }
-
-    private enum State {
-        case preamble(boundaryMatchIndex: Int = 0)
-        case headers(state: HeaderState = .preHeaders())
-        case body
-        case boundary(boundaryMatchIndex: Int = 0)
-        case epilogue
-    }
-
-    public var onHeader: (String, String) -> ()
-    public var onBody: (inout ByteBuffer) -> ()
-    public var onPartComplete: () -> ()
-
-    private let boundary: [UInt8]
-    private let boundaryLength: Int
+    let boundary: ArraySlice<UInt8>
     private var state: State
-    private var buffer: ByteBuffer!
 
-    /// Creates a new `MultipartParser`.
-    /// - Parameter boundary: boundary separating parts. Must not be empty nor longer than 70 characters according to rfc1341 but we don't check for the latter.
-    public init(boundary: String) {
-        precondition(!boundary.isEmpty)
-
-        self.onHeader = { _, _ in }
-        self.onBody = { _ in }
-        self.onPartComplete = { }
-
-        self.boundary = Array("\r\n--\(boundary)".utf8)
-        self.boundaryLength = self.boundary.count
-        self.state = .preamble()
+    init(boundary: String) {
+        self.boundary = ArraySlice(boundary.utf8)
+        self.state = .idle
     }
 
-    public func execute(_ string: String) throws {
-        try execute(ByteBuffer(string: string))
+    enum ReadResult {
+        case success(reading: MultipartPart? = nil)
+        case needMoreData
     }
 
-    public func execute(_ bytes: [UInt8]) throws {
-        try execute(ByteBuffer(bytes: bytes))
-    }
-
-    public func execute(_ buffer: ByteBuffer) throws {
-        self.buffer = buffer
-        defer { self.buffer = nil }
-
-        try execute()
-    }
-
-    private func execute() throws {
-        while buffer.readableBytes > 0 {
-            switch state {
-            case let .preamble(boundaryMatchIndex):
-                state = parsePreamble(boundaryMatchIndex: boundaryMatchIndex)
-            case let .headers(headerState):
-                state = try parseHeaders(headerState: headerState)
-            case .body:
-                state = parseBody()
-            case let .boundary(boundaryMatchIndex):
-                state = try parseBoundary(boundaryMatchIndex: boundaryMatchIndex)
-            case .epilogue:
-                // ignore any data in epilogue
-                return
-            }
-        }
-    }
-
-    private func readByte() -> UInt8? { buffer.readInteger() }
-
-    private func parsePreamble(boundaryMatchIndex: Int) -> State {
-        var boundaryMatchIndex = boundaryMatchIndex
-
-        while boundaryMatchIndex < boundaryLength, let byte = readByte() {
-
-            // allow skipping the initial CRLF
-            if boundaryMatchIndex == 0, byte == boundary[2] {
-                boundaryMatchIndex = 3
-            // (continues to) match boundary: move on to next index
-            } else if byte == boundary[boundaryMatchIndex] {
-                boundaryMatchIndex = boundaryMatchIndex + 1
-            // stopped matching boundary but matches with start of boundary: restart at 1
-            } else if boundaryMatchIndex > 0, byte == boundary[0] {
-                boundaryMatchIndex = 1
-            // no match at either current position or start of boundary: restart at 0
-            } else {
-                boundaryMatchIndex = 0
-            }
-        }
-
-        if boundaryMatchIndex >= boundaryLength {
-            return .headers()
-        } else {
-            return .preamble(boundaryMatchIndex: boundaryMatchIndex)
-        }
-    }
-
-    private func parseCRLF(_ crlf: CRLF) throws -> CRLF? {
-        var crlf = crlf
-
-        while let byte = readByte() {
-            switch (crlf, byte) {
-            case (.cr, .cr):
-                crlf = .lf
-            case (.lf, .lf):
-                return nil
-            default:
-                throw Error.syntax
-            }
-        }
-
-        return crlf
-    }
-
-    private func parseHeaders(headerState: HeaderState) throws -> State {
-        var headerState = headerState
-
-        while buffer.readableBytes > 0 {
-            switch headerState {
-            case let .preHeaders(crlf):
-                headerState = try parseCRLF(crlf).map(HeaderState.preHeaders) ?? .headerName()
-            case let .headerName(name):
-                headerState = try parseHeaderName(name: name)
-            case let .headerValue(value, name):
-                headerState = try parseHeaderValue(value, name: name)
-            case let .postHeaderValue(value, name):
-                guard readByte() == .lf else {
-                    throw Error.syntax
+    mutating func read() throws -> ReadResult {
+        switch self.state {
+        case .idle:
+            self.state = .parsing(.boundary, .init())
+            return .success()
+        case .error(let error):
+            throw error
+        case .parsing(let part, let buffer):
+            switch part {
+            // TODO: handle initial boundary differently
+            case .boundary:
+                switch buffer.getIndexAfter(boundary) {
+                case .wrongCharacter:  // abort
+                    throw Error.invalidBoundary
+                case .prematureEnd:  // ask for more data and retry
+                    self.state = .parsing(.boundary, buffer)
+                    return .needMoreData
+                case let .success(index):  // move on to reading headers
+                    self.state = .parsing(.header(.init()), buffer[..<index])
+                    return .success()
                 }
-                onHeader(String(bytes: name, encoding: .utf8) ?? "", String(bytes: value, encoding: .utf8) ?? "")
-                headerState = .headerName([])
-            case .postHeaders:
-                guard readByte() == .lf else {
-                    throw Error.syntax
+            case .header(var fields):
+                // check for CRLF
+                let indexAfterFirstCRLF: ArraySlice<UInt8>.Index
+                switch buffer.getIndexAfter([13, 10]) {
+                case .success(let index):
+                    indexAfterFirstCRLF = index
+                    self.state = .parsing(.header(fields), buffer[index...])
+                case .wrongCharacter:
+                    throw Error.invalidHeader(reason: "There should be a CRLF here")
+                case .prematureEnd:
+                    self.state = .parsing(.header(fields), buffer)
+                    return .needMoreData
                 }
-                return .body
-            }
-        }
+                // TODO: check for another CRLF (end of headers)
 
-        return .headers(state: headerState)
-    }
-
-    private func parseHeaderName(name: [UInt8]) throws -> HeaderState {
-        var name = name
-
-        while let byte = readByte() {
-            switch byte {
-            case .colon where !name.isEmpty:
-                return .headerValue(name: name)
-            case .cr where name.isEmpty:
-                return .postHeaders
-            case _ where byte.isAllowedHeaderFieldNameCharacter:
-                name.append(byte)
-            default:
-                throw Error.syntax
-            }
-        }
-
-        return .headerName(name)
-    }
-
-    private func parseHeaderValue(_ value: [UInt8], name: [UInt8]) throws -> HeaderState {
-        var value = value
-
-        while let byte = readByte() {
-            switch byte {
-            case .cr:
-                return .postHeaderValue(value, name: name)
-            case .space, .tab:
-                if value.isEmpty {
-                    continue
+                // read the header name until ':'
+                guard
+                    let endOfHeaderNameIndex = buffer[indexAfterFirstCRLF...].firstIndex(where: {
+                        switch $0 {
+                        case 0x21, 0x23, 0x24, 0x25, 0x26, 0x27, 0x2A, 0x2B, 0x2D, 0x2E, 0x5E,
+                            0x5F, 0x60, 0x7C, 0x7E, 0x30...0x39, 0x41...0x5A, 0x61...0x7A:
+                            true
+                        default: false
+                        }
+                    })
+                else {
+                    // we need more data, ":" has not appeared yet
+                    self.state = .parsing(.header(fields), buffer)
+                    return .needMoreData
                 }
-                fallthrough
-            default:
-                value.append(byte)
-            }
-        }
 
-        return .headerValue(value, name: name)
-    }
+                let headerName = buffer[indexAfterFirstCRLF..<endOfHeaderNameIndex]
 
-    private func parseBody() -> State {
-        var slice = ByteBuffer(buffer.readableBytesView.prefix { $0 != boundary[0] })
-
-        if slice.readableBytes > 0 {
-            buffer.moveReaderIndex(forwardBy: slice.readableBytes)
-            onBody(&slice)
-        }
-
-        return buffer.readableBytes > 0 ? .boundary() : .body
-    }
-
-    private func parseBoundary(boundaryMatchIndex: Int) throws -> State {
-        var boundaryMatchIndex = boundaryMatchIndex
-
-        while true {
-            guard let byte = readByte() else {
-                return .boundary(boundaryMatchIndex: boundaryMatchIndex)
-            }
-
-            guard boundaryMatchIndex < boundaryLength else {
-                onPartComplete()
-                switch byte {
-                case .cr:
-                    return .headers(state: .preHeaders(.lf))
-                case .hyphen:
-                    return .epilogue
-                default:
-                    throw Error.syntax
+                // there should be a colon after the header name
+                let indexAfterColonAndSpace: ArraySlice<UInt8>.Index
+                switch buffer.getIndexAfter([58, 32]) {  // ": "
+                case .wrongCharacter(at: let index):
+                    throw Error.invalidHeader(reason: "Expected ': ' after header name, found \(buffer[index])")
+                case .prematureEnd:
+                    self.state = .parsing(.header(fields), buffer)
+                    return .needMoreData
+                case .success(let index):
+                    indexAfterColonAndSpace = index
                 }
-            }
 
-            guard byte == boundary[boundaryMatchIndex] else {
-                var boundaryBuffer = ByteBuffer(bytes: boundary[0..<boundaryMatchIndex])
-
-                if byte == boundary[0] {
-                    onBody(&boundaryBuffer)
-                    return .boundary(boundaryMatchIndex: 1)
-                } else {
-                    boundaryBuffer.writeInteger(byte)
-                    onBody(&boundaryBuffer)
-                    return .body
+                // read the header value until CRLF
+                guard
+                    let endOfHeaderValueIndex = buffer[indexAfterColonAndSpace...].firstIndex(where: { cr in
+                        let next = buffer.firstIndex(of: cr)! + 1
+                        switch (cr, buffer[next]) {
+                        case (13, 10): return true
+                        default: return false
+                        }
+                    })
+                else {
+                    // we need more data, CRLF has not appeared yet
+                    self.state = .parsing(.header(fields), buffer)
+                    return .needMoreData
                 }
-            }
 
-            boundaryMatchIndex += 1
+                let headerValue = buffer[indexAfterColonAndSpace..<endOfHeaderValueIndex]
+
+                // add the header to the fields
+                guard let name = HTTPField.Name(String(decoding: headerName, as: UTF8.self)) else {
+                    throw Error.invalidHeader(reason: "Invalid header name")
+                }
+                let field = HTTPField(name: name, value: String(decoding: headerValue, as: UTF8.self))
+                fields.append(field)
+
+                // move on to reading the next header
+                self.state = .parsing(.header(fields), buffer[endOfHeaderValueIndex...])
+                return .success(reading: .headerField(field))
+            case .body(let buffer):
+                break
+            }
+        case .finished:
+            return .success()
         }
     }
 }
 
-private extension UInt8 {
-    static let colon: UInt8 = 58
-    static let lf: UInt8 = 10
-    static let cr: UInt8 = 13
-    static let hyphen: UInt8 = 45
-    static let space: UInt8 = 9
-    static let tab: UInt8 = 32
+extension ArraySlice where Element == UInt8 {
+    /// Returns the index after the given slice if it matches the start of the buffer.
+    /// If the buffer is too short, it returns the index of the last character.
+    /// If the buffer does not match the slice, it returns the index of the first mismatching character.
+    /// - Parameters:
+    ///     - slice: The slice to match against the buffer.
+    /// - Returns: The index after the slice if it matches, or the index of the first mismatching character.
+    func getIndexAfter(_ slice: ArraySlice<UInt8>) -> IndexAfterSlice {
+        var resultIndex = self.startIndex
+        for (index, element) in self.enumerated() {
+            guard element == slice[index] else {
+                return .wrongCharacter(at: index)
+            }
+            resultIndex = index
+        }
 
-    /*
-     See https://tools.ietf.org/html/rfc1341#page-6 and https://tools.ietf.org/html/rfc822#section-3.2
-
-        field-name  = token
-        token       = 1*<any CHAR except CTLs or tspecials>
-        CTL         = <any US-ASCII control character (octets 0 - 31) and DEL (127)>
-        tspecials   = "(" | ")" | "<" | ">" | "@"
-                    | "," | ";" | ":" | "\" | DQUOTE
-                    | "/" | "[" | "]" | "?" | "="
-                    | "{" | "}" | SP | HT
-        DQUOTE      = <US-ASCII double-quote mark (34)>
-        SP          = <US-ASCII SP, space (32)>
-        HT          = <US-ASCII HT, horizontal-tab (9)>
-     */
-    private static let allowedHeaderFieldNameCharacterFlags: [Bool] = [
-        //  0 nul   1 soh   2 stx   3 etx   4 eot   5 enq   6 ack   7 bel
-            false,  false,  false,  false,  false,  false,  false,  false,
-        //  8 bs    9 ht    10 nl   11 vt   12 np   13 cr   14 so   15 si
-            false,  false,  false,  false,  false,  false,  false,  false,
-        //  16 dle  17 dc1  18 dc2  19 dc3  20 dc4  21 nak  22 syn  23 etb
-            false,  false,  false,  false,  false,  false,  false,  false,
-        //  24 can  25 em   26 sub  27 esc  28 fs   29 gs   30 rs   31 us
-            false,  false,  false,  false,  false,  false,  false,  false,
-        //  32 sp   33 !    34 "    35 #    36 $    37 %    38 &    39
-            false,  true,   false,  true,   true,   true,   true,   true,
-        //  40 (    41 )    42 *    43 +    44 ,    45 -    46 .    47
-            false,  false,  true,   true,   false,  true,   true,   false,
-        //  48 0    49 1    50 2    51 3    52 4    53 5    54 6    55 7
-            true,   true,   true,   true,   true,   true,   true,   true,
-        //  56 8    57 9    58 :    59 ;    60 <    61 =    62 >    63
-            true,   true,   false,  false,  false,  false,  false,  false,
-        //  64 @    65 A    66 B    67 C    68 D    69 E    70 F    71 G
-            false,  true,   true,   true,   true,   true,   true,   true,
-        //  72 H    73 I    74 J    75 K    76 L    77 M    78 N    79 O
-            true,   true,   true,   true,   true,   true,   true,   true,
-        //  80 P    81 Q    82 R    83 S    84 T    85 U    86 V    87 W
-            true,   true,   true,   true,   true,   true,   true,   true,
-        //  88 X    89 Y    90 Z    91 [    92 \    93 ]    94 ^    95 _
-            true,   true,   true,    false, false,  false,  true,   true,
-        //  96 `    97 a    98 b    99 c    100 d   101 e   102 f   103 g
-            true,   true,   true,   true,   true,   true,   true,   true,
-        //  104 h   105 i   106 j   107 k   108 l   109 m   110 n   111 o
-            true,   true,   true,   true,   true,   true,   true,   true,
-        //  112 p   113 q   114 r   115 s   116 t   117 u   118 v   119 w
-            true,   true,   true,   true,   true,   true,   true,   true,
-        //  120 x   121 y   122 z   123 {   124 |   125 }   126 ~   127 del
-            true,   true,   true,   false,  true,   false,  true,   false
-    ]
-
-    var isAllowedHeaderFieldNameCharacter: Bool {
-        Self.allowedHeaderFieldNameCharacterFlags[Int(self)]
+        return .success(resultIndex)
     }
+}
+
+/// The result of a `getIndexAfter(_:)` call.
+/// - success: The slice was found at the given index. The index is the index after the slice.
+/// - wrongCharacter: The buffer did not match the slice. The index is the index of the first mismatching character.
+/// - prematureEnd: The buffer was too short to contain the slice. The index is the index of the last character.
+enum IndexAfterSlice {
+    case success(ArraySlice<UInt8>.Index)
+    case wrongCharacter(at: ArraySlice<UInt8>.Index)
+    case prematureEnd(at: ArraySlice<UInt8>.Index)
 }

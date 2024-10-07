@@ -6,7 +6,7 @@ import NIOCore
 public final class MultipartSerializer: Sendable {
 
     /// Creates a new `MultipartSerializer`.
-    public init() { }
+    public init() {}
 
     /// Serializes the `MultipartForm` to data.
     ///
@@ -35,24 +35,26 @@ public final class MultipartSerializer: Sendable {
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     ///     - buffer: Buffer to write to.
     /// - throws: Any errors that may occur during serialization.
-    public func serialize(parts: [MultipartPart], boundary: String, into buffer: inout ByteBuffer) throws {
-        for part in parts {
-            buffer.writeString("--")
-            buffer.writeString(boundary)
-            buffer.writeString("\r\n")
-            for (key, val) in part.headers {
-                buffer.writeString(key)
-                buffer.writeString(": ")
-                buffer.writeString(val)
-                buffer.writeString("\r\n")
-            }
-            buffer.writeString("\r\n")
-            var body = part.body
-            buffer.writeBuffer(&body)
-            buffer.writeString("\r\n")
-        }
-        buffer.writeString("--")
-        buffer.writeString(boundary)
-        buffer.writeString("--\r\n")
+    public func serialize(parts: [MultipartPart], boundary: String, into buffer: inout ByteBuffer)
+        throws
+    {
+        // for part in parts {
+        //     buffer.writeString("--")
+        //     buffer.writeString(boundary)
+        //     buffer.writeString("\r\n")
+        //     for (key, val) in part.headers {
+        //         buffer.writeString(key)
+        //         buffer.writeString(": ")
+        //         buffer.writeString(val)
+        //         buffer.writeString("\r\n")
+        //     }
+        //     buffer.writeString("\r\n")
+        //     var body = part.body
+        //     buffer.writeBuffer(&body)
+        //     buffer.writeString("\r\n")
+        // }
+        // buffer.writeString("--")
+        // buffer.writeString(boundary)
+        // buffer.writeString("--\r\n")
     }
 }

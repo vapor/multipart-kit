@@ -1,110 +1,110 @@
-import struct Foundation.Data
-import struct Foundation.URL
+// import struct Foundation.Data
+// import struct Foundation.URL
 
-/// A protocol to provide custom behaviors for parsing and serializing types from and to multipart data.
-public protocol MultipartPartConvertible {
-    var multipart: MultipartPart? { get }
-    
-    init?(multipart: MultipartPart)
-}
+// /// A protocol to provide custom behaviors for parsing and serializing types from and to multipart data.
+// public protocol MultipartPartConvertible {
+//     var multipart: MultipartPart? { get }
 
-// MARK: MultipartPart self-conformance
+//     init?(multipart: MultipartPart)
+// }
 
-extension MultipartPart: MultipartPartConvertible {
-    public var multipart: MultipartPart? {
-        self
-    }
-    
-    public init?(multipart: MultipartPart) {
-        self = multipart
-    }
-}
+// // MARK: MultipartPart self-conformance
 
-// MARK: String
+// extension MultipartPart: MultipartPartConvertible {
+//     public var multipart: MultipartPart? {
+//         self
+//     }
 
-extension String: MultipartPartConvertible {
-    public var multipart: MultipartPart? {
-        .init(body: self)
-    }
+//     public init?(multipart: MultipartPart) {
+//         self = multipart
+//     }
+// }
 
-    public init?(multipart: MultipartPart) {
-        self.init(decoding: multipart.body.readableBytesView, as: UTF8.self)
-    }
-}
+// // MARK: String
 
-// MARK: Numbers
+// extension String: MultipartPartConvertible {
+//     public var multipart: MultipartPart? {
+//         .init(body: self)
+//     }
 
-extension FixedWidthInteger {
-    public var multipart: MultipartPart? {
-        .init(body: self.description)
-    }
+//     public init?(multipart: MultipartPart) {
+//         self.init(decoding: multipart.body.readableBytesView, as: UTF8.self)
+//     }
+// }
 
-    public init?(multipart: MultipartPart) {
-        self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
-    }
-}
+// // MARK: Numbers
 
-extension Int: MultipartPartConvertible { }
-extension Int8: MultipartPartConvertible { }
-extension Int16: MultipartPartConvertible { }
-extension Int32: MultipartPartConvertible { }
-extension Int64: MultipartPartConvertible { }
-extension UInt: MultipartPartConvertible { }
-extension UInt8: MultipartPartConvertible { }
-extension UInt16: MultipartPartConvertible { }
-extension UInt32: MultipartPartConvertible { }
-extension UInt64: MultipartPartConvertible { }
+// extension FixedWidthInteger {
+//     public var multipart: MultipartPart? {
+//         .init(body: self.description)
+//     }
 
-extension Float: MultipartPartConvertible {
-    public var multipart: MultipartPart? {
-        .init(body: self.description)
-    }
+//     public init?(multipart: MultipartPart) {
+//         self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
+//     }
+// }
 
-    public init?(multipart: MultipartPart) {
-        self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
-    }
-}
+// extension Int: MultipartPartConvertible { }
+// extension Int8: MultipartPartConvertible { }
+// extension Int16: MultipartPartConvertible { }
+// extension Int32: MultipartPartConvertible { }
+// extension Int64: MultipartPartConvertible { }
+// extension UInt: MultipartPartConvertible { }
+// extension UInt8: MultipartPartConvertible { }
+// extension UInt16: MultipartPartConvertible { }
+// extension UInt32: MultipartPartConvertible { }
+// extension UInt64: MultipartPartConvertible { }
 
-extension Double: MultipartPartConvertible {
-    public var multipart: MultipartPart? {
-        .init(body: self.description)
-    }
+// extension Float: MultipartPartConvertible {
+//     public var multipart: MultipartPart? {
+//         .init(body: self.description)
+//     }
 
-    public init?(multipart: MultipartPart) {
-        self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
-    }
-}
+//     public init?(multipart: MultipartPart) {
+//         self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
+//     }
+// }
 
-// MARK: Bool
+// extension Double: MultipartPartConvertible {
+//     public var multipart: MultipartPart? {
+//         .init(body: self.description)
+//     }
 
-extension Bool: MultipartPartConvertible {
-    public var multipart: MultipartPart? {
-        .init(body: self.description)
-    }
+//     public init?(multipart: MultipartPart) {
+//         self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
+//     }
+// }
 
-    public init?(multipart: MultipartPart) {
-        self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
-    }
-}
+// // MARK: Bool
 
-// MARK: Foundation types
+// extension Bool: MultipartPartConvertible {
+//     public var multipart: MultipartPart? {
+//         .init(body: self.description)
+//     }
 
-extension Data: MultipartPartConvertible {
-    public var multipart: MultipartPart? {
-        .init(body: self)
-    }
-    
-    public init?(multipart: MultipartPart) {
-        self.init(multipart.body.readableBytesView)
-    }
-}
+//     public init?(multipart: MultipartPart) {
+//         self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
+//     }
+// }
 
-extension URL: MultipartPartConvertible {
-    public var multipart: MultipartPart? {
-        .init(body: self.absoluteString)
-    }
-    
-    public init?(multipart: MultipartPart) {
-        self.init(string: String(multipart: multipart)!) // String.init(multipart:) never returns nil
-    }
-}
+// // MARK: Foundation types
+
+// extension Data: MultipartPartConvertible {
+//     public var multipart: MultipartPart? {
+//         .init(body: self)
+//     }
+
+//     public init?(multipart: MultipartPart) {
+//         self.init(multipart.body.readableBytesView)
+//     }
+// }
+
+// extension URL: MultipartPartConvertible {
+//     public var multipart: MultipartPart? {
+//         .init(body: self.absoluteString)
+//     }
+
+//     public init?(multipart: MultipartPart) {
+//         self.init(string: String(multipart: multipart)!) // String.init(multipart:) never returns nil
+//     }
+// }
