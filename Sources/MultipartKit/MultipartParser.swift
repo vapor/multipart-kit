@@ -1,19 +1,20 @@
 import HTTPTypes
 
 struct MultipartParser {
-    enum Error: Swift.Error {
+    enum Error: Swift.Error, Equatable {
         case invalidBoundary
         case invalidHeader(reason: String)
         case invalidBody(reason: String)
     }
 
-    enum State {
-        enum Part {
+    enum State: Equatable {
+        enum Part: Equatable {
             case boundary
             case header(HTTPFields)
             case body(ArraySlice<UInt8>)
         }
-        case idle
+
+        case initial
         case parsing(Part, ArraySlice<UInt8>)
         case finished
         case error(Error)
@@ -24,19 +25,33 @@ struct MultipartParser {
 
     init(boundary: String) {
         self.boundary = ArraySlice(boundary.utf8)
-        self.state = .idle
+        self.state = .initial
     }
 
     enum ReadResult {
+        case finished
         case success(reading: MultipartPart? = nil)
         case needMoreData
     }
 
+    mutating func append(buffer: ArraySlice<UInt8>) {
+        switch self.state {
+        case .initial:
+            self.state = .parsing(.boundary, buffer)
+        case .error:
+            break
+        case .parsing(let part, var existingBuffer):
+            existingBuffer.append(contentsOf: buffer)
+            self.state = .parsing(part, existingBuffer)
+        case .finished:
+            break
+        }
+    }
+
     mutating func read() throws -> ReadResult {
         switch self.state {
-        case .idle:
-            self.state = .parsing(.boundary, .init())
-            return .success()
+        case .initial:
+            return .needMoreData
         case .error(let error):
             throw error
         case .parsing(let part, let buffer):
@@ -50,7 +65,7 @@ struct MultipartParser {
                     self.state = .parsing(.boundary, buffer)
                     return .needMoreData
                 case let .success(index):  // move on to reading headers
-                    self.state = .parsing(.header(.init()), buffer[..<index])
+                    self.state = .parsing(.header(.init()), buffer[index...])
                     return .success()
                 }
             case .header(var fields):
@@ -66,48 +81,54 @@ struct MultipartParser {
                     self.state = .parsing(.header(fields), buffer)
                     return .needMoreData
                 }
-                // TODO: check for another CRLF (end of headers)
-
-                // read the header name until ':'
-                guard
-                    let endOfHeaderNameIndex = buffer[indexAfterFirstCRLF...].firstIndex(where: {
+                // check for second CRLF (end of headers
+                switch buffer[indexAfterFirstCRLF...].getIndexAfter([13, 10]) {
+                case .success(let index):
+                    self.state = .parsing(.body([]), buffer[index...])
+                    return .success()
+                case .wrongCharacter:
+                    self.state = .parsing(.header(fields), buffer[indexAfterFirstCRLF...])
+                case .prematureEnd:
+                    self.state = .parsing(.header(fields), buffer)
+                    return .needMoreData
+                }
+                
+                func getFirstUnsupportedCharacterIndex(in slice: ArraySlice<UInt8>) -> ArraySlice<UInt8>.Index? {
+                    slice.firstIndex(where: {
                         switch $0 {
+                        // allowed multipart header name characters
                         case 0x21, 0x23, 0x24, 0x25, 0x26, 0x27, 0x2A, 0x2B, 0x2D, 0x2E, 0x5E,
                             0x5F, 0x60, 0x7C, 0x7E, 0x30...0x39, 0x41...0x5A, 0x61...0x7A:
-                            true
-                        default: false
+                            false
+                        default: true
                         }
                     })
-                else {
-                    // we need more data, ":" has not appeared yet
+                }
+
+                // read the header name until ":"
+                guard let endOfHeaderNameIndex = getFirstUnsupportedCharacterIndex(in: buffer[indexAfterFirstCRLF...]) else {
+                    // we need more data, ": " has not appeared yet
                     self.state = .parsing(.header(fields), buffer)
                     return .needMoreData
                 }
 
                 let headerName = buffer[indexAfterFirstCRLF..<endOfHeaderNameIndex]
+                let headerWithoutName = buffer[endOfHeaderNameIndex...]
 
-                // there should be a colon after the header name
+                // there should be a colon and space after the header name
                 let indexAfterColonAndSpace: ArraySlice<UInt8>.Index
-                switch buffer.getIndexAfter([58, 32]) {  // ": "
+                switch headerWithoutName.getIndexAfter([58, 32]) {  // ": "
                 case .wrongCharacter(at: let index):
-                    throw Error.invalidHeader(reason: "Expected ': ' after header name, found \(buffer[index])")
+                    throw Error.invalidHeader(reason: "Expected ': ' after header name, found \(Character(UnicodeScalar(buffer[index])))")
                 case .prematureEnd:
-                    self.state = .parsing(.header(fields), buffer)
+                    self.state = .parsing(.header(fields), headerWithoutName)
                     return .needMoreData
                 case .success(let index):
                     indexAfterColonAndSpace = index
                 }
 
                 // read the header value until CRLF
-                guard
-                    let endOfHeaderValueIndex = buffer[indexAfterColonAndSpace...].firstIndex(where: { cr in
-                        let next = buffer.firstIndex(of: cr)! + 1
-                        switch (cr, buffer[next]) {
-                        case (13, 10): return true
-                        default: return false
-                        }
-                    })
-                else {
+                guard let endOfHeaderValueIndex = buffer[indexAfterColonAndSpace...].firstRange(of: [13, 10])?.lowerBound else {
                     // we need more data, CRLF has not appeared yet
                     self.state = .parsing(.header(fields), buffer)
                     return .needMoreData
@@ -125,11 +146,12 @@ struct MultipartParser {
                 // move on to reading the next header
                 self.state = .parsing(.header(fields), buffer[endOfHeaderValueIndex...])
                 return .success(reading: .headerField(field))
-            case .body(let buffer):
-                break
+            case .body(_):
+                self.state = .finished
+                return .success()
             }
         case .finished:
-            return .success()
+            return .finished
         }
     }
 }
@@ -143,13 +165,16 @@ extension ArraySlice where Element == UInt8 {
     /// - Returns: The index after the slice if it matches, or the index of the first mismatching character.
     func getIndexAfter(_ slice: ArraySlice<UInt8>) -> IndexAfterSlice {
         var resultIndex = self.startIndex
-        for (index, element) in self.enumerated() {
-            guard element == slice[index] else {
-                return .wrongCharacter(at: index)
+        for element in slice {
+            guard resultIndex < self.endIndex else {
+                return .prematureEnd(at: resultIndex)
             }
-            resultIndex = index
+            guard self[resultIndex] == element else {
+                return .wrongCharacter(at: resultIndex)
+            }
+            resultIndex += 1
         }
-
+    
         return .success(resultIndex)
     }
 }

@@ -6,4 +6,5 @@ import NIOHTTP1
 public enum MultipartPart: Equatable, Sendable {
     case headerField(HTTPField)
     case bodyChunk(ByteBuffer)
+    case boundary
 }

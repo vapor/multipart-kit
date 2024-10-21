@@ -1,23 +1,42 @@
-struct MultipartParseSequence: AsyncSequence {
+public struct MultipartParseSequence: AsyncSequence {
     private let parser: MultipartParser
     private let buffer: AnyAsyncSequence<ArraySlice<UInt8>>
-    private let chunkSize: Int
 
-    func makeAsyncIterator() -> Iterator {}
+    public init<AS: AsyncSequence & Sendable>(boundary: String, buffer: AS) where AS.Element == ArraySlice<UInt8> {
+        self.parser = .init(boundary: boundary)
+        self.buffer = .init(buffer)
+    }
+    
+    public func makeAsyncIterator() -> Iterator {
+        Iterator(parser: parser, iterator: buffer.makeAsyncIterator())
+    }
 
-    struct Iterator: AsyncIteratorProtocol {
-        typealias Element = MultipartPart
-
+    public struct Iterator: AsyncIteratorProtocol {
         private var parser: MultipartParser
+        private var iterator: AnyAsyncSequence<ArraySlice<UInt8>>.AsyncIterator
 
-        mutating func next() async throws -> MultipartPart? {
+        init(parser: MultipartParser, iterator: AnyAsyncSequence<ArraySlice<UInt8>>.AsyncIterator) {
+            self.parser = parser
+            self.iterator = iterator
+        }
+
+        public mutating func next() async throws -> MultipartPart? {
             while true {
                 switch try parser.read() {
-                case .success(let readPart):
-                    if let readPart { return readPart }
+                case .success(let optionalPart):
+                    switch optionalPart {
+                    case .none: continue
+                    case .some(let part): return part
+                    }
                 case .needMoreData:
-                    break
+                    guard let next = try await iterator.next() else {
+                        return nil
+                    }
+                    parser.append(buffer: next)
+                case .finished:
+                    return nil
                 }
+
             }
         }
     }

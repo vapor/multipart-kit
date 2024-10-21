@@ -4,10 +4,10 @@ import PackageDescription
 let package = Package(
     name: "multipart-kit",
     platforms: [
-        .macOS(.v10_15),
-        .iOS(.v13),
-        .tvOS(.v13),
-        .watchOS(.v6),
+        .macOS(.v13),
+        .iOS(.v15),
+        .tvOS(.v15),
+        .watchOS(.v8),
     ],
     products: [
         .library(name: "MultipartKit", targets: ["MultipartKit"])
