@@ -56,7 +56,6 @@ struct MultipartParser {
             throw error
         case .parsing(let part, let buffer):
             switch part {
-            // TODO: handle initial boundary differently
             case .boundary:
                 switch buffer.getIndexAfter(boundary) {
                 case .wrongCharacter:  // abort
@@ -64,10 +63,17 @@ struct MultipartParser {
                 case .prematureEnd:  // ask for more data and retry
                     self.state = .parsing(.boundary, buffer)
                     return .needMoreData
-                case let .success(index):  // move on to reading headers
-                    self.state = .parsing(.header(.init()), buffer[index...])
-                    return .success()
+                case let .success(index):
+                    switch buffer[index...].getIndexAfter([45, 45]) {  // check if it's the final boundary
+                    case .success:  // if it is, finish
+                        self.state = .finished
+                        return .finished
+                    case .wrongCharacter, .prematureEnd:  // if it's not, move to reading headers
+                        self.state = .parsing(.header(.init()), buffer[index...])
+                        return .success()
+                    }
                 }
+
             case .header(var fields):
                 // check for CRLF
                 let indexAfterFirstCRLF: ArraySlice<UInt8>.Index
@@ -81,9 +87,10 @@ struct MultipartParser {
                     self.state = .parsing(.header(fields), buffer)
                     return .needMoreData
                 }
-                // check for second CRLF (end of headers
+
+                // check for second CRLF (end of headers)
                 switch buffer[indexAfterFirstCRLF...].getIndexAfter([13, 10]) {
-                case .success(let index):
+                case .success(let index):  // end of headers found, move to body
                     self.state = .parsing(.body([]), buffer[index...])
                     return .success()
                 case .wrongCharacter:
@@ -92,7 +99,7 @@ struct MultipartParser {
                     self.state = .parsing(.header(fields), buffer)
                     return .needMoreData
                 }
-                
+
                 func getFirstUnsupportedCharacterIndex(in slice: ArraySlice<UInt8>) -> ArraySlice<UInt8>.Index? {
                     slice.firstIndex(where: {
                         switch $0 {
@@ -146,9 +153,29 @@ struct MultipartParser {
                 // move on to reading the next header
                 self.state = .parsing(.header(fields), buffer[endOfHeaderValueIndex...])
                 return .success(reading: .headerField(field))
-            case .body(_):
-                self.state = .finished
-                return .success()
+
+            case .body(let chunk):
+                switch buffer.firstIndexOf([13, 10]) {
+                case .notFound, .prematureEnd:  // no CRLF or only CR. keep looking
+                    self.state = .parsing(.body(chunk), buffer)
+                    return .needMoreData
+
+                case .success(let index):  // CRLF found
+                    let chunk = buffer[..<index]
+                    let bufferAfterCRLF = buffer[(index + 2)...]
+                    // check for end
+                    switch bufferAfterCRLF.getIndexAfter(boundary) {
+                    case .success:  // boundary found
+                        self.state = .parsing(.boundary, bufferAfterCRLF)
+                        return .success(reading: .bodyChunk(chunk))
+                    case .prematureEnd:
+                        return .needMoreData
+                    case .wrongCharacter:
+                        self.state = .parsing(.body([]), bufferAfterCRLF)
+                        return .success(reading: .bodyChunk(chunk))
+                    }
+                }
+
             }
         case .finished:
             return .finished
@@ -157,6 +184,16 @@ struct MultipartParser {
 }
 
 extension ArraySlice where Element == UInt8 {
+    /// The result of a `getIndexAfter(_:)` call.
+    /// - success: The slice was found at the given index. The index is the index after the slice.
+    /// - wrongCharacter: The buffer did not match the slice. The index is the index of the first mismatching character.
+    /// - prematureEnd: The buffer was too short to contain the slice. The index is the index of the last character.
+    enum IndexAfterSlice {
+        case success(ArraySlice<UInt8>.Index)
+        case wrongCharacter(at: ArraySlice<UInt8>.Index)
+        case prematureEnd(at: ArraySlice<UInt8>.Index)
+    }
+
     /// Returns the index after the given slice if it matches the start of the buffer.
     /// If the buffer is too short, it returns the index of the last character.
     /// If the buffer does not match the slice, it returns the index of the first mismatching character.
@@ -174,17 +211,55 @@ extension ArraySlice where Element == UInt8 {
             }
             resultIndex += 1
         }
-    
+
         return .success(resultIndex)
     }
-}
 
-/// The result of a `getIndexAfter(_:)` call.
-/// - success: The slice was found at the given index. The index is the index after the slice.
-/// - wrongCharacter: The buffer did not match the slice. The index is the index of the first mismatching character.
-/// - prematureEnd: The buffer was too short to contain the slice. The index is the index of the last character.
-enum IndexAfterSlice {
-    case success(ArraySlice<UInt8>.Index)
-    case wrongCharacter(at: ArraySlice<UInt8>.Index)
-    case prematureEnd(at: ArraySlice<UInt8>.Index)
+    /// The result of a `firstIndexOf(_:)` call.
+    /// - Parameter success: The slice was found. The associated index is the index before the slice.
+    /// - Parameter notFound: The slice was not found in the buffer.
+    enum FirstIndexOfSliceResult {
+        case success(ArraySlice<UInt8>.Index)
+        case notFound
+        case prematureEnd
+    }
+
+    /// Returns the start index of the given slice if it matches.
+    /// - Parameters:
+    ///    - slice: The slice to match against the buffer.
+    /// - Returns: The start index the slice if it matches, or `.notFound` if the slice was not found.
+    func firstIndexOf(_ slice: ArraySlice<UInt8>) -> FirstIndexOfSliceResult {
+        guard !slice.isEmpty else { return .notFound }
+
+        var sliceIndex = slice.startIndex
+        var matchStartIndex: Index? = nil
+
+        for (currentIndex, element) in self.enumerated() {
+            if sliceIndex == slice.endIndex {
+                // we've matched the entire slice
+                return .success(self.index(self.startIndex, offsetBy: matchStartIndex!))
+            }
+            if element == slice[sliceIndex] {
+                // matching char found
+                if sliceIndex == slice.startIndex {
+                    matchStartIndex = currentIndex
+                }
+                sliceIndex = slice.index(after: sliceIndex)
+            } else {
+                // reset
+                sliceIndex = slice.startIndex
+                matchStartIndex = nil
+
+                // check if current char could start new match
+                if element == slice[sliceIndex] {
+                    matchStartIndex = currentIndex
+                    sliceIndex = slice.index(after: sliceIndex)
+                }
+            }
+        }
+        if sliceIndex != slice.startIndex {
+            return .prematureEnd
+        }
+        return .notFound
+    }
 }

@@ -1,6 +1,7 @@
 import HTTPTypes
-import MultipartKit
 import Testing
+
+@testable import MultipartKit
 
 @Suite("Multipart Parser Tests")
 struct MultipartParserTests {
@@ -8,17 +9,12 @@ struct MultipartParserTests {
     func parseBasicExample() async throws {
         let boundary = "--boundary123"
         let message = """
-            --boundary123\r
+            \(boundary)\r
+            Content-Disposition: form-data; name="id"\r
             Content-Type: text/plain\r
-            Content-Disposition: form-data; name="field1"\r
             \r
-            value1\r
-            --boundary123\r
-            Content-Type: text/plain\r
-            Content-Disposition: form-data; name="field2"\r
-            \r
-            value2\r
-            --boundary123--\r
+            123e4567-e89b-12d3-a456-426655440000\r
+            \(boundary)--
             """
 
         let uint8Slice = ArraySlice(message.utf8)
@@ -39,15 +35,17 @@ struct MultipartParserTests {
         }
 
         var expectedFields: [HTTPField] = [
+            .init(name: .contentDisposition, value: "form-data; name=\"id\""),
             .init(name: .contentType, value: "text/plain"),
-            .init(name: .contentDisposition, value: "form-data; name=\"field1\""),
-//            .init(name: .contentDisposition, value: "form-data; name=\"field2\""),
-//            .init(name: .contentType, value: "text/plain"),
         ]
 
         for part in parts {
-            if case .headerField(let field) = part {
+            switch part {
+            case .headerField(let field):
                 #expect(field == expectedFields.removeFirst())
+            case .bodyChunk(let chunk):
+                #expect(String(decoding: chunk, as: UTF8.self) == "123e4567-e89b-12d3-a456-426655440000")
+            case .boundary: break
             }
         }
     }

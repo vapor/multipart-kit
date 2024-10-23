@@ -6,7 +6,7 @@ public struct MultipartParseSequence: AsyncSequence {
         self.parser = .init(boundary: boundary)
         self.buffer = .init(buffer)
     }
-    
+
     public func makeAsyncIterator() -> Iterator {
         Iterator(parser: parser, iterator: buffer.makeAsyncIterator())
     }
