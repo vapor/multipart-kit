@@ -67,7 +67,7 @@ struct MultipartParser {
             .finished
         }
     }
-    
+
     private mutating func parseBoundary(from buffer: ArraySlice<UInt8>) throws -> ReadResult {
         switch buffer.getIndexAfter(boundary) {
         case .wrongCharacter:  // the boundary is unexpected
@@ -88,7 +88,7 @@ struct MultipartParser {
             }
         }
     }
-    
+
     private mutating func parseBody(from buffer: ArraySlice<UInt8>) throws -> ReadResult {
         // read until CRLF
         switch buffer.getFirstRange(of: [13, 10]) {
@@ -112,19 +112,8 @@ struct MultipartParser {
             }
         }
     }
-    
+
     private mutating func parseHeader(from buffer: ArraySlice<UInt8>) throws -> ReadResult {
-        // look for end of headers. exit if found
-        switch buffer.getFirstRange(of: [13, 10, 13, 10]) {
-        case .success(let range):
-            self.state = .parsing(.body, buffer[range.upperBound...])
-            return .success()
-        case .prematureEnd:
-            return .needMoreData
-        case .notFound:
-            break
-        }
-        
         // check for CRLF
         let indexAfterFirstCRLF: ArraySlice<UInt8>.Index
         switch buffer.getIndexAfter([13, 10]) {
@@ -137,11 +126,25 @@ struct MultipartParser {
             self.state = .parsing(.header, buffer)
             return .needMoreData
         }
-        
+
+        // check for second CRLF (end of headers)
+        switch buffer[indexAfterFirstCRLF...].getIndexAfter([13, 10]) {
+        case .success(let index):  // end of headers found, move to body
+            self.state = .parsing(.body, buffer[index...])
+            return .success()
+        case .wrongCharacter:  // no end of headers
+            self.state = .parsing(.header, buffer[indexAfterFirstCRLF...])
+        case .prematureEnd:  // might be end. ask for more data
+            self.state = .parsing(.header, buffer)
+            return .needMoreData
+        }
+
         // read the header name until ":" or CR
-        guard let endOfHeaderNameIndex = buffer[indexAfterFirstCRLF...].firstIndex(where: { element in
-            element == 58 || element == 13 // ":" || CR
-        }) else {
+        guard
+            let endOfHeaderNameIndex = buffer[indexAfterFirstCRLF...].firstIndex(where: { element in
+                element == 58 || element == 13  // ":" || CR
+            })
+        else {
             self.state = .parsing(.header, buffer)
             return .needMoreData
         }
@@ -160,7 +163,7 @@ struct MultipartParser {
         case .success(let index):
             indexAfterColonAndSpace = index
         }
-        
+
         // read the header value until CRLF
         let headerValue: ArraySlice<UInt8>
         switch buffer[indexAfterColonAndSpace...].getFirstRange(of: [13, 10]) {
