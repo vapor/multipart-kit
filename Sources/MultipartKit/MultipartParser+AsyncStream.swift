@@ -22,7 +22,7 @@ public struct MultipartParseSequence: AsyncSequence {
 
         public mutating func next() async throws -> MultipartPart? {
             while true {
-                switch try parser.read() {
+                switch parser.read() {
                 case .success(let optionalPart):
                     switch optionalPart {
                     case .none: continue
@@ -33,6 +33,8 @@ public struct MultipartParseSequence: AsyncSequence {
                         return nil
                     }
                     parser.append(buffer: next)
+                case .error(let error):
+                    throw error
                 case .finished:
                     return nil
                 }

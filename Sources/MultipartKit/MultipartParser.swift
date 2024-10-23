@@ -17,7 +17,6 @@ struct MultipartParser {
         case initial
         case parsing(Part, ArraySlice<UInt8>)
         case finished
-        case error(Error)
     }
 
     let boundary: ArraySlice<UInt8>
@@ -31,6 +30,7 @@ struct MultipartParser {
     enum ReadResult {
         case finished
         case success(reading: MultipartPart? = nil)
+        case error(Error)
         case needMoreData
     }
 
@@ -38,8 +38,6 @@ struct MultipartParser {
         switch self.state {
         case .initial:
             self.state = .parsing(.boundary, buffer)
-        case .error:
-            break
         case .parsing(let part, var existingBuffer):
             existingBuffer.append(contentsOf: buffer)
             self.state = .parsing(part, existingBuffer)
@@ -48,30 +46,28 @@ struct MultipartParser {
         }
     }
 
-    mutating func read() throws -> ReadResult {
+    mutating func read() -> ReadResult {
         switch self.state {
         case .initial:
             .needMoreData
-        case .error(let error):
-            throw error
         case .parsing(let part, let buffer):
             switch part {
             case .boundary:
-                try parseBoundary(from: buffer)
+                parseBoundary(from: buffer)
             case .header:
-                try parseHeader(from: buffer)
+                parseHeader(from: buffer)
             case .body:
-                try parseBody(from: buffer)
+                parseBody(from: buffer)
             }
         case .finished:
             .finished
         }
     }
 
-    private mutating func parseBoundary(from buffer: ArraySlice<UInt8>) throws -> ReadResult {
+    private mutating func parseBoundary(from buffer: ArraySlice<UInt8>) -> ReadResult {
         switch buffer.getIndexAfter(boundary) {
         case .wrongCharacter:  // the boundary is unexpected
-            throw Error.invalidBoundary
+            return .error(Error.invalidBoundary)
         case .prematureEnd:  // ask for more data and retry
             self.state = .parsing(.boundary, buffer)
             return .needMoreData
@@ -89,7 +85,7 @@ struct MultipartParser {
         }
     }
 
-    private mutating func parseBody(from buffer: ArraySlice<UInt8>) throws -> ReadResult {
+    private mutating func parseBody(from buffer: ArraySlice<UInt8>) -> ReadResult {
         // read until CRLF
         switch buffer.getFirstRange(of: [13, 10]) {
         case .notFound, .prematureEnd:  // no CRLF or only CR. keep looking
@@ -113,7 +109,7 @@ struct MultipartParser {
         }
     }
 
-    private mutating func parseHeader(from buffer: ArraySlice<UInt8>) throws -> ReadResult {
+    private mutating func parseHeader(from buffer: ArraySlice<UInt8>) -> ReadResult {
         // check for CRLF
         let indexAfterFirstCRLF: ArraySlice<UInt8>.Index
         switch buffer.getIndexAfter([13, 10]) {
@@ -121,7 +117,7 @@ struct MultipartParser {
             indexAfterFirstCRLF = index
             self.state = .parsing(.header, buffer[index...])
         case .wrongCharacter:
-            throw Error.invalidHeader(reason: "There should be a CRLF here")
+            return .error(Error.invalidHeader(reason: "There should be a CRLF here"))
         case .prematureEnd:
             self.state = .parsing(.header, buffer)
             return .needMoreData
@@ -156,7 +152,7 @@ struct MultipartParser {
         let indexAfterColonAndSpace: ArraySlice<UInt8>.Index
         switch headerWithoutName.getIndexAfter([58, 32]) {  // ": "
         case .wrongCharacter(at: let index):
-            throw Error.invalidHeader(reason: "Expected ': ' after header name, found \(Character(UnicodeScalar(buffer[index])))")
+            return .error(Error.invalidHeader(reason: "Expected ': ' after header name, found \(Character(UnicodeScalar(buffer[index])))"))
         case .prematureEnd:
             self.state = .parsing(.header, headerWithoutName)
             return .needMoreData
@@ -176,7 +172,7 @@ struct MultipartParser {
 
         // add the header to the fields
         guard let name = HTTPField.Name(String(decoding: headerName, as: UTF8.self)) else {
-            throw Error.invalidHeader(reason: "Invalid header name")
+            return .error(Error.invalidHeader(reason: "Invalid header name"))
         }
         let field = HTTPField(name: name, value: String(decoding: headerValue, as: UTF8.self))
 
