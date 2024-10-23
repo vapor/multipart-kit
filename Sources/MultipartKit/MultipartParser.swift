@@ -10,8 +10,8 @@ struct MultipartParser {
     enum State: Equatable {
         enum Part: Equatable {
             case boundary
-            case header(HTTPFields)
-            case body(ArraySlice<UInt8>)
+            case header
+            case body
         }
 
         case initial
@@ -51,135 +51,135 @@ struct MultipartParser {
     mutating func read() throws -> ReadResult {
         switch self.state {
         case .initial:
-            return .needMoreData
+            .needMoreData
         case .error(let error):
             throw error
         case .parsing(let part, let buffer):
             switch part {
             case .boundary:
-                switch buffer.getIndexAfter(boundary) {
-                case .wrongCharacter:  // abort
-                    throw Error.invalidBoundary
-                case .prematureEnd:  // ask for more data and retry
-                    self.state = .parsing(.boundary, buffer)
-                    return .needMoreData
-                case let .success(index):
-                    switch buffer[index...].getIndexAfter([45, 45]) {  // check if it's the final boundary
-                    case .success:  // if it is, finish
-                        self.state = .finished
-                        return .finished
-                    case .wrongCharacter, .prematureEnd:  // if it's not, move to reading headers
-                        self.state = .parsing(.header(.init()), buffer[index...])
-                        return .success()
-                    }
-                }
-
-            case .header(var fields):
-                // check for CRLF
-                let indexAfterFirstCRLF: ArraySlice<UInt8>.Index
-                switch buffer.getIndexAfter([13, 10]) {
-                case .success(let index):
-                    indexAfterFirstCRLF = index
-                    self.state = .parsing(.header(fields), buffer[index...])
-                case .wrongCharacter:
-                    throw Error.invalidHeader(reason: "There should be a CRLF here")
-                case .prematureEnd:
-                    self.state = .parsing(.header(fields), buffer)
-                    return .needMoreData
-                }
-
-                // check for second CRLF (end of headers)
-                switch buffer[indexAfterFirstCRLF...].getIndexAfter([13, 10]) {
-                case .success(let index):  // end of headers found, move to body
-                    self.state = .parsing(.body([]), buffer[index...])
-                    return .success()
-                case .wrongCharacter:
-                    self.state = .parsing(.header(fields), buffer[indexAfterFirstCRLF...])
-                case .prematureEnd:
-                    self.state = .parsing(.header(fields), buffer)
-                    return .needMoreData
-                }
-
-                func getFirstUnsupportedCharacterIndex(in slice: ArraySlice<UInt8>) -> ArraySlice<UInt8>.Index? {
-                    slice.firstIndex(where: {
-                        switch $0 {
-                        // allowed multipart header name characters
-                        case 0x21, 0x23, 0x24, 0x25, 0x26, 0x27, 0x2A, 0x2B, 0x2D, 0x2E, 0x5E,
-                            0x5F, 0x60, 0x7C, 0x7E, 0x30...0x39, 0x41...0x5A, 0x61...0x7A:
-                            false
-                        default: true
-                        }
-                    })
-                }
-
-                // read the header name until ":"
-                guard let endOfHeaderNameIndex = getFirstUnsupportedCharacterIndex(in: buffer[indexAfterFirstCRLF...]) else {
-                    // we need more data, ": " has not appeared yet
-                    self.state = .parsing(.header(fields), buffer)
-                    return .needMoreData
-                }
-
-                let headerName = buffer[indexAfterFirstCRLF..<endOfHeaderNameIndex]
-                let headerWithoutName = buffer[endOfHeaderNameIndex...]
-
-                // there should be a colon and space after the header name
-                let indexAfterColonAndSpace: ArraySlice<UInt8>.Index
-                switch headerWithoutName.getIndexAfter([58, 32]) {  // ": "
-                case .wrongCharacter(at: let index):
-                    throw Error.invalidHeader(reason: "Expected ': ' after header name, found \(Character(UnicodeScalar(buffer[index])))")
-                case .prematureEnd:
-                    self.state = .parsing(.header(fields), headerWithoutName)
-                    return .needMoreData
-                case .success(let index):
-                    indexAfterColonAndSpace = index
-                }
-
-                // read the header value until CRLF
-                guard let endOfHeaderValueIndex = buffer[indexAfterColonAndSpace...].firstRange(of: [13, 10])?.lowerBound else {
-                    // we need more data, CRLF has not appeared yet
-                    self.state = .parsing(.header(fields), buffer)
-                    return .needMoreData
-                }
-
-                let headerValue = buffer[indexAfterColonAndSpace..<endOfHeaderValueIndex]
-
-                // add the header to the fields
-                guard let name = HTTPField.Name(String(decoding: headerName, as: UTF8.self)) else {
-                    throw Error.invalidHeader(reason: "Invalid header name")
-                }
-                let field = HTTPField(name: name, value: String(decoding: headerValue, as: UTF8.self))
-                fields.append(field)
-
-                // move on to reading the next header
-                self.state = .parsing(.header(fields), buffer[endOfHeaderValueIndex...])
-                return .success(reading: .headerField(field))
-
-            case .body(let chunk):
-                switch buffer.firstIndexOf([13, 10]) {
-                case .notFound, .prematureEnd:  // no CRLF or only CR. keep looking
-                    self.state = .parsing(.body(chunk), buffer)
-                    return .needMoreData
-
-                case .success(let index):  // CRLF found
-                    let chunk = buffer[..<index]
-                    let bufferAfterCRLF = buffer[(index + 2)...]
-                    // check for end
-                    switch bufferAfterCRLF.getIndexAfter(boundary) {
-                    case .success:  // boundary found
-                        self.state = .parsing(.boundary, bufferAfterCRLF)
-                        return .success(reading: .bodyChunk(chunk))
-                    case .prematureEnd:
-                        return .needMoreData
-                    case .wrongCharacter:
-                        self.state = .parsing(.body([]), bufferAfterCRLF)
-                        return .success(reading: .bodyChunk(chunk))
-                    }
-                }
-
+                try parseBoundary(from: buffer)
+            case .header:
+                try parseHeader(from: buffer)
+            case .body:
+                try parseBody(from: buffer)
             }
         case .finished:
-            return .finished
+            .finished
         }
+    }
+    
+    private mutating func parseBoundary(from buffer: ArraySlice<UInt8>) throws -> ReadResult {
+        switch buffer.getIndexAfter(boundary) {
+        case .wrongCharacter:  // the boundary is unexpected
+            throw Error.invalidBoundary
+        case .prematureEnd:  // ask for more data and retry
+            self.state = .parsing(.boundary, buffer)
+            return .needMoreData
+        case let .success(index):
+            switch buffer[index...].getIndexAfter([45, 45]) {  // check if it's the final boundary (ends with "--")
+            case .success:  // if it is, finish
+                self.state = .finished
+                return .finished
+            case .prematureEnd:
+                return .needMoreData
+            case .wrongCharacter:  // if it's not, move on to reading headers
+                self.state = .parsing(.header, buffer[index...])
+                return .success()
+            }
+        }
+    }
+    
+    private mutating func parseBody(from buffer: ArraySlice<UInt8>) throws -> ReadResult {
+        // read until CRLF
+        switch buffer.getFirstRange(of: [13, 10]) {
+        case .notFound, .prematureEnd:  // no CRLF or only CR. keep looking
+            self.state = .parsing(.body, buffer)
+            return .needMoreData
+
+        case .success(let range):  // CRLF found
+            let chunk = buffer[..<range.lowerBound]
+            let bufferAfterCRLF = buffer[(range.upperBound)...]
+            // check for end
+            switch bufferAfterCRLF.getIndexAfter(boundary) {
+            case .success:  // boundary found
+                self.state = .parsing(.boundary, bufferAfterCRLF)
+                return .success(reading: .bodyChunk(chunk))
+            case .prematureEnd:
+                return .needMoreData
+            case .wrongCharacter:
+                self.state = .parsing(.body, bufferAfterCRLF)
+                return .success(reading: .bodyChunk(chunk))
+            }
+        }
+    }
+    
+    private mutating func parseHeader(from buffer: ArraySlice<UInt8>) throws -> ReadResult {
+        // look for end of headers. exit if found
+        switch buffer.getFirstRange(of: [13, 10, 13, 10]) {
+        case .success(let range):
+            self.state = .parsing(.body, buffer[range.upperBound...])
+            return .success()
+        case .prematureEnd:
+            return .needMoreData
+        case .notFound:
+            break
+        }
+        
+        // check for CRLF
+        let indexAfterFirstCRLF: ArraySlice<UInt8>.Index
+        switch buffer.getIndexAfter([13, 10]) {
+        case .success(let index):
+            indexAfterFirstCRLF = index
+            self.state = .parsing(.header, buffer[index...])
+        case .wrongCharacter:
+            throw Error.invalidHeader(reason: "There should be a CRLF here")
+        case .prematureEnd:
+            self.state = .parsing(.header, buffer)
+            return .needMoreData
+        }
+        
+        // read the header name until ":" or CR
+        guard let endOfHeaderNameIndex = buffer[indexAfterFirstCRLF...].firstIndex(where: { element in
+            element == 58 || element == 13 // ":" || CR
+        }) else {
+            self.state = .parsing(.header, buffer)
+            return .needMoreData
+        }
+
+        let headerName = buffer[indexAfterFirstCRLF..<endOfHeaderNameIndex]
+        let headerWithoutName = buffer[endOfHeaderNameIndex...]
+
+        // there should be a colon and space after the header name
+        let indexAfterColonAndSpace: ArraySlice<UInt8>.Index
+        switch headerWithoutName.getIndexAfter([58, 32]) {  // ": "
+        case .wrongCharacter(at: let index):
+            throw Error.invalidHeader(reason: "Expected ': ' after header name, found \(Character(UnicodeScalar(buffer[index])))")
+        case .prematureEnd:
+            self.state = .parsing(.header, headerWithoutName)
+            return .needMoreData
+        case .success(let index):
+            indexAfterColonAndSpace = index
+        }
+        
+        // read the header value until CRLF
+        let headerValue: ArraySlice<UInt8>
+        switch buffer[indexAfterColonAndSpace...].getFirstRange(of: [13, 10]) {
+        case .success(let range):
+            headerValue = buffer[indexAfterColonAndSpace..<range.lowerBound]
+        case .notFound, .prematureEnd:
+            self.state = .parsing(.header, buffer)
+            return .needMoreData
+        }
+
+        // add the header to the fields
+        guard let name = HTTPField.Name(String(decoding: headerName, as: UTF8.self)) else {
+            throw Error.invalidHeader(reason: "Invalid header name")
+        }
+        let field = HTTPField(name: name, value: String(decoding: headerValue, as: UTF8.self))
+
+        // move on to reading the next header
+        self.state = .parsing(.header, buffer[headerValue.endIndex...])
+        return .success(reading: .headerField(field))
     }
 }
 
@@ -219,16 +219,17 @@ extension ArraySlice where Element == UInt8 {
     /// - Parameter success: The slice was found. The associated index is the index before the slice.
     /// - Parameter notFound: The slice was not found in the buffer.
     enum FirstIndexOfSliceResult {
-        case success(ArraySlice<UInt8>.Index)
+        case success(Range<Index>)
         case notFound
         case prematureEnd
     }
 
-    /// Returns the start index of the given slice if it matches.
+    /// Returns the range of the matching slice if it matches.
     /// - Parameters:
     ///    - slice: The slice to match against the buffer.
-    /// - Returns: The start index the slice if it matches, or `.notFound` if the slice was not found.
-    func firstIndexOf(_ slice: ArraySlice<UInt8>) -> FirstIndexOfSliceResult {
+    /// - Returns: The range of the matching slice if it matches, ``FirstIndexOfSliceResult/notFound`` if the slice was not
+    ///     or ``FirstIndexOfSliceResult/prematureEnd``
+    func getFirstRange(of slice: ArraySlice<UInt8>) -> FirstIndexOfSliceResult {
         guard !slice.isEmpty else { return .notFound }
 
         var sliceIndex = slice.startIndex
@@ -237,7 +238,9 @@ extension ArraySlice where Element == UInt8 {
         for (currentIndex, element) in self.enumerated() {
             if sliceIndex == slice.endIndex {
                 // we've matched the entire slice
-                return .success(self.index(self.startIndex, offsetBy: matchStartIndex!))
+                let startIndex = self.index(self.startIndex, offsetBy: matchStartIndex!)
+                let endIndex = self.index(self.startIndex, offsetBy: currentIndex)
+                return .success(startIndex..<endIndex)
             }
             if element == slice[sliceIndex] {
                 // matching char found
