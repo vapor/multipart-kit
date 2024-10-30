@@ -1,10 +1,10 @@
-public struct MultipartParseSequence: AsyncSequence {
+public struct MultipartParseSequence<BackingSequence: AsyncSequence>: AsyncSequence where BackingSequence.Element: Collection<UInt8> {
     private let parser: MultipartParser
-    private let buffer: AnyAsyncSequence<ArraySlice<UInt8>>
+    private let buffer: BackingSequence
 
-    public init<AS: AsyncSequence & Sendable>(boundary: String, buffer: AS) where AS.Element == ArraySlice<UInt8> {
+    public init(boundary: String, buffer: BackingSequence) {
         self.parser = .init(boundary: boundary)
-        self.buffer = .init(buffer)
+        self.buffer = buffer
     }
 
     public func makeAsyncIterator() -> Iterator {
@@ -13,9 +13,9 @@ public struct MultipartParseSequence: AsyncSequence {
 
     public struct Iterator: AsyncIteratorProtocol {
         private var parser: MultipartParser
-        private var iterator: AnyAsyncSequence<ArraySlice<UInt8>>.AsyncIterator
+        private var iterator: BackingSequence.AsyncIterator
 
-        init(parser: MultipartParser, iterator: AnyAsyncSequence<ArraySlice<UInt8>>.AsyncIterator) {
+        init(parser: MultipartParser, iterator: BackingSequence.AsyncIterator) {
             self.parser = parser
             self.iterator = iterator
         }

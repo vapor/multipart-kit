@@ -34,10 +34,10 @@ struct MultipartParser {
         case needMoreData
     }
 
-    mutating func append(buffer: ArraySlice<UInt8>) {
+    mutating func append(buffer: some Collection<UInt8>) {
         switch self.state {
         case .initial:
-            self.state = .parsing(.boundary, buffer)
+            self.state = .parsing(.boundary, .init(buffer))
         case .parsing(let part, var existingBuffer):
             existingBuffer.append(contentsOf: buffer)
             self.state = .parsing(part, existingBuffer)
@@ -87,25 +87,22 @@ struct MultipartParser {
 
     private mutating func parseBody(from buffer: ArraySlice<UInt8>) -> ReadResult {
         // read until CRLF
-        switch buffer.getFirstRange(of: [13, 10]) {
-        case .notFound, .prematureEnd:  // no CRLF or only CR. keep looking
+        switch buffer.getFirstRange(of: [13, 10] + boundary) {
+        case .prematureEnd:  // found part of body end, request more data
             self.state = .parsing(.body, buffer)
             return .needMoreData
-
-        case .success(let range):  // CRLF found
-            let chunk = buffer[..<range.lowerBound]
-            let bufferAfterCRLF = buffer[(range.upperBound)...]
-            // check for end
-            switch bufferAfterCRLF.getIndexAfter(boundary) {
-            case .success:  // boundary found
-                self.state = .parsing(.boundary, bufferAfterCRLF)
-                return .success(reading: .bodyChunk(chunk))
-            case .prematureEnd:
+        case .notFound:  // end not in sight, emit body chunk
+            if buffer.isEmpty {
+                self.state = .parsing(.body, buffer)
                 return .needMoreData
-            case .wrongCharacter:
-                self.state = .parsing(.body, bufferAfterCRLF)
-                return .success(reading: .bodyChunk(chunk))
             }
+            self.state = .parsing(.body, [])
+            return .success(reading: .bodyChunk(buffer))
+        case .success(let range):  // end found
+            let chunk = buffer[..<range.lowerBound]
+            let bufferAfterCRLF = buffer[(range.lowerBound + 2)...]
+            self.state = .parsing(.boundary, bufferAfterCRLF)
+            return .success(reading: .bodyChunk(chunk))
         }
     }
 
