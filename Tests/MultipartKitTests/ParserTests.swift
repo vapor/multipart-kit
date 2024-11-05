@@ -2,60 +2,10 @@ import HTTPTypes
 import MultipartKit
 import Testing
 
-@Suite("Multipart Parser Tests")
-struct MultipartParserTests {
-    @Test("Parse Basic Example")
-    func parseBasicExample() async throws {
-        let boundary = "--boundary123"
-        let body = "123e4567-e89b-12d3-a456-426655440000"
-        let message = """
-            \(boundary)\r
-            Content-Disposition: form-data; name="id"\r
-            Content-Type: text/plain\r
-            \r
-            123e4567-e89b-12d3-a456-426655440000\r
-            \(boundary)--
-            """
-
-        let uint8Slice = ArraySlice(message.utf8)
-        let stream = AsyncStream<ArraySlice<UInt8>> { continuation in
-            var offset = uint8Slice.startIndex
-            while offset < uint8Slice.endIndex {
-                let endIndex = min(uint8Slice.endIndex, offset + 16)
-                continuation.yield(uint8Slice[offset..<endIndex])
-                offset = endIndex
-            }
-            continuation.finish()
-        }
-        let sequence = MultipartParseSequence(boundary: boundary, buffer: stream)
-
-        var parts: [MultipartPart] = []
-        for try await part in sequence {
-            parts.append(part)
-        }
-
-        var expectedFields: [HTTPField] = [
-            .init(name: .contentDisposition, value: "form-data; name=\"id\""),
-            .init(name: .contentType, value: "text/plain"),
-        ]
-
-        var receivedBody: ArraySlice<UInt8> = []
-
-        for part in parts {
-            switch part {
-            case .headerField(let field):
-                #expect(field == expectedFields.removeFirst())
-            case .bodyChunk(let chunk):
-                receivedBody.append(contentsOf: chunk)
-            case .boundary: break
-            }
-        }
-
-        #expect(receivedBody == ArraySlice(body.utf8))
-    }
-
-    @Test("Parse Complex Example")
-    func parseComplexExample() async throws {
+@Suite("Parser Tests")
+struct ParserTests {
+    @Test("Parse Example")
+    func parseExample() async throws {
         let pngData: [UInt8] = [
             0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
             0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x3C, 0x08, 0x02, 0x00, 0x00, 0x00, 0xE9, 0x14, 0x0D,
@@ -108,18 +58,10 @@ struct MultipartParserTests {
         message.append(contentsOf: pngData)
         message.append(contentsOf: "\r\n\(boundary)--".utf8)
 
-        let stream = AsyncStream<ArraySlice<UInt8>> { continuation in
-            var offset = message.startIndex
-            while offset < message.endIndex {
-                let endIndex = min(message.endIndex, offset + 16)
-                continuation.yield(message[offset..<endIndex])
-                offset = endIndex
-            }
-            continuation.finish()
-        }
-        let sequence = MultipartParseSequence(boundary: boundary, buffer: stream)
+        let stream = makeParsingStream(for: message)
+        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: stream)
 
-        var parts: [MultipartPart] = []
+        var parts: [MultipartSection] = []
         for try await part in sequence {
             parts.append(part)
         }
@@ -148,8 +90,8 @@ struct MultipartParserTests {
 
         for part in parts {
             switch part {
-            case .headerField(let field):
-                #expect(field == expectedFields.removeFirst())
+            case .headerFields(let field):
+                #expect(field.first == expectedFields.removeFirst())
             case .bodyChunk(let chunk):
                 actualBodies.append(contentsOf: chunk)
             case .boundary: break
@@ -157,5 +99,65 @@ struct MultipartParserTests {
         }
 
         #expect(actualBodies == expectedBodies)
+    }
+
+    @Test("Parse non ASCII header")
+    func parseNonASCIIHeader() async throws {
+        let filename = "Non-ASCII filé namé.txt"
+        let data = ArraySlice(
+            """
+            ------WebKitFormBoundaryPVOZifB9OqEwP2fn\r
+            Content-Disposition: form-data; name="test"; filename="\(filename)"\r
+            \r
+            eqw-dd-sa----123;1[234\r
+            ------WebKitFormBoundaryPVOZifB9OqEwP2fn--\r\n
+            """.utf8)
+
+        let stream = makeParsingStream(for: data)
+        let sequence = MultipartParserAsyncSequence(boundary: "------WebKitFormBoundaryPVOZifB9OqEwP2fn", buffer: stream)
+
+        for try await part in sequence {
+            switch part {
+            case .bodyChunk(let chunk):
+                print(String(decoding: chunk, as: UTF8.self))
+            case .headerFields(let field):
+                print(field)
+            case .boundary: break
+            }
+        }
+    }
+    
+    @Test("Parse Synchronously")
+    func parseSynchronously() async throws {
+        let boundary = "boundary123"
+        let message = """
+            \(boundary)\r
+            Content-Disposition: form-data; name="id"\r
+            Content-Type: text/plain\r
+            \r
+            123e4567-e89b-12d3-a456-426655440000\r
+            \(boundary)--
+            """
+        
+        let parts = try MultipartParser.parse([UInt8](message.utf8), boundary: [UInt8](boundary.utf8))
+        
+        #expect(parts.count == 1)
+        #expect(parts[0].headerFields == .init([
+            .init(name: .contentDisposition, value: "form-data; name=\"id\""),
+            .init(name: .contentType, value: "text/plain"),
+        ]))
+        #expect(parts[0].body == ArraySlice("123e4567-e89b-12d3-a456-426655440000".utf8))
+    }
+
+    private func makeParsingStream(for message: ArraySlice<UInt8>) -> AsyncStream<ArraySlice<UInt8>> {
+        AsyncStream<ArraySlice<UInt8>> { continuation in
+            var offset = message.startIndex
+            while offset < message.endIndex {
+                let endIndex = min(message.endIndex, offset + 16)
+                continuation.yield(message[offset..<endIndex])
+                offset = endIndex
+            }
+            continuation.finish()
+        }
     }
 }

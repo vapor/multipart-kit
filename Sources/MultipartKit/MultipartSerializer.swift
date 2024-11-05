@@ -1,13 +1,7 @@
-import NIOCore
-
 /// Serializes `MultipartForm`s to `Data`.
 ///
 /// See `MultipartParser` for more information about the multipart encoding.
-public final class MultipartSerializer: Sendable {
-
-    /// Creates a new `MultipartSerializer`.
-    public init() {}
-
+public enum MultipartSerializer: Sendable {
     /// Serializes the `MultipartForm` to data.
     ///
     ///     let data = try MultipartSerializer().serialize(parts: [part], boundary: "123")
@@ -18,10 +12,10 @@ public final class MultipartSerializer: Sendable {
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     /// - throws: Any errors that may occur during serialization.
     /// - returns: `multipart`-encoded `Data`.
-    public func serialize(parts: [MultipartPart], boundary: String) throws -> String {
-        var buffer = ByteBufferAllocator().buffer(capacity: 0)
+    public static func serialize(parts: [MultipartPart<some Collection<UInt8>>], boundary: String) throws -> String {
+        var buffer = [UInt8]()
         try self.serialize(parts: parts, boundary: boundary, into: &buffer)
-        return String(decoding: buffer.readableBytesView, as: UTF8.self)
+        return String(decoding: buffer, as: UTF8.self)
     }
 
     /// Serializes the `MultipartForm` into a `ByteBuffer`.
@@ -35,26 +29,16 @@ public final class MultipartSerializer: Sendable {
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     ///     - buffer: Buffer to write to.
     /// - throws: Any errors that may occur during serialization.
-    public func serialize(parts: [MultipartPart], boundary: String, into buffer: inout ByteBuffer)
-        throws
-    {
-        // for part in parts {
-        //     buffer.writeString("--")
-        //     buffer.writeString(boundary)
-        //     buffer.writeString("\r\n")
-        //     for (key, val) in part.headers {
-        //         buffer.writeString(key)
-        //         buffer.writeString(": ")
-        //         buffer.writeString(val)
-        //         buffer.writeString("\r\n")
-        //     }
-        //     buffer.writeString("\r\n")
-        //     var body = part.body
-        //     buffer.writeBuffer(&body)
-        //     buffer.writeString("\r\n")
-        // }
-        // buffer.writeString("--")
-        // buffer.writeString(boundary)
-        // buffer.writeString("--\r\n")
+    public static func serialize(parts: [MultipartPart<some Collection<UInt8>>], boundary: String, into buffer: inout [UInt8]) throws {
+        for part in parts {
+            buffer.append(contentsOf: Array("--\(boundary)\r\n".utf8))
+            for field in part.headerFields {
+                buffer.append(contentsOf: Array("\(field.description)\r\n".utf8))
+            }
+            buffer.append(contentsOf: Array("\r\n".utf8))
+            buffer.append(contentsOf: part.body)
+            buffer.append(contentsOf: Array("\r\n".utf8))
+        }
+        buffer.append(contentsOf: Array("--\(boundary)--\r\n".utf8))
     }
 }

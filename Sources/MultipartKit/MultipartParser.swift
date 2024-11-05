@@ -1,6 +1,6 @@
 import HTTPTypes
 
-struct MultipartParser {
+public struct MultipartParser {
     enum Error: Swift.Error, Equatable {
         case invalidBoundary
         case invalidHeader(reason: String)
@@ -21,15 +21,20 @@ struct MultipartParser {
 
     let boundary: ArraySlice<UInt8>
     private var state: State
+    
+    init(boundary: some Collection<UInt8>) {
+        self.boundary = .init([45, 45] + boundary)
+        self.state = .initial
+    }
 
     init(boundary: String) {
-        self.boundary = ArraySlice(boundary.utf8)
+        self.boundary = [45, 45] + ArraySlice(boundary.utf8)
         self.state = .initial
     }
 
     enum ReadResult {
         case finished
-        case success(reading: MultipartPart? = nil)
+        case success(reading: MultipartSection? = nil)
         case error(Error)
         case needMoreData
     }
@@ -75,12 +80,12 @@ struct MultipartParser {
             switch buffer[index...].getIndexAfter([45, 45]) {  // check if it's the final boundary (ends with "--")
             case .success:  // if it is, finish
                 self.state = .finished
-                return .finished
+                return .success(reading: .boundary(end: true))
             case .prematureEnd:
                 return .needMoreData
             case .wrongCharacter:  // if it's not, move on to reading headers
                 self.state = .parsing(.header, buffer[index...])
-                return .success()
+                return .success(reading: .boundary(end: false))
             }
         }
     }
@@ -175,7 +180,7 @@ struct MultipartParser {
 
         // move on to reading the next header
         self.state = .parsing(.header, buffer[headerValue.endIndex...])
-        return .success(reading: .headerField(field))
+        return .success(reading: .headerFields(.init([field])))
     }
 }
 

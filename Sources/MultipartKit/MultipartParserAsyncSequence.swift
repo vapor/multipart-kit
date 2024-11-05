@@ -1,4 +1,4 @@
-public struct MultipartParseSequence<BackingSequence: AsyncSequence>: AsyncSequence where BackingSequence.Element: Collection<UInt8> {
+public struct MultipartParserAsyncSequence<BackingSequence: AsyncSequence>: AsyncSequence where BackingSequence.Element: Collection<UInt8> {
     private let parser: MultipartParser
     private let buffer: BackingSequence
 
@@ -20,7 +20,7 @@ public struct MultipartParseSequence<BackingSequence: AsyncSequence>: AsyncSeque
             self.iterator = iterator
         }
 
-        public mutating func next() async throws -> MultipartPart? {
+        public mutating func next() async throws -> MultipartSection? {
             while true {
                 switch parser.read() {
                 case .success(let optionalPart):
