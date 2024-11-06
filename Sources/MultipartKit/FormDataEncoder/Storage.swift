@@ -1,33 +1,33 @@
-// import Collections
+import Collections
 
-// final class Storage {
-//     var dataContainer: (any DataContainer)? = nil
-//     var data: MultipartFormData? {
-//         dataContainer?.data
-//     }
-// }
+final class Storage {
+    var dataContainer: (any DataContainer)? = nil
+    var data: MultipartFormData? {
+        dataContainer?.data
+    }
+}
 
-// protocol DataContainer {
-//     var data: MultipartFormData { get }
-// }
+protocol DataContainer {
+    var data: MultipartFormData { get }
+}
 
-// struct SingleValueDataContainer: DataContainer {
-//     init(part: MultipartPart) {
-//         data = .single(part)
-//     }
-//     let data: MultipartFormData
-// }
+struct SingleValueDataContainer: DataContainer {
+    init(part: MultipartPart<[UInt8]>) {
+        data = .single(part)
+    }
+    let data: MultipartFormData
+}
 
-// final class KeyedDataContainer: DataContainer {
-//     var value: OrderedDictionary<String, Storage> = [:]
-//     var data: MultipartFormData {
-//         .keyed(value.compactMapValues(\.data))
-//     }
-// }
+final class KeyedDataContainer: DataContainer {
+    var value: OrderedDictionary<String, Storage> = [:]
+    var data: MultipartFormData {
+        .keyed(value.compactMapValues(\.data))
+    }
+}
 
-// final class UnkeyedDataContainer: DataContainer {
-//     var value: [Storage] = []
-//     var data: MultipartFormData {
-//         .array(value.compactMap(\.data))
-//     }
-// }
+final class UnkeyedDataContainer: DataContainer {
+    var value: [Storage] = []
+    var data: MultipartFormData {
+        .array(value.compactMap(\.data))
+    }
+}

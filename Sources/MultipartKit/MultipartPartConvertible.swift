@@ -1,110 +1,155 @@
-// import struct Foundation.Data
-// import struct Foundation.URL
+import struct Foundation.Data
+import struct Foundation.URL
 
-// /// A protocol to provide custom behaviors for parsing and serializing types from and to multipart data.
-// public protocol MultipartPartConvertible {
-//     var multipart: MultipartPart? { get }
+/// A protocol to provide custom behaviors for parsing and serializing types from and to multipart data.
+public protocol MultipartPartConvertible<Body> {
+    associatedtype Body: MultipartPartBodyElement
 
-//     init?(multipart: MultipartPart)
-// }
+    var multipart: MultipartPart<Body>? { get }
+    init?(multipart: MultipartPart<Body>)
+}
 
-// // MARK: MultipartPart self-conformance
+// MARK: MultipartPart self-conformance
 
-// extension MultipartPart: MultipartPartConvertible {
-//     public var multipart: MultipartPart? {
-//         self
-//     }
+extension MultipartPart: MultipartPartConvertible {
+    public var multipart: MultipartPart<Body>? {
+        self
+    }
 
-//     public init?(multipart: MultipartPart) {
-//         self = multipart
-//     }
-// }
+    public init?(multipart: MultipartPart<Body>) {
+        self = multipart
+    }
+}
 
-// // MARK: String
+// MARK: String
 
-// extension String: MultipartPartConvertible {
-//     public var multipart: MultipartPart? {
-//         .init(body: self)
-//     }
+extension String: MultipartPartConvertible {
+    public typealias Body = [UInt8]
 
-//     public init?(multipart: MultipartPart) {
-//         self.init(decoding: multipart.body.readableBytesView, as: UTF8.self)
-//     }
-// }
+    public var multipart: MultipartPart<[UInt8]>? {
+        MultipartPart(headerFields: [:], body: Array(self.utf8))
+    }
 
-// // MARK: Numbers
+    public init?(multipart: MultipartPart<[UInt8]>) {
+        guard let string = String(bytes: multipart.body, encoding: .utf8) else {
+            return nil
+        }
+        self = string
+    }
+}
 
-// extension FixedWidthInteger {
-//     public var multipart: MultipartPart? {
-//         .init(body: self.description)
-//     }
+// MARK: Numbers
 
-//     public init?(multipart: MultipartPart) {
-//         self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
-//     }
-// }
+extension FixedWidthInteger {
+    public typealias Body = [UInt8]
 
-// extension Int: MultipartPartConvertible { }
-// extension Int8: MultipartPartConvertible { }
-// extension Int16: MultipartPartConvertible { }
-// extension Int32: MultipartPartConvertible { }
-// extension Int64: MultipartPartConvertible { }
-// extension UInt: MultipartPartConvertible { }
-// extension UInt8: MultipartPartConvertible { }
-// extension UInt16: MultipartPartConvertible { }
-// extension UInt32: MultipartPartConvertible { }
-// extension UInt64: MultipartPartConvertible { }
+    public var multipart: MultipartPart<[UInt8]>? {
+        self.description.multipart
+    }
 
-// extension Float: MultipartPartConvertible {
-//     public var multipart: MultipartPart? {
-//         .init(body: self.description)
-//     }
+    public init?(multipart: MultipartPart<[UInt8]>) {
+        guard let str = String(bytes: multipart.body, encoding: .utf8),
+            let value = Self(str)
+        else {
+            return nil
+        }
+        self = value
+    }
+}
 
-//     public init?(multipart: MultipartPart) {
-//         self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
-//     }
-// }
+extension Int: MultipartPartConvertible {}
+extension Int8: MultipartPartConvertible {}
+extension Int16: MultipartPartConvertible {}
+extension Int32: MultipartPartConvertible {}
+extension Int64: MultipartPartConvertible {}
+extension UInt: MultipartPartConvertible {}
+extension UInt8: MultipartPartConvertible {}
+extension UInt16: MultipartPartConvertible {}
+extension UInt32: MultipartPartConvertible {}
+extension UInt64: MultipartPartConvertible {}
 
-// extension Double: MultipartPartConvertible {
-//     public var multipart: MultipartPart? {
-//         .init(body: self.description)
-//     }
+// MARK: Floating Point Numbers
 
-//     public init?(multipart: MultipartPart) {
-//         self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
-//     }
-// }
+extension Float: MultipartPartConvertible {
+    public typealias Body = [UInt8]
 
-// // MARK: Bool
+    public var multipart: MultipartPart<[UInt8]>? {
+        self.description.multipart
+    }
 
-// extension Bool: MultipartPartConvertible {
-//     public var multipart: MultipartPart? {
-//         .init(body: self.description)
-//     }
+    public init?(multipart: MultipartPart<[UInt8]>) {
+        guard let str = String(bytes: multipart.body, encoding: .utf8),
+            let value = Float(str)
+        else {
+            return nil
+        }
+        self = value
+    }
+}
 
-//     public init?(multipart: MultipartPart) {
-//         self.init(String(multipart: multipart)!) // String.init(multipart:) never returns nil
-//     }
-// }
+extension Double: MultipartPartConvertible {
+    public typealias Body = [UInt8]
 
-// // MARK: Foundation types
+    public var multipart: MultipartPart<[UInt8]>? {
+        self.description.multipart
+    }
 
-// extension Data: MultipartPartConvertible {
-//     public var multipart: MultipartPart? {
-//         .init(body: self)
-//     }
+    public init?(multipart: MultipartPart<[UInt8]>) {
+        guard let str = String(bytes: multipart.body, encoding: .utf8),
+            let value = Double(str)
+        else {
+            return nil
+        }
+        self = value
+    }
+}
 
-//     public init?(multipart: MultipartPart) {
-//         self.init(multipart.body.readableBytesView)
-//     }
-// }
+// MARK: Bool
 
-// extension URL: MultipartPartConvertible {
-//     public var multipart: MultipartPart? {
-//         .init(body: self.absoluteString)
-//     }
+extension Bool: MultipartPartConvertible {
+    public typealias Body = [UInt8]
 
-//     public init?(multipart: MultipartPart) {
-//         self.init(string: String(multipart: multipart)!) // String.init(multipart:) never returns nil
-//     }
-// }
+    public var multipart: MultipartPart<[UInt8]>? {
+        self.description.multipart
+    }
+
+    public init?(multipart: MultipartPart<[UInt8]>) {
+        guard let str = String(bytes: multipart.body, encoding: .utf8),
+            let value = Bool(str)
+        else {
+            return nil
+        }
+        self = value
+    }
+}
+
+// MARK: Foundation types
+
+extension Data: MultipartPartConvertible {
+    public typealias Body = [UInt8]
+
+    public var multipart: MultipartPart<[UInt8]>? {
+        MultipartPart(headerFields: [:], body: Array(self))
+    }
+
+    public init?(multipart: MultipartPart<[UInt8]>) {
+        self.init(multipart.body)
+    }
+}
+
+extension URL: MultipartPartConvertible {
+    public typealias Body = [UInt8]
+
+    public var multipart: MultipartPart<[UInt8]>? {
+        self.absoluteString.multipart
+    }
+
+    public init?(multipart: MultipartPart<[UInt8]>) {
+        guard let str = String(bytes: multipart.body, encoding: .utf8),
+            let url = URL(string: str)
+        else {
+            return nil
+        }
+        self = url
+    }
+}

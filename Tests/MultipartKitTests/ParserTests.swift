@@ -34,15 +34,15 @@ struct ParserTests {
             0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
         ]
 
-        let boundary = "--boundary123"
+        let boundary = "boundary123"
         var message = ArraySlice(
             """
-            \(boundary)\r
+            --\(boundary)\r
             Content-Disposition: form-data; name="id"\r
             Content-Type: text/plain\r
             \r
             123e4567-e89b-12d3-a456-426655440000\r
-            \(boundary)\r
+            --\(boundary)\r
             Content-Disposition: form-data; name="address"\r
             Content-Type: application/json\r
             \r
@@ -50,13 +50,13 @@ struct ParserTests {
             "street": "3, Garden St",\r
             "city": "Hillsbery, UT"\r
             }\r
-            \(boundary)\r
+            --\(boundary)\r
             Content-Disposition: form-data; name="profileImage"; filename="image1.png"\r
             Content-Type: image/png\r
             \r\n
             """.utf8)
         message.append(contentsOf: pngData)
-        message.append(contentsOf: "\r\n\(boundary)--".utf8)
+        message.append(contentsOf: "\r\n--\(boundary)--".utf8)
 
         let stream = makeParsingStream(for: message)
         let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: stream)
@@ -114,7 +114,7 @@ struct ParserTests {
             """.utf8)
 
         let stream = makeParsingStream(for: data)
-        let sequence = MultipartParserAsyncSequence(boundary: "------WebKitFormBoundaryPVOZifB9OqEwP2fn", buffer: stream)
+        let sequence = MultipartParserAsyncSequence(boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn", buffer: stream)
 
         for try await part in sequence {
             switch part {
@@ -131,12 +131,12 @@ struct ParserTests {
     func parseSynchronously() async throws {
         let boundary = "boundary123"
         let message = """
-            \(boundary)\r
+            --\(boundary)\r
             Content-Disposition: form-data; name="id"\r
             Content-Type: text/plain\r
             \r
             123e4567-e89b-12d3-a456-426655440000\r
-            \(boundary)--
+            --\(boundary)--
             """
 
         let parts = try MultipartParser(boundary: boundary)

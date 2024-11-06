@@ -23,7 +23,7 @@ public struct MultipartParser {
     private var state: State
 
     init(boundary: some Collection<UInt8>) {
-        self.boundary = .init([45, 45] + boundary)
+        self.boundary = .init(boundary)
         self.state = .initial
     }
 

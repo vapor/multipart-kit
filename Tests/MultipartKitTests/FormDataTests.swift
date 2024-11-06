@@ -1,49 +1,49 @@
-// import XCTest
-// import MultipartKit
+ import XCTest
+ import MultipartKit
 
-// final class FormDataTests: XCTestCase {
-//     func testFormDataEncoder() throws {
-//         struct Foo: Encodable {
-//             var string: String
-//             var int: Int
-//             var double: Double
-//             var array: [Int]
-//             var bool: Bool
-//         }
-//         let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3], bool: true)
-//         let data = try FormDataEncoder().encode(a, boundary: "hello")
-//         XCTAssertEqual(data, """
-//         --hello\r
-//         Content-Disposition: form-data; name="string"\r
-//         \r
-//         a\r
-//         --hello\r
-//         Content-Disposition: form-data; name="int"\r
-//         \r
-//         42\r
-//         --hello\r
-//         Content-Disposition: form-data; name="double"\r
-//         \r
-//         3.14\r
-//         --hello\r
-//         Content-Disposition: form-data; name="array[0]"\r
-//         \r
-//         1\r
-//         --hello\r
-//         Content-Disposition: form-data; name="array[1]"\r
-//         \r
-//         2\r
-//         --hello\r
-//         Content-Disposition: form-data; name="array[2]"\r
-//         \r
-//         3\r
-//         --hello\r
-//         Content-Disposition: form-data; name="bool"\r
-//         \r
-//         true\r
-//         --hello--\r\n
-//         """)
-//     }
+final class FormDataTests: XCTestCase {
+     func testFormDataEncoder() throws {
+         struct Foo: Encodable {
+             var string: String
+             var int: Int
+             var double: Double
+             var array: [Int]
+             var bool: Bool
+         }
+         let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3], bool: true)
+         let data = try FormDataEncoder().encode(a, boundary: "hello")
+         XCTAssertEqual(data, """
+         --hello\r
+         Content-Disposition: form-data; name="string"\r
+         \r
+         a\r
+         --hello\r
+         Content-Disposition: form-data; name="int"\r
+         \r
+         42\r
+         --hello\r
+         Content-Disposition: form-data; name="double"\r
+         \r
+         3.14\r
+         --hello\r
+         Content-Disposition: form-data; name="array[0]"\r
+         \r
+         1\r
+         --hello\r
+         Content-Disposition: form-data; name="array[1]"\r
+         \r
+         2\r
+         --hello\r
+         Content-Disposition: form-data; name="array[2]"\r
+         \r
+         3\r
+         --hello\r
+         Content-Disposition: form-data; name="bool"\r
+         \r
+         true\r
+         --hello--\r\n
+         """)
+     }
 
 //     func testFormDataDecoderW3() throws {
 //         /// Content-Type: multipart/form-data; boundary=12345
@@ -553,4 +553,4 @@
 //         XCTAssertEqual(try FormDataDecoder().decode(AllTypes.self, from: multipart, boundary: "-"), value)
 
 //     }
-// }
+}

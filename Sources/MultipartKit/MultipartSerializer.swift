@@ -5,7 +5,7 @@ public struct MultipartSerializer: Sendable {
     let boundary: String
 
     /// Creates a new `MultipartSerializer`.
-    init(boundary: String) {
+    public init(boundary: String) {
         self.boundary = boundary
     }
 

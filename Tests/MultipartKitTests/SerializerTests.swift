@@ -16,6 +16,15 @@ struct SerializerTests {
             )
         ]
 
-        let serialized = try MultipartSerializer.serialize(parts: example, boundary: "boundary123")
+        let serialized = try MultipartSerializer(boundary: "boundary123").serialize(parts: example)
+        let expected = """
+            --boundary123\r
+            Content-Disposition: form-data; name="file"; filename="hello.txt"\r
+            Content-Type: text/plain\r
+            \r
+            Hello, world!\r
+            --boundary123--\r\n
+            """
+        #expect(serialized == expected)
     }
 }
