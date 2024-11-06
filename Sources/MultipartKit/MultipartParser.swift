@@ -21,13 +21,13 @@ public struct MultipartParser {
 
     let boundary: ArraySlice<UInt8>
     private var state: State
-    
+
     init(boundary: some Collection<UInt8>) {
         self.boundary = .init([45, 45] + boundary)
         self.state = .initial
     }
 
-    init(boundary: String) {
+    public init(boundary: String) {
         self.boundary = [45, 45] + ArraySlice(boundary.utf8)
         self.state = .initial
     }

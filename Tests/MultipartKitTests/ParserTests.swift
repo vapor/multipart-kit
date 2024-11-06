@@ -126,7 +126,7 @@ struct ParserTests {
             }
         }
     }
-    
+
     @Test("Parse Synchronously")
     func parseSynchronously() async throws {
         let boundary = "boundary123"
@@ -138,14 +138,17 @@ struct ParserTests {
             123e4567-e89b-12d3-a456-426655440000\r
             \(boundary)--
             """
-        
-        let parts = try MultipartParser.parse([UInt8](message.utf8), boundary: [UInt8](boundary.utf8))
-        
+
+        let parts = try MultipartParser(boundary: boundary)
+            .parse([UInt8](message.utf8))
+
         #expect(parts.count == 1)
-        #expect(parts[0].headerFields == .init([
-            .init(name: .contentDisposition, value: "form-data; name=\"id\""),
-            .init(name: .contentType, value: "text/plain"),
-        ]))
+        #expect(
+            parts[0].headerFields
+                == .init([
+                    .init(name: .contentDisposition, value: "form-data; name=\"id\""),
+                    .init(name: .contentType, value: "text/plain"),
+                ]))
         #expect(parts[0].body == ArraySlice("123e4567-e89b-12d3-a456-426655440000".utf8))
     }
 

@@ -13,9 +13,9 @@ struct SerializerTests {
                     .init(name: .contentType, value: "text/plain"),
                 ]),
                 body: ArraySlice("Hello, world!".utf8)
-            ),
+            )
         ]
-        
+
         let serialized = try MultipartSerializer.serialize(parts: example, boundary: "boundary123")
     }
 }
