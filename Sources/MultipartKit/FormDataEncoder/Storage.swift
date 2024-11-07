@@ -1,26 +1,27 @@
 import Collections
 
-final class Storage {
+final class Storage<Body: MultipartPartBodyElement> {
     var dataContainer: (any DataContainer)? = nil
-    var data: MultipartFormData? {
+    var data: MultipartFormData<Body>? {
         dataContainer?.data
     }
 }
 
-protocol DataContainer {
-    var data: MultipartFormData { get }
+protocol DataContainer<Body> {
+    associatedtype Body: MultipartPartBodyElement
+    var data: MultipartFormData<Body> { get }
 }
 
-struct SingleValueDataContainer: DataContainer {
-    init(part: MultipartPart<[UInt8]>) {
+struct SingleValueDataContainer<Body: MultipartPartBodyElement>: DataContainer {
+    init(part: MultipartPart<Body>) {
         data = .single(part)
     }
-    let data: MultipartFormData
+    let data: MultipartFormData<Body>
 }
 
-final class KeyedDataContainer: DataContainer {
+final class KeyedDataContainer<Body: MultipartPartBodyElement>: DataContainer {
     var value: OrderedDictionary<String, Storage> = [:]
-    var data: MultipartFormData {
+    var data: MultipartFormData<Body> {
         .keyed(value.compactMapValues(\.data))
     }
 }

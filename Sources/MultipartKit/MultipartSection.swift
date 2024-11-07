@@ -1,8 +1,8 @@
 import Foundation
 import HTTPTypes
 
-public enum MultipartSection: Equatable, Sendable {
+public enum MultipartSection<Body: MultipartPartBodyElement>: Equatable, Sendable {
     case headerFields(HTTPFields)
-    case bodyChunk(ArraySlice<UInt8>)
+    case bodyChunk(Body)
     case boundary(end: Bool)
 }

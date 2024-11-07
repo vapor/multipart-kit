@@ -1,6 +1,7 @@
 import HTTPTypes
 import MultipartKit
 import Testing
+import NIOCore
 
 @Suite("Parser Tests")
 struct ParserTests {
@@ -152,11 +153,11 @@ struct ParserTests {
         #expect(parts[0].body == ArraySlice("123e4567-e89b-12d3-a456-426655440000".utf8))
     }
 
-    private func makeParsingStream(for message: ArraySlice<UInt8>) -> AsyncStream<ArraySlice<UInt8>> {
-        AsyncStream<ArraySlice<UInt8>> { continuation in
+    private func makeParsingStream<Body: MultipartPartBodyElement>(for message: Body) -> AsyncStream<Body.SubSequence> {
+        AsyncStream<Body.SubSequence> { continuation in
             var offset = message.startIndex
             while offset < message.endIndex {
-                let endIndex = min(message.endIndex, offset + 16)
+                let endIndex = min(message.endIndex, message.index(offset, offsetBy: 16))
                 continuation.yield(message[offset..<endIndex])
                 offset = endIndex
             }
