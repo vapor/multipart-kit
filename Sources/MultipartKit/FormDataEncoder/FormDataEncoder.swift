@@ -3,8 +3,7 @@
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
 ///
 /// Seealso `MultipartParser` for more information about the `multipart` encoding.
-public struct FormDataEncoder: Sendable {
-
+public struct FormDataEncoder<Body: MultipartPartBodyElement>: Sendable where Body: RangeReplaceableCollection {
     /// Any contextual information set by the user for encoding.
     public var userInfo: [CodingUserInfoKey: any Sendable] = [:]
 
@@ -36,11 +35,11 @@ public struct FormDataEncoder: Sendable {
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     ///     - buffer: Buffer to write to.
     /// - throws: Any errors encoding the model with `Codable` or serializing the data.
-    public func encode<E: Encodable>(_ encodable: E, boundary: String, into buffer: inout [UInt8]) throws {
-        try MultipartSerializer(boundary: boundary).serialize(parts: parts(from: encodable), into: &buffer)
+    public func encode<E: Encodable>(_ encodable: E, boundary: String) throws -> Body {
+        try MultipartSerializer<Body>(boundary: boundary).serialize(parts: parts(from: encodable))
     }
 
-    private func parts<E: Encodable>(from encodable: E) throws -> [MultipartPart<[UInt8]>] {
+    private func parts<E: Encodable>(from encodable: E) throws -> [MultipartPart<Body>] {
         let encoder = Encoder(codingPath: [], userInfo: userInfo)
         try encodable.encode(to: encoder)
         return encoder.storage.data?.namedParts() ?? []

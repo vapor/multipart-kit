@@ -1,8 +1,15 @@
 extension FormDataEncoder {
-    struct Encoder {
+    struct Encoder: Sendable {
         let codingPath: [any CodingKey]
-        let storage = Storage()
-        let userInfo: [CodingUserInfoKey: Any]
+        let storage = Storage<Body>()
+        let sendableUserInfo: [CodingUserInfoKey: any Sendable]
+
+        var userInfo: [CodingUserInfoKey: Any] { sendableUserInfo }
+
+        init(codingPath: [any CodingKey] = [], userInfo: [CodingUserInfoKey: any Sendable] = [:]) {
+            self.codingPath = codingPath
+            self.sendableUserInfo = userInfo
+        }
     }
 }
 
@@ -26,6 +33,6 @@ extension FormDataEncoder.Encoder: Encoder {
 
 extension FormDataEncoder.Encoder {
     func nested(at key: any CodingKey) -> FormDataEncoder.Encoder {
-        .init(codingPath: codingPath + [key], userInfo: userInfo)
+        .init(codingPath: codingPath + [key], userInfo: sendableUserInfo)
     }
 }

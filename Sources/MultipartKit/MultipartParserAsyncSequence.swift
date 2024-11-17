@@ -1,4 +1,5 @@
-public struct MultipartParserAsyncSequence<BackingSequence: AsyncSequence>: AsyncSequence where BackingSequence.Element: MultipartPartBodyElement {
+public struct MultipartParserAsyncSequence<BackingSequence: AsyncSequence>: AsyncSequence
+where BackingSequence.Element == ArraySlice<UInt8> {
     private let parser: MultipartParser
     private let buffer: BackingSequence
 
@@ -13,7 +14,7 @@ public struct MultipartParserAsyncSequence<BackingSequence: AsyncSequence>: Asyn
 
     public struct Iterator: AsyncIteratorProtocol {
         public typealias Element = MultipartSection<BackingSequence.Element>
-        
+
         private var parser: MultipartParser
         private var iterator: BackingSequence.AsyncIterator
 

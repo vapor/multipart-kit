@@ -1,7 +1,7 @@
 /// Serializes `MultipartForm`s to `Data`.
 ///
 /// See `MultipartParser` for more information about the multipart encoding.
-public struct MultipartSerializer: Sendable {
+public struct MultipartSerializer<Body: MultipartPartBodyElement>: Sendable where Body: RangeReplaceableCollection {
     let boundary: String
 
     /// Creates a new `MultipartSerializer`.
@@ -19,8 +19,14 @@ public struct MultipartSerializer: Sendable {
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     /// - throws: Any errors that may occur during serialization.
     /// - returns: `multipart`-encoded `Data`.
-    public func serialize(parts: [MultipartPart<some Collection<UInt8>>]) throws -> String {
-        var buffer = [UInt8]()
+    public func serialize(parts: [MultipartPart<Body>]) throws -> Body {
+        var buffer = Body()
+        try self.serialize(parts: parts, into: &buffer)
+        return buffer
+    }
+    
+    public func serialize(parts: [MultipartPart<Body>]) throws -> String {
+        var buffer = Body()
         try self.serialize(parts: parts, into: &buffer)
         return String(decoding: buffer, as: UTF8.self)
     }
@@ -36,16 +42,17 @@ public struct MultipartSerializer: Sendable {
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     ///     - buffer: Buffer to write to.
     /// - throws: Any errors that may occur during serialization.
-    public func serialize(parts: [MultipartPart<some Collection<UInt8>>], into buffer: inout [UInt8]) throws {
+    public func serialize(parts: [MultipartPart<Body>], into buffer: inout Body) throws {
+        let crlf = Array("\r\n".utf8)
         for part in parts {
-            buffer.append(contentsOf: Array("--\(boundary)\r\n".utf8))
+            buffer.append(contentsOf: Array("--\(boundary)".utf8) + crlf)
             for field in part.headerFields {
-                buffer.append(contentsOf: Array("\(field.description)\r\n".utf8))
+                buffer.append(contentsOf: Array("\(field.description)".utf8) + crlf)
             }
-            buffer.append(contentsOf: Array("\r\n".utf8))
+            buffer.append(contentsOf: crlf)
             buffer.append(contentsOf: part.body)
-            buffer.append(contentsOf: Array("\r\n".utf8))
+            buffer.append(contentsOf: crlf)
         }
-        buffer.append(contentsOf: Array("--\(boundary)--\r\n".utf8))
+        buffer.append(contentsOf: Array("--\(boundary)--".utf8) + crlf)
     }
 }

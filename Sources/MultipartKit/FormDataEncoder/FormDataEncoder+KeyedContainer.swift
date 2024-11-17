@@ -1,6 +1,6 @@
 extension FormDataEncoder {
     struct KeyedContainer<Key: CodingKey> {
-        let dataContainer = KeyedDataContainer()
+        let dataContainer = KeyedDataContainer<Body>()
         let encoder: Encoder
     }
 }

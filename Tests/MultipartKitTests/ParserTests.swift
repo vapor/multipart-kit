@@ -1,7 +1,6 @@
 import HTTPTypes
 import MultipartKit
 import Testing
-import NIOCore
 
 @Suite("Parser Tests")
 struct ParserTests {
@@ -62,7 +61,7 @@ struct ParserTests {
         let stream = makeParsingStream(for: message)
         let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: stream)
 
-        var parts: [MultipartSection] = []
+        var parts: [MultipartSection<ArraySlice<UInt8>>] = []
         for try await part in sequence {
             parts.append(part)
         }
@@ -153,7 +152,8 @@ struct ParserTests {
         #expect(parts[0].body == ArraySlice("123e4567-e89b-12d3-a456-426655440000".utf8))
     }
 
-    private func makeParsingStream<Body: MultipartPartBodyElement>(for message: Body) -> AsyncStream<Body.SubSequence> {
+    private func makeParsingStream<Body: MultipartPartBodyElement>(for message: Body) -> AsyncStream<Body.SubSequence>
+    where Body.SubSequence: Sendable {
         AsyncStream<Body.SubSequence> { continuation in
             var offset = message.startIndex
             while offset < message.endIndex {

@@ -34,7 +34,7 @@ public struct MultipartParser {
 
     enum ReadResult {
         case finished
-        case success(reading: MultipartSection? = nil)
+        case success(reading: MultipartSection<ArraySlice<UInt8>>? = nil)
         case error(Error)
         case needMoreData
     }

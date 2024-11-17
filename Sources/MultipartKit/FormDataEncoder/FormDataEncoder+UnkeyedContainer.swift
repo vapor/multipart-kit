@@ -1,6 +1,6 @@
 extension FormDataEncoder {
     struct UnkeyedContainer {
-        let dataContainer = UnkeyedDataContainer()
+        let dataContainer = UnkeyedDataContainer<Body>()
         let encoder: FormDataEncoder.Encoder
     }
 }
