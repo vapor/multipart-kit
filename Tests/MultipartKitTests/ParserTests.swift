@@ -139,7 +139,7 @@ struct ParserTests {
             --\(boundary)--
             """
 
-        let parts = try MultipartParser(boundary: boundary)
+        let parts = try MultipartParser<[UInt8]>(boundary: boundary)
             .parse([UInt8](message.utf8))
 
         #expect(parts.count == 1)
@@ -149,7 +149,7 @@ struct ParserTests {
                     .init(name: .contentDisposition, value: "form-data; name=\"id\""),
                     .init(name: .contentType, value: "text/plain"),
                 ]))
-        #expect(parts[0].body == ArraySlice("123e4567-e89b-12d3-a456-426655440000".utf8))
+        #expect(parts[0].body == Array("123e4567-e89b-12d3-a456-426655440000".utf8))
     }
 
     private func makeParsingStream<Body: MultipartPartBodyElement>(for message: Body) -> AsyncStream<Body.SubSequence>

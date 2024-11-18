@@ -1,7 +1,7 @@
 extension FormDataEncoder {
-    struct UnkeyedContainer {
+    struct UnkeyedContainer<Body: MultipartPartBodyElement> where Body: RangeReplaceableCollection {
         let dataContainer = UnkeyedDataContainer<Body>()
-        let encoder: FormDataEncoder.Encoder
+        let encoder: FormDataEncoder.Encoder<Body>
     }
 }
 
@@ -34,7 +34,7 @@ extension FormDataEncoder.UnkeyedContainer: UnkeyedEncodingContainer {
         nextEncoder()
     }
 
-    func nextEncoder() -> FormDataEncoder.Encoder {
+    func nextEncoder() -> FormDataEncoder.Encoder<Body> {
         let encoder = self.encoder.nested(at: BasicCodingKey.index(count))
         dataContainer.value.append(encoder.storage)
         return encoder

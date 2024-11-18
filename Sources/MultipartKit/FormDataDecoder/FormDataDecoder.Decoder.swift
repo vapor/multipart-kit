@@ -1,81 +1,86 @@
- extension FormDataDecoder {
-     struct Decoder {
-         let codingPath: [any CodingKey]
-         let data: MultipartFormData<Body>
-         let userInfo: [CodingUserInfoKey: Any]
-         let previousCodingPath: [any CodingKey]?
-         let previousType: (any Decodable.Type)?
+extension FormDataDecoder {
+    struct Decoder<Body: MultipartPartBodyElement>: Sendable {
+        let codingPath: [any CodingKey]
+        let data: MultipartFormData<Body>
+        let sendableUserInfo: [CodingUserInfoKey: any Sendable]
+        let previousCodingPath: [any CodingKey]?
+        let previousType: (any Decodable.Type)?
 
-         init(
-            codingPath: [any CodingKey], data: MultipartFormData<Body>, userInfo: [CodingUserInfoKey: Any],
-             previousCodingPath: [any CodingKey]? = nil, previousType: (any Decodable.Type)? = nil
-         ) {
-             self.codingPath = codingPath
-             self.data = data
-             self.userInfo = userInfo
-             self.previousCodingPath = previousCodingPath
-             self.previousType = previousType
-         }
-     }
- }
+        var userInfo: [CodingUserInfoKey: Any] { sendableUserInfo }
 
- extension FormDataDecoder.Decoder: Decoder {
-     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-         guard let dictionary = data.dictionary else {
-             throw decodingError(expectedType: "dictionary")
-         }
-         return KeyedDecodingContainer(FormDataDecoder.KeyedContainer(data: dictionary, decoder: self))
-     }
+        init(
+            codingPath: [any CodingKey],
+            data: MultipartFormData<Body>,
+            userInfo: [CodingUserInfoKey: any Sendable] = [:],
+            previousCodingPath: [any CodingKey]? = nil,
+            previousType: (any Decodable.Type)? = nil
+        ) {
+            self.codingPath = codingPath
+            self.data = data
+            self.sendableUserInfo = userInfo
+            self.previousCodingPath = previousCodingPath
+            self.previousType = previousType
+        }
+    }
+}
 
-     func unkeyedContainer() throws -> any UnkeyedDecodingContainer {
-         guard let array = data.array else {
-             throw decodingError(expectedType: "array")
-         }
-         return FormDataDecoder.UnkeyedContainer(data: array, decoder: self)
-     }
+extension FormDataDecoder.Decoder: Decoder {
+    func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
+        guard let dictionary = data.dictionary else {
+            throw decodingError(expectedType: "dictionary")
+        }
+        return KeyedDecodingContainer(FormDataDecoder.KeyedContainer(data: dictionary, decoder: self))
+    }
 
-     func singleValueContainer() throws -> any SingleValueDecodingContainer {
-         self
-     }
- }
+    func unkeyedContainer() throws -> any UnkeyedDecodingContainer {
+        guard let array = data.array else {
+            throw decodingError(expectedType: "array")
+        }
+        return FormDataDecoder.UnkeyedContainer(data: array, decoder: self)
+    }
 
- extension FormDataDecoder.Decoder {
-     func nested(at key: any CodingKey, with data: MultipartFormData<Body>) -> Self {
-         .init(codingPath: codingPath + [key], data: data, userInfo: userInfo)
-     }
- }
+    func singleValueContainer() throws -> any SingleValueDecodingContainer {
+        self
+    }
+}
 
- extension FormDataDecoder.Decoder {
-     fileprivate func decodingError(expectedType: String) -> any Error {
-         let encounteredType: Any.Type
-         let encounteredTypeDescription: String
+extension FormDataDecoder.Decoder {
+    func nested(at key: any CodingKey, with data: MultipartFormData<Body>) -> Self {
+        .init(codingPath: codingPath + [key], data: data, userInfo: sendableUserInfo)
+    }
+}
 
-         switch data {
-         case .nestingDepthExceeded:
-             return DecodingError.dataCorrupted(
-                 .init(
-                     codingPath: codingPath,
-                     debugDescription: "Nesting depth exceeded while expecting \(expectedType).",
-                     underlyingError: nil
-                 ))
-         case .array:
-             encounteredType = [MultipartFormData<Body>].self
-             encounteredTypeDescription = "array"
-         case .keyed:
-             encounteredType = MultipartFormData<Body>.Keyed.self
-             encounteredTypeDescription = "dictionary"
-         case .single:
-             encounteredType = MultipartPart<Body>.self
-             encounteredTypeDescription = "single value"
-         }
+extension FormDataDecoder.Decoder {
+    fileprivate func decodingError(expectedType: String) -> any Error {
+        let encounteredType: Any.Type
+        let encounteredTypeDescription: String
 
-         return DecodingError.typeMismatch(
-             encounteredType,
-             .init(
-                 codingPath: codingPath,
-                 debugDescription: "Expected \(expectedType) but encountered \(encounteredTypeDescription).",
-                 underlyingError: nil
-             )
-         )
-     }
- }
+        switch data {
+        case .nestingDepthExceeded:
+            return DecodingError.dataCorrupted(
+                .init(
+                    codingPath: codingPath,
+                    debugDescription: "Nesting depth exceeded while expecting \(expectedType).",
+                    underlyingError: nil
+                ))
+        case .array:
+            encounteredType = [MultipartFormData<Body>].self
+            encounteredTypeDescription = "array"
+        case .keyed:
+            encounteredType = MultipartFormData<Body>.Keyed.self
+            encounteredTypeDescription = "dictionary"
+        case .single:
+            encounteredType = MultipartPart<Body>.self
+            encounteredTypeDescription = "single value"
+        }
+
+        return DecodingError.typeMismatch(
+            encounteredType,
+            .init(
+                codingPath: codingPath,
+                debugDescription: "Expected \(expectedType) but encountered \(encounteredTypeDescription).",
+                underlyingError: nil
+            )
+        )
+    }
+}

@@ -24,7 +24,7 @@ public struct MultipartSerializer<Body: MultipartPartBodyElement>: Sendable wher
         try self.serialize(parts: parts, into: &buffer)
         return buffer
     }
-    
+
     public func serialize(parts: [MultipartPart<Body>]) throws -> String {
         var buffer = Body()
         try self.serialize(parts: parts, into: &buffer)

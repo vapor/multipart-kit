@@ -5,7 +5,7 @@ import HTTPTypes
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
 ///
 /// Seealso `MultipartParser` for more information about the `multipart` encoding.
-public struct FormDataDecoder<Body: MultipartPartBodyElement>: Sendable {
+public struct FormDataDecoder: Sendable {
 
     /// Maximum nesting depth to allow when decoding the input.
     /// - 1 corresponds to a single value
@@ -22,7 +22,7 @@ public struct FormDataDecoder<Body: MultipartPartBodyElement>: Sendable {
         self.nestingDepth = nestingDepth
     }
 
-    /// Decodes a `Decodable` item from `String` using the supplied boundary.
+    /// Decodes a ``Decodable`` item from ``String`` using the supplied boundary.
     ///
     ///     let foo = try FormDataDecoder().decode(Foo.self, from: "...", boundary: "123")
     ///
@@ -32,8 +32,8 @@ public struct FormDataDecoder<Body: MultipartPartBodyElement>: Sendable {
     ///   - boundary: Multipart boundary to used in the decoding.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
-    public func decode<D: Decodable>(_ decodable: D.Type, from data: String, boundary: String) throws -> D {
-        try decode(D.self, from: Array(data.utf8), boundary: boundary)
+    public func decode<D: Decodable>(_ decodable: D.Type, from string: String, boundary: String) throws -> D {
+        try decode(D.self, from: Array(string.utf8), boundary: boundary)
     }
 
     /// Decodes a `Decodable` item from `Data` using the supplied boundary.
@@ -46,61 +46,12 @@ public struct FormDataDecoder<Body: MultipartPartBodyElement>: Sendable {
     ///   - boundary: Multipart boundary to used in the decoding.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
-    public func decode<D: Decodable>(_ decodable: D.Type, from data: [UInt8], boundary: String) throws -> D {
-        try decode(D.self, from: data, boundary: boundary)
-    }
-
-    /// Decodes a `Decodable` item from `Data` using the supplied boundary.
-    ///
-    ///     let foo = try FormDataDecoder().decode(Foo.self, from: data, boundary: "123")
-    ///
-    /// - Parameters:
-    ///   - decodable: Generic `Decodable` type.
-    ///   - data: Data to decode.
-    ///   - boundary: Multipart boundary to used in the decoding.
-    /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
-    /// - Returns: An instance of the decoded type `D`.
-    public func decode<D: Decodable>(_ decodable: D.Type, from buffer: Body, boundary: String) async throws
-        -> D where Body.SubSequence: Equatable & Sendable
+    public func decode<D: Decodable, Body: MultipartPartBodyElement>(_ decodable: D.Type, from buffer: Body, boundary: String) throws
+        -> D where Body: RangeReplaceableCollection, Body.SubSequence: Equatable & Sendable
     {
-        let stream = AsyncStream<Body.SubSequence> { continuation in
-            let endIndex = buffer.endIndex
-            var offset = buffer.startIndex
-            while offset < endIndex {
-                let endIndex = min(endIndex, buffer.index(offset, offsetBy: 16))
-                continuation.yield(buffer[offset..<endIndex])
-                offset = endIndex
-            }
-            continuation.finish()
-        }
-
-        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: stream)
-        var parts: [MultipartPart<ArraySlice<UInt8>>] = []
-        
-        var currentHeaders: HTTPFields?
-        var currentBody = ArraySlice<UInt8>()
-        
-        for try await part in sequence {
-            switch part {
-            case .bodyChunk(let chunk):
-                currentBody.append(contentsOf: chunk)
-            case .headerFields(let field):
-                if var currentHeaders {
-                    currentHeaders = HTTPFields(currentHeaders + field)
-                } else {
-                    currentHeaders = field
-                }
-            case .boundary:
-                if let headers = currentHeaders {
-                    parts.append(MultipartPart(headerFields: headers, body: currentBody))
-                }
-                currentHeaders = nil
-                currentBody = []
-            }
-        }
-        
-        let data = MultipartFormData<ArraySlice<UInt8>>(parts: parts, nestingDepth: nestingDepth)
-        let decoder = FormDataDecoder<ArraySlice<UInt8>>.Decoder(codingPath: [], data: data, userInfo: userInfo)
+        let parts = try MultipartParser(boundary: boundary).parse(buffer)
+        let data = MultipartFormData(parts: parts, nestingDepth: nestingDepth)
+        let decoder = FormDataDecoder.Decoder(codingPath: [], data: data, userInfo: userInfo)
         return try decoder.decode(D.self)
     }
 }

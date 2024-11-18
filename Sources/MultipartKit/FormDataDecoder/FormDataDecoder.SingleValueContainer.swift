@@ -1,37 +1,59 @@
- extension FormDataDecoder.Decoder: SingleValueDecodingContainer {
-     func decodeNil() -> Bool {
-         false
-     }
+import Foundation
 
-     func decode<T: Decodable>(_: T.Type = T.self) throws -> T {
-         guard
-             let part = data.part,
-             let Convertible = T.self as? any MultipartPartConvertible<Body>.Type
-         else {
-             guard previousCodingPath?.count != codingPath.count || previousType != T.self else {
-                 throw DecodingError.dataCorrupted(.init(codingPath: codingPath, debugDescription: "Decoding caught in recursion loop"))
-             }
-             return try T(
-                 from: FormDataDecoder.Decoder(
-                     codingPath: codingPath, data: data, userInfo: userInfo, previousCodingPath: codingPath, previousType: T.self))
-         }
+extension FormDataDecoder.Decoder: SingleValueDecodingContainer {
+    func decodeNil() -> Bool {
+        false
+    }
 
-         guard !data.hasExceededNestingDepth else {
-             throw DecodingError.dataCorrupted(
-                 .init(codingPath: codingPath, debugDescription: "Nesting depth exceeded.", underlyingError: nil))
-         }
+    func decode<T: Decodable>(_: T.Type = T.self) throws -> T {
+        guard let part = data.part else {
+            guard previousCodingPath?.count != codingPath.count || previousType != T.self else {
+                throw DecodingError.dataCorrupted(.init(codingPath: codingPath, debugDescription: "Decoding caught in recursion loop"))
+            }
 
-         guard
-             let decoded = Convertible.init(multipart: part) as? T
-         else {
-             let path = codingPath.map(\.stringValue).joined(separator: ".")
-             throw DecodingError.dataCorrupted(
-                 .init(
-                     codingPath: codingPath,
-                     debugDescription: #"Could not convert value at "\#(path)" to type \#(T.self) from multipart part."#
-                 )
-             )
-         }
-         return decoded
-     }
- }
+            return try T(
+                from: FormDataDecoder.Decoder(
+                    codingPath: codingPath, data: data, userInfo: sendableUserInfo, previousCodingPath: codingPath, previousType: T.self
+                )
+            )
+        }
+
+        let decoded =
+            switch T.self {
+            case is MultipartPart<Body>.Type:
+                part as? T
+            case is String.Type:
+                String(bytes: part.body, encoding: .utf8) as? T
+            case let IntType as any FixedWidthInteger.Type:
+                String(bytes: part.body, encoding: .utf8).flatMap(IntType.init) as? T
+            case is Float.Type:
+                String(bytes: part.body, encoding: .utf8).flatMap(Float.init) as? T
+            case is Double.Type:
+                String(bytes: part.body, encoding: .utf8).flatMap(Double.init) as? T
+            case is Bool.Type:
+                String(bytes: part.body, encoding: .utf8).flatMap(Bool.init) as? T
+            case is Data.Type:
+                Data(part.body) as? T
+            case is URL.Type:
+                String(bytes: part.body, encoding: .utf8).flatMap(URL.init(string:)) as? T
+            default:
+                T?.none
+            }
+
+        guard let decoded else {
+            guard !data.hasExceededNestingDepth else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: codingPath, debugDescription: "Nesting depth exceeded.", underlyingError: nil)
+                )
+            }
+
+            return try T(
+                from: FormDataDecoder.Decoder(
+                    codingPath: codingPath, data: data, userInfo: sendableUserInfo, previousCodingPath: codingPath, previousType: T.self
+                )
+            )
+        }
+
+        return decoded
+    }
+}

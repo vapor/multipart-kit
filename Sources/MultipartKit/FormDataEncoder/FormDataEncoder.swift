@@ -3,7 +3,7 @@
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
 ///
 /// Seealso `MultipartParser` for more information about the `multipart` encoding.
-public struct FormDataEncoder<Body: MultipartPartBodyElement>: Sendable where Body: RangeReplaceableCollection {
+public struct FormDataEncoder: Sendable {
     /// Any contextual information set by the user for encoding.
     public var userInfo: [CodingUserInfoKey: any Sendable] = [:]
 
@@ -21,7 +21,8 @@ public struct FormDataEncoder<Body: MultipartPartBodyElement>: Sendable where Bo
     /// - throws: Any errors encoding the model with `Codable` or serializing the data.
     /// - returns: `multipart/form-data`-encoded `String`.
     public func encode<E: Encodable>(_ encodable: E, boundary: String) throws -> String {
-        try MultipartSerializer(boundary: boundary).serialize(parts: parts(from: encodable))
+        let parts: [MultipartPart<[UInt8]>] = try self.parts(from: encodable)
+        return try MultipartSerializer(boundary: boundary).serialize(parts: parts)
     }
 
     /// Encodes an `Encodable` item into a `ByteBuffer` using the supplied boundary.
@@ -35,12 +36,14 @@ public struct FormDataEncoder<Body: MultipartPartBodyElement>: Sendable where Bo
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     ///     - buffer: Buffer to write to.
     /// - throws: Any errors encoding the model with `Codable` or serializing the data.
-    public func encode<E: Encodable>(_ encodable: E, boundary: String) throws -> Body {
+    public func encode<E: Encodable, Body: MultipartPartBodyElement>(_ encodable: E, boundary: String) throws -> Body
+    where Body: RangeReplaceableCollection {
         try MultipartSerializer<Body>(boundary: boundary).serialize(parts: parts(from: encodable))
     }
 
-    private func parts<E: Encodable>(from encodable: E) throws -> [MultipartPart<Body>] {
-        let encoder = Encoder(codingPath: [], userInfo: userInfo)
+    private func parts<E: Encodable, Body: MultipartPartBodyElement>(from encodable: E) throws -> [MultipartPart<Body>]
+    where Body: RangeReplaceableCollection {
+        let encoder = Encoder<Body>(codingPath: [], userInfo: userInfo)
         try encodable.encode(to: encoder)
         return encoder.storage.data?.namedParts() ?? []
     }

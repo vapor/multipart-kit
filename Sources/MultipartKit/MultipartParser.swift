@@ -1,6 +1,6 @@
 import HTTPTypes
 
-public struct MultipartParser {
+public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeReplaceableCollection {
     enum Error: Swift.Error, Equatable {
         case invalidBoundary
         case invalidHeader(reason: String)
@@ -34,12 +34,12 @@ public struct MultipartParser {
 
     enum ReadResult {
         case finished
-        case success(reading: MultipartSection<ArraySlice<UInt8>>? = nil)
+        case success(reading: MultipartSection<Body>? = nil)
         case error(Error)
         case needMoreData
     }
 
-    mutating func append(buffer: some Collection<UInt8>) {
+    mutating func append(buffer: Body) {
         switch self.state {
         case .initial:
             self.state = .parsing(.boundary, .init(buffer))
@@ -102,12 +102,12 @@ public struct MultipartParser {
                 return .needMoreData
             }
             self.state = .parsing(.body, [])
-            return .success(reading: .bodyChunk(buffer))
+            return .success(reading: .bodyChunk(.init(buffer)))
         case .success(let range):  // end found
             let chunk = buffer[..<range.lowerBound]
             let bufferAfterCRLF = buffer[(range.lowerBound + 2)...]
             self.state = .parsing(.boundary, bufferAfterCRLF)
-            return .success(reading: .bodyChunk(chunk))
+            return .success(reading: .bodyChunk(.init(chunk)))
         }
     }
 
@@ -119,7 +119,7 @@ public struct MultipartParser {
             indexAfterFirstCRLF = index
             self.state = .parsing(.header, buffer[index...])
         case .wrongCharacter:
-            return .error(Error.invalidHeader(reason: "There should be a CRLF here"))
+            return .error(.invalidHeader(reason: "There should be a CRLF here"))
         case .prematureEnd:
             self.state = .parsing(.header, buffer)
             return .needMoreData
@@ -154,9 +154,9 @@ public struct MultipartParser {
         let indexAfterColonAndSpace: ArraySlice<UInt8>.Index
         switch headerWithoutName.getIndexAfter([58, 32]) {  // ": "
         case .wrongCharacter(at: let index):
-            return .error(Error.invalidHeader(reason: "Expected ': ' after header name, found \(Character(UnicodeScalar(buffer[index])))"))
+            return .error(.invalidHeader(reason: "Expected ': ' after header name, found \(Character(UnicodeScalar(buffer[index])))"))
         case .prematureEnd:
-            self.state = .parsing(.header, headerWithoutName)
+            self.state = .parsing(.header, buffer)
             return .needMoreData
         case .success(let index):
             indexAfterColonAndSpace = index
@@ -174,7 +174,7 @@ public struct MultipartParser {
 
         // add the header to the fields
         guard let name = HTTPField.Name(String(decoding: headerName, as: UTF8.self)) else {
-            return .error(Error.invalidHeader(reason: "Invalid header name"))
+            return .error(.invalidHeader(reason: "Invalid header name"))
         }
         let field = HTTPField(name: name, value: String(decoding: headerValue, as: UTF8.self))
 

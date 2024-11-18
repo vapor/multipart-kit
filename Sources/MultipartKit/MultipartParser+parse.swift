@@ -1,12 +1,12 @@
 import HTTPTypes
 
 extension MultipartParser {
-    public func parse(_ data: some Collection<UInt8>) throws -> [MultipartPart<ArraySlice<UInt8>>] {
-        var output: [MultipartPart<ArraySlice<UInt8>>] = []
+    public func parse(_ data: Body) throws -> [MultipartPart<Body>] where Body: RangeReplaceableCollection {
+        var output: [MultipartPart<Body>] = []
         var parser = MultipartParser(boundary: self.boundary)
 
         var currentHeaders: HTTPFields?
-        var currentBody = ArraySlice<UInt8>()
+        var currentBody = Body()
 
         // Append data to the parser and process the sections
         parser.append(buffer: data)
@@ -36,7 +36,7 @@ extension MultipartParser {
                         }
                         // Reset for the next part
                         currentHeaders = nil
-                        currentBody = []
+                        currentBody = Body()
                     }
                 }
             case .needMoreData:

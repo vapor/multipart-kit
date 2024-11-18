@@ -1,6 +1,6 @@
 public struct MultipartParserAsyncSequence<BackingSequence: AsyncSequence>: AsyncSequence
-where BackingSequence.Element == ArraySlice<UInt8> {
-    private let parser: MultipartParser
+where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollection {
+    private let parser: MultipartParser<BackingSequence.Element>
     private let buffer: BackingSequence
 
     public init(boundary: String, buffer: BackingSequence) {
@@ -15,10 +15,10 @@ where BackingSequence.Element == ArraySlice<UInt8> {
     public struct Iterator: AsyncIteratorProtocol {
         public typealias Element = MultipartSection<BackingSequence.Element>
 
-        private var parser: MultipartParser
+        private var parser: MultipartParser<BackingSequence.Element>
         private var iterator: BackingSequence.AsyncIterator
 
-        init(parser: MultipartParser, iterator: BackingSequence.AsyncIterator) {
+        init(parser: MultipartParser<BackingSequence.Element>, iterator: BackingSequence.AsyncIterator) {
             self.parser = parser
             self.iterator = iterator
         }
