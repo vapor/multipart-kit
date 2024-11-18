@@ -167,8 +167,8 @@ struct FormDataEncodingTests {
             -----\r\n
             """
 
-        #expect(try await FormDataEncoder().encode(uuid, boundary: "-") == multipart)
-        #expect(try await FormDataDecoder().decode(UUID.self, from: multipart, boundary: "-") == uuid)
+        #expect(try FormDataEncoder().encode(uuid, boundary: "-") == multipart)
+        #expect(try FormDataDecoder().decode(UUID.self, from: multipart, boundary: "-") == uuid)
     }
 
     // https://github.com/vapor/multipart-kit/issues/65

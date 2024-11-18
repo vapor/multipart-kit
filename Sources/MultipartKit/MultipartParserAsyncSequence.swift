@@ -1,3 +1,27 @@
+/// A sequence that parses a stream of multipart data into sections asynchronously.
+///
+/// This sequence is designed to be used with `AsyncStream` to parse a stream of data asynchronously.
+/// The sequence will yield ``MultipartSection`` values as they are parsed from the stream.
+///
+///     let boundary = "boundary123"
+///     var message = ArraySlice(...)
+///     let stream = AsyncStream { continuation in
+///     var offset = message.startIndex
+///         while offset < message.endIndex {
+///             let endIndex = min(message.endIndex, message.index(offset, offsetBy: 16))
+///             continuation.yield(message[offset..<endIndex])
+///             offset = endIndex
+///         }
+///         continuation.finish()
+///     }
+///     let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: stream)
+///     for try await part in sequence {
+///         switch part {
+///         case .bodyChunk(let chunk): ...
+///         case .headerFields(let field): ...
+///         case .boundary: break
+///     }
+///
 public struct MultipartParserAsyncSequence<BackingSequence: AsyncSequence>: AsyncSequence
 where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollection {
     private let parser: MultipartParser<BackingSequence.Element>
@@ -41,7 +65,6 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
                 case .finished:
                     return nil
                 }
-
             }
         }
     }

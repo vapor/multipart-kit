@@ -1,13 +1,13 @@
 import Collections
-import NIOConcurrencyHelpers
+import Synchronization
 
 final class Storage<Body: MultipartPartBodyElement>: Sendable {
     private let _dataContainer: (any DataContainer<Body>)? = nil
-    private let box: NIOLockedValueBox<(any DataContainer<Body>)?> = .init(nil)
+    private let box: Mutex<(any DataContainer<Body>)?> = .init(nil)
 
     var dataContainer: (any DataContainer<Body>)? {
-        get { box.withLockedValue { $0 } }
-        set { box.withLockedValue { $0 = newValue } }
+        get { box.withLock { $0 } }
+        set { box.withLock { $0 = newValue } }
     }
 
     var data: MultipartFormData<Body>? {
@@ -29,11 +29,11 @@ struct SingleValueDataContainer<Body: MultipartPartBodyElement>: DataContainer {
 
 final class KeyedDataContainer<Body: MultipartPartBodyElement>: DataContainer {
     private let _value: OrderedDictionary<String, Storage<Body>> = [:]
-    private let box: NIOLockedValueBox<OrderedDictionary<String, Storage<Body>>> = .init(.init())
+    private let box: Mutex<OrderedDictionary<String, Storage<Body>>> = .init(.init())
 
     var value: OrderedDictionary<String, Storage<Body>> {
-        get { box.withLockedValue { $0 } }
-        set { box.withLockedValue { $0 = newValue } }
+        get { box.withLock { $0 } }
+        set { box.withLock { $0 = newValue } }
     }
 
     var data: MultipartFormData<Body> {
@@ -43,11 +43,11 @@ final class KeyedDataContainer<Body: MultipartPartBodyElement>: DataContainer {
 
 final class UnkeyedDataContainer<Body: MultipartPartBodyElement>: DataContainer {
     private let _value: [Storage<Body>] = []
-    private let box: NIOLockedValueBox<[Storage<Body>]> = .init(.init())
+    private let box: Mutex<[Storage<Body>]> = .init(.init())
 
     var value: [Storage<Body>] {
-        get { box.withLockedValue { $0 } }
-        set { box.withLockedValue { $0 = newValue } }
+        get { box.withLock { $0 } }
+        set { box.withLock { $0 = newValue } }
     }
 
     var data: MultipartFormData<Body> {

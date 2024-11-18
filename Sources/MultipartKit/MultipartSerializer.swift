@@ -1,48 +1,57 @@
-/// Serializes `MultipartForm`s to `Data`.
-///
-/// See `MultipartParser` for more information about the multipart encoding.
-public struct MultipartSerializer<Body: MultipartPartBodyElement>: Sendable where Body: RangeReplaceableCollection {
+/// Serializes ``MultipartPart``s to some ``MultipartPartBodyElement``.
+public struct MultipartSerializer: Sendable {
     let boundary: String
 
-    /// Creates a new `MultipartSerializer`.
+    /// Creates a new ``MultipartSerializer``.
     public init(boundary: String) {
         self.boundary = boundary
     }
 
-    /// Serializes the `MultipartForm` to data.
+    /// Serializes some ``MultipartPart``s to some ``MultipartPartBodyElement``.
     ///
-    ///     let data = try MultipartSerializer().serialize(parts: [part], boundary: "123")
-    ///     print(data) // multipart-encoded
+    ///     let serialized: ArraySlice<UInt8> = try MultipartSerializer(boundary: "123").serialize(parts: [part])
     ///
-    /// - parameters:
-    ///     - parts: One or more `MultipartPart`s to serialize into `Data`.
-    ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
-    /// - throws: Any errors that may occur during serialization.
-    /// - returns: `multipart`-encoded `Data`.
-    public func serialize(parts: [MultipartPart<Body>]) throws -> Body {
+    /// - Parameters:
+    ///   - parts: One or more ``MultipartPart``s to serialize into some ``MultipartPartBodyElement``.
+    /// - Throws: Any errors that may occur during serialization.
+    /// - Returns: some `multipart`-encoded ``MultipartPartBodyElement``.
+    public func serialize<Body: MultipartPartBodyElement>(parts: [MultipartPart<some MultipartPartBodyElement>]) throws -> Body
+    where Body: RangeReplaceableCollection {
         var buffer = Body()
         try self.serialize(parts: parts, into: &buffer)
         return buffer
     }
 
-    public func serialize(parts: [MultipartPart<Body>]) throws -> String {
+    /// Serializes some ``MultipartPartBodyElement`` to a `String`.
+    ///
+    ///     let serialized: String = try MultipartSerializer(boundary: "123").serialize(parts: [part])
+    ///
+    /// - Parameters:
+    ///   - parts: One or more ``MultipartPart``s to serialize into some ``MultipartPartBodyElement``.
+    /// - Throws: Any errors that may occur during serialization.
+    /// - Returns: a `multipart`-encoded `String`.
+    public func serialize<Body: MultipartPartBodyElement>(parts: [MultipartPart<Body>]) throws -> String
+    where Body: RangeReplaceableCollection {
         var buffer = Body()
         try self.serialize(parts: parts, into: &buffer)
         return String(decoding: buffer, as: UTF8.self)
     }
 
-    /// Serializes the `MultipartForm` into a `ByteBuffer`.
+    /// Serializes some ``MultipartPart``s to a buffer.
     ///
-    ///     var buffer = ByteBuffer()
-    ///     try MultipartSerializer().serialize(parts: [part], boundary: "123", into: &buffer)
-    ///     print(String(buffer: buffer)) // multipart-encoded
+    ///     var buffer = ByteBuffer().readableBytesView
+    ///     try MultipartSerializer(boundary: "123").serialize(parts: [part], into: &buffer)
     ///
-    /// - parameters:
-    ///     - parts: One or more `MultipartPart`s to serialize into `Data`.
-    ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
-    ///     - buffer: Buffer to write to.
-    /// - throws: Any errors that may occur during serialization.
-    public func serialize(parts: [MultipartPart<Body>], into buffer: inout Body) throws {
+    /// - Parameters:
+    ///   - parts: One or more ``MultipartPart``s to serialize into a buffer.
+    ///   - buffer: Buffer to write to.
+    /// - Throws: Any errors that may occur during serialization.
+    /// - Note: `ByteBuffer` directly won't work because we have no dependency on NIO.
+    ///   You can use `ByteBufferView` via `ByteBuffer.readableBytesView`.
+    public func serialize<OutputBody: MultipartPartBodyElement>(
+        parts: [MultipartPart<some MultipartPartBodyElement>],
+        into buffer: inout OutputBody
+    ) throws where OutputBody: RangeReplaceableCollection {
         let crlf = Array("\r\n".utf8)
         for part in parts {
             buffer.append(contentsOf: Array("--\(boundary)".utf8) + crlf)

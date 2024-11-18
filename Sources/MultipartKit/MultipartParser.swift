@@ -1,5 +1,6 @@
 import HTTPTypes
 
+/// Parses any kind of multipart encoded data into ``MultipartSection``s.
 public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeReplaceableCollection {
     enum Error: Swift.Error, Equatable {
         case invalidBoundary

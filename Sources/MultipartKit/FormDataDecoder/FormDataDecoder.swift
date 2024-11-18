@@ -1,10 +1,10 @@
 import HTTPTypes
 
-/// Decodes `Decodable` types from `multipart/form-data` encoded `Data`.
+/// Decodes `Decodable` types from `multipart/form-data` encoded data.
 ///
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
 ///
-/// Seealso `MultipartParser` for more information about the `multipart` encoding.
+/// - Seealso: ``MultipartParser`` for more information about the `multipart` encoding.
 public struct FormDataDecoder: Sendable {
 
     /// Maximum nesting depth to allow when decoding the input.
@@ -28,7 +28,7 @@ public struct FormDataDecoder: Sendable {
     ///
     /// - Parameters:
     ///   - decodable: Generic `Decodable` type.
-    ///   - data: String to decode.
+    ///   - data: `String` to decode.
     ///   - boundary: Multipart boundary to used in the decoding.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
@@ -36,13 +36,13 @@ public struct FormDataDecoder: Sendable {
         try decode(D.self, from: Array(string.utf8), boundary: boundary)
     }
 
-    /// Decodes a `Decodable` item from `Data` using the supplied boundary.
+    /// Decodes a `Decodable` item from  some``MultipartPartBodyElement`` using the supplied boundary.
     ///
     ///     let foo = try FormDataDecoder().decode(Foo.self, from: data, boundary: "123")
     ///
     /// - Parameters:
     ///   - decodable: Generic `Decodable` type.
-    ///   - data: Data to decode.
+    ///   - data: some ``MultipartPartBodyElement`` to decode.
     ///   - boundary: Multipart boundary to used in the decoding.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
