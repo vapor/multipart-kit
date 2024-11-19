@@ -1,11 +1,11 @@
+import MultipartKit
+import Testing
+
 #if canImport(FoundationEssentials)
     import FoundationEssentials
 #else
     import Foundation
 #endif
-
-import MultipartKit
-import Testing
 
 @Suite("Form Data Encoding Tests")
 struct FormDataEncodingTests {

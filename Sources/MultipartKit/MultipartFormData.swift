@@ -1,4 +1,5 @@
 import Collections
+import Foundation
 
 enum MultipartFormData<Body: MultipartPartBodyElement>: Equatable, Sendable {
     typealias Keyed = OrderedDictionary<String, MultipartFormData>
