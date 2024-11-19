@@ -1,4 +1,9 @@
-import Foundation
+#if canImport(FoundationEssentials)
+    import FoundationEssentials
+#else
+    import Foundation
+#endif
+
 import MultipartKit
 import Testing
 

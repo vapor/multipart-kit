@@ -1,4 +1,3 @@
-import Foundation
 import HTTPTypes
 
 public enum MultipartSection<Body: MultipartPartBodyElement>: Equatable, Sendable {
