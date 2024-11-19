@@ -17,7 +17,7 @@ public struct FormDataDecoder: Sendable {
     let nestingDepth: Int
 
     /// Any contextual information set by the user for decoding.
-    public var userInfo: [CodingUserInfoKey: Sendable] = [:]
+    public var userInfo: [CodingUserInfoKey: any Sendable] = [:]
 
     /// Creates a new `FormDataDecoder`.
     /// - Parameter nestingDepth: maximum allowed nesting depth of the decoded structure. Defaults to 8.

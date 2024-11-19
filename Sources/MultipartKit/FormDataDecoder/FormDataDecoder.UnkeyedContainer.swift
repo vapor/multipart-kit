@@ -7,11 +7,11 @@ extension FormDataDecoder {
 }
 
 extension FormDataDecoder.UnkeyedContainer: UnkeyedDecodingContainer {
-    var codingPath: [CodingKey] {
+    var codingPath: [any CodingKey] {
         decoder.codingPath
     }
     var count: Int? { data.count }
-    var index: CodingKey { BasicCodingKey.index(currentIndex) }
+    var index: any CodingKey { BasicCodingKey.index(currentIndex) }
     var isAtEnd: Bool { currentIndex >= data.count }
 
     mutating func decodeNil() throws -> Bool {
@@ -26,11 +26,11 @@ extension FormDataDecoder.UnkeyedContainer: UnkeyedDecodingContainer {
         try decoderAtIndex().container(keyedBy: keyType)
     }
 
-    mutating func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer {
+    mutating func nestedUnkeyedContainer() throws -> any UnkeyedDecodingContainer {
         try decoderAtIndex().unkeyedContainer()
     }
 
-    mutating func superDecoder() throws -> Decoder {
+    mutating func superDecoder() throws -> any Decoder {
         try decoderAtIndex()
     }
 

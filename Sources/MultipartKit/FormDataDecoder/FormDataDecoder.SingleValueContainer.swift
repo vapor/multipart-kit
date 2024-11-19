@@ -6,7 +6,7 @@ extension FormDataDecoder.Decoder: SingleValueDecodingContainer {
     func decode<T: Decodable>(_: T.Type = T.self) throws -> T {
         guard
             let part = data.part,
-            let Convertible = T.self as? MultipartPartConvertible.Type
+            let Convertible = T.self as? any MultipartPartConvertible.Type
         else {
             guard previousCodingPath?.count != codingPath.count || previousType != T.self else {
                 throw DecodingError.dataCorrupted(.init(codingPath: codingPath, debugDescription: "Decoding caught in recursion loop"))

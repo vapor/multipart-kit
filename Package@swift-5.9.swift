@@ -13,8 +13,8 @@ let package = Package(
         .library(name: "MultipartKit", targets: ["MultipartKit"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.61.1"),
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.5"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.1.0"),
     ],
     targets: [
         .target(
@@ -26,6 +26,7 @@ let package = Package(
                 .product(name: "Collections", package: "swift-collections"),
             ],
             swiftSettings: [
+                .enableUpcomingFeature("ExistentialAny"),
                 .enableExperimentalFeature("StrictConcurrency=complete"),
             ]
         ),
@@ -37,6 +38,7 @@ let package = Package(
                 .copy("Utilities/image.jpeg"),
             ],
             swiftSettings: [
+                .enableUpcomingFeature("ExistentialAny"),
                 .enableExperimentalFeature("StrictConcurrency=complete"),
             ]
         ),

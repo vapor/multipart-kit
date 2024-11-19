@@ -3,7 +3,7 @@ import MultipartKit
 import NIOCore
 import NIOHTTP1
 
-class MultipartTests: XCTestCase {
+final class MultipartTests: XCTestCase {
     let named = """
     test123
     aijdisadi>SDASD<a|

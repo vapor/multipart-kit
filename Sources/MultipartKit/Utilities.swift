@@ -19,16 +19,19 @@ extension HTTPHeaders {
         defaultValue: String
     ) {
         var current: [String]
+        
         if let existing = self.headerParts(name: name) {
             current = existing.filter { !$0.hasPrefix("\(key)=") }
         } else {
             current = [defaultValue]
         }
+        
         if let value = value {
             current.append("\(key)=\"\(value)\"")
         }
-        let new = current.joined(separator: "; ")
-            .trimmingCharacters(in: .whitespaces)
+        
+        let new = current.joined(separator: "; ").trimmingCharacters(in: .whitespaces)
+        
         self.replaceOrAdd(name: name, value: new)
     }
     
