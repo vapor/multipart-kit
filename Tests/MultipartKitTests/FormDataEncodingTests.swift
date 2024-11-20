@@ -19,7 +19,7 @@ struct FormDataEncodingTests {
             var bool: Bool
         }
         let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3], bool: true)
-        let data: [UInt8] = try FormDataEncoder().encode(a, boundary: "hello")
+        let data = try FormDataEncoder().encode(a, boundary: "hello", to: [UInt8].self)
         #expect(
             data
                 == Array(
@@ -77,7 +77,7 @@ struct FormDataEncodingTests {
         }
 
         let encoder = FormDataEncoder()
-        let data: String = try encoder.encode(
+        let data = try encoder.encode(
             FormData(nestedFormdata: [
                 .init(
                     int: "1",

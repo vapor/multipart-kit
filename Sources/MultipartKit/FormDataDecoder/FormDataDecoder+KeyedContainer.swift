@@ -1,5 +1,5 @@
 extension FormDataDecoder {
-    struct KeyedContainer<K: CodingKey, Body: MultipartPartBodyElement>: Sendable {
+    struct KeyedContainer<K: CodingKey, Body: MultipartPartBodyElement> {
         let data: MultipartFormData<Body>.Keyed
         let decoder: FormDataDecoder.Decoder<Body>
     }

@@ -1,5 +1,5 @@
 extension FormDataDecoder {
-    struct Decoder<Body: MultipartPartBodyElement>: Sendable {
+    struct Decoder<Body: MultipartPartBodyElement> {
         let codingPath: [any CodingKey]
         let data: MultipartFormData<Body>
         let sendableUserInfo: [CodingUserInfoKey: any Sendable]

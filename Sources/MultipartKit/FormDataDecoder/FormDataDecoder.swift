@@ -22,7 +22,7 @@ public struct FormDataDecoder: Sendable {
         self.nestingDepth = nestingDepth
     }
 
-    /// Decodes a ``Decodable`` item from ``String`` using the supplied boundary.
+    /// Decodes a `Decodable` item from `String` using the supplied boundary.
     ///
     ///     let foo = try FormDataDecoder().decode(Foo.self, from: "...", boundary: "123")
     ///
@@ -46,8 +46,12 @@ public struct FormDataDecoder: Sendable {
     ///   - boundary: Multipart boundary to used in the decoding.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
-    public func decode<D: Decodable, Body: MultipartPartBodyElement>(_ decodable: D.Type, from buffer: Body, boundary: String) throws
-        -> D where Body: RangeReplaceableCollection, Body.SubSequence: Equatable & Sendable
+    public func decode<D: Decodable, Body: MultipartPartBodyElement>(
+        _ decodable: D.Type,
+        from buffer: Body,
+        boundary: String
+    )
+        throws -> D where Body: RangeReplaceableCollection, Body.SubSequence: Equatable & Sendable
     {
         let parts = try MultipartParser(boundary: boundary).parse(buffer)
         let data = MultipartFormData(parts: parts, nestingDepth: nestingDepth)

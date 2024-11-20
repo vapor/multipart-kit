@@ -1,5 +1,5 @@
 extension FormDataDecoder {
-    struct UnkeyedContainer<Body: MultipartPartBodyElement>: Sendable {
+    struct UnkeyedContainer<Body: MultipartPartBodyElement> {
         var currentIndex: Int = 0
         let data: [MultipartFormData<Body>]
         let decoder: FormDataDecoder.Decoder<Body>

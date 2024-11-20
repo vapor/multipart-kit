@@ -1,5 +1,5 @@
 extension FormDataEncoder {
-    struct KeyedContainer<Key: CodingKey, Body: MultipartPartBodyElement>: Sendable where Body: RangeReplaceableCollection {
+    struct KeyedContainer<Key: CodingKey, Body: MultipartPartBodyElement> where Body: RangeReplaceableCollection {
         let dataContainer = KeyedDataContainer<Body>()
         let encoder: Encoder<Body>
     }

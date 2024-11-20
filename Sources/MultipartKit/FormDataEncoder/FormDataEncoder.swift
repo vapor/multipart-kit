@@ -36,8 +36,11 @@ public struct FormDataEncoder: Sendable {
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     ///     - buffer: Buffer to write to.
     /// - throws: Any errors encoding the model with `Codable` or serializing the data.
-    public func encode<E: Encodable, Body: MultipartPartBodyElement>(_ encodable: E, boundary: String) throws -> Body
-    where Body: RangeReplaceableCollection {
+    public func encode<E: Encodable, Body: MultipartPartBodyElement>(
+        _ encodable: E,
+        boundary: String,
+        to: Body.Type = Body.self
+    ) throws -> Body where Body: RangeReplaceableCollection {
         let parts: [MultipartPart<Body>] = try self.parts(from: encodable)
         return try MultipartSerializer(boundary: boundary).serialize(parts: parts)
     }
