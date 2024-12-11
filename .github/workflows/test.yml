@@ -1,9 +1,18 @@
-name: test
-on:
-  pull_request: { branches: ['*'] }
-  push: { branches: ['main'] }
+name: CI
+
+on: pull_request
 
 jobs:
-  unit-tests:
-    uses: vapor/ci/.github/workflows/run-unit-tests.yml@main
-    secrets: inherit
+  test:
+    runs-on: ubuntu-latest
+    container: swift:latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: swift build --build-tests
+    - run: swift test --skip-build --enable-swift-testing --parallel
+  lint:
+    runs-on: ubuntu-latest
+    container: swift:latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift format lint -r -p -s .
