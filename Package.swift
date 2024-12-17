@@ -23,7 +23,8 @@ let package = Package(
                 .product(name: "NIO", package: "swift-nio"),
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "Collections", package: "swift-collections"),
-            ]
+            ],
+            exclude: ["Docs.docc"]
         ),
         .testTarget(
             name: "MultipartKitTests",
