@@ -1,7 +1,7 @@
 extension FormDataEncoder {
-    struct KeyedContainer<Key: CodingKey> {
-        let dataContainer = KeyedDataContainer()
-        let encoder: Encoder
+    struct KeyedContainer<Key: CodingKey, Body: MultipartPartBodyElement> where Body: RangeReplaceableCollection {
+        let dataContainer = KeyedDataContainer<Body>()
+        let encoder: Encoder<Body>
     }
 }
 
@@ -34,7 +34,7 @@ extension FormDataEncoder.KeyedContainer: KeyedEncodingContainerProtocol {
         encoderForKey(key)
     }
 
-    func encoderForKey(_ key: any CodingKey) -> FormDataEncoder.Encoder {
+    func encoderForKey(_ key: any CodingKey) -> FormDataEncoder.Encoder<Body> {
         let encoder = self.encoder.nested(at: key)
         dataContainer.value[key.stringValue] = encoder.storage
         return encoder

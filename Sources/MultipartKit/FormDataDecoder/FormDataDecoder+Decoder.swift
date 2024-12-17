@@ -1,15 +1,23 @@
 extension FormDataDecoder {
-    struct Decoder {
+    struct Decoder<Body: MultipartPartBodyElement> {
         let codingPath: [any CodingKey]
-        let data: MultipartFormData
-        let userInfo: [CodingUserInfoKey: Any]
+        let data: MultipartFormData<Body>
+        let sendableUserInfo: [CodingUserInfoKey: any Sendable]
         let previousCodingPath: [any CodingKey]?
         let previousType: (any Decodable.Type)?
 
-        init(codingPath: [any CodingKey], data: MultipartFormData, userInfo: [CodingUserInfoKey: Any], previousCodingPath: [any CodingKey]? = nil, previousType: (any Decodable.Type)? = nil) {
+        var userInfo: [CodingUserInfoKey: Any] { sendableUserInfo }
+
+        init(
+            codingPath: [any CodingKey],
+            data: MultipartFormData<Body>,
+            userInfo: [CodingUserInfoKey: any Sendable] = [:],
+            previousCodingPath: [any CodingKey]? = nil,
+            previousType: (any Decodable.Type)? = nil
+        ) {
             self.codingPath = codingPath
             self.data = data
-            self.userInfo = userInfo
+            self.sendableUserInfo = userInfo
             self.previousCodingPath = previousCodingPath
             self.previousType = previousType
         }
@@ -37,41 +45,42 @@ extension FormDataDecoder.Decoder: Decoder {
 }
 
 extension FormDataDecoder.Decoder {
-    func nested(at key: any CodingKey, with data: MultipartFormData) -> Self {
-        .init(codingPath: codingPath + [key], data: data, userInfo: userInfo)
+    func nested(at key: any CodingKey, with data: MultipartFormData<Body>) -> Self {
+        .init(codingPath: codingPath + [key], data: data, userInfo: sendableUserInfo)
     }
 }
 
-private extension FormDataDecoder.Decoder {
-    func decodingError(expectedType: String) -> any Error {
+extension FormDataDecoder.Decoder {
+    fileprivate func decodingError(expectedType: String) -> any Error {
         let encounteredType: Any.Type
         let encounteredTypeDescription: String
 
         switch data {
         case .nestingDepthExceeded:
-            return DecodingError.dataCorrupted(.init(
-                codingPath: codingPath,
-                debugDescription: "Nesting depth exceeded while expecting \(expectedType).",
-                underlyingError: nil
-            ))
+            return DecodingError.dataCorrupted(
+                .init(
+                    codingPath: codingPath,
+                    debugDescription: "Nesting depth exceeded while expecting \(expectedType).",
+                    underlyingError: nil
+                ))
         case .array:
-            encounteredType = [MultipartFormData].self
+            encounteredType = [MultipartFormData<Body>].self
             encounteredTypeDescription = "array"
         case .keyed:
-            encounteredType = MultipartFormData.Keyed.self
+            encounteredType = MultipartFormData<Body>.Keyed.self
             encounteredTypeDescription = "dictionary"
         case .single:
-            encounteredType = MultipartPart.self
+            encounteredType = MultipartPart<Body>.self
             encounteredTypeDescription = "single value"
         }
 
         return DecodingError.typeMismatch(
             encounteredType,
-                .init(
-                    codingPath: codingPath,
-                    debugDescription: "Expected \(expectedType) but encountered \(encounteredTypeDescription).",
-                    underlyingError: nil
-                )
+            .init(
+                codingPath: codingPath,
+                debugDescription: "Expected \(expectedType) but encountered \(encounteredTypeDescription).",
+                underlyingError: nil
+            )
         )
     }
 }

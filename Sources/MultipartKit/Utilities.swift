@@ -1,43 +1,41 @@
 import Foundation
-import NIOHTTP1
+import HTTPTypes
 
-extension HTTPHeaders {
-    func getParameter(_ name: String, _ key: String) -> String? {
-        return self.headerParts(name: name).flatMap {
-            $0.filter { $0.hasPrefix("\(key)=") }
-                .first?
-                .split(separator: "=")
-                .last
-                .flatMap { $0 .trimmingCharacters(in: .quotes)}
-        }
+extension HTTPFields {
+    func getParameter(_ name: HTTPField.Name, _ key: String) -> String? {
+        headerParts(name: name)?
+            .filter { $0.contains("\(key)=") }
+            .first?
+            .split(separator: "=")
+            .last?
+            .trimmingCharacters(in: .quotes)
     }
-    
+
     mutating func setParameter(
-        _ name: String,
+        _ name: HTTPField.Name,
         _ key: String,
         to value: String?,
         defaultValue: String
     ) {
         var current: [String]
-        
+
         if let existing = self.headerParts(name: name) {
             current = existing.filter { !$0.hasPrefix("\(key)=") }
         } else {
             current = [defaultValue]
         }
-        
+
         if let value = value {
             current.append("\(key)=\"\(value)\"")
         }
-        
+
         let new = current.joined(separator: "; ").trimmingCharacters(in: .whitespaces)
-        
-        self.replaceOrAdd(name: name, value: new)
+
+        self[name] = new
     }
-    
-    func headerParts(name: String) -> [String]? {
-        return self[name]
-            .first
+
+    func headerParts(name: HTTPField.Name) -> [String]? {
+        self[name]
             .flatMap {
                 $0.split(separator: ";")
                     .map { $0.trimmingCharacters(in: .whitespaces) }

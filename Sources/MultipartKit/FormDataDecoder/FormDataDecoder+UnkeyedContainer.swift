@@ -1,8 +1,8 @@
 extension FormDataDecoder {
-    struct UnkeyedContainer {
+    struct UnkeyedContainer<Body: MultipartPartBodyElement> {
         var currentIndex: Int = 0
-        let data: [MultipartFormData]
-        let decoder: FormDataDecoder.Decoder
+        let data: [MultipartFormData<Body>]
+        let decoder: FormDataDecoder.Decoder<Body>
     }
 }
 
@@ -34,15 +34,15 @@ extension FormDataDecoder.UnkeyedContainer: UnkeyedDecodingContainer {
         try decoderAtIndex()
     }
 
-    mutating func decoderAtIndex() throws -> FormDataDecoder.Decoder {
+    mutating func decoderAtIndex() throws -> FormDataDecoder.Decoder<Body> {
         defer { currentIndex += 1 }
         return try decoder.nested(at: index, with: getValue())
     }
 
-    mutating func getValue() throws -> MultipartFormData {
+    mutating func getValue() throws -> MultipartFormData<Body> {
         guard !isAtEnd else {
             throw DecodingError.valueNotFound(
-                FormDataDecoder.Decoder.self,
+                FormDataDecoder.Decoder<Body>.self,
                 .init(
                     codingPath: codingPath,
                     debugDescription: "Unkeyed container is at end.",

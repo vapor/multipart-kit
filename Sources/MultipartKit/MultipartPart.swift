@@ -1,63 +1,30 @@
-import NIOCore
-import NIOHTTP1
-import Foundation
+import HTTPTypes
 
-/// A single part of a `multipart`-encoded message.
-public struct MultipartPart: Equatable, Sendable {
-    /// The part's headers.
-    public var headers: HTTPHeaders
+public typealias MultipartPartBodyElement = Collection<UInt8> & Equatable & Sendable
 
-    /// The part's raw data.
-    public var body: ByteBuffer
-    
-    /// Gets or sets the `name` attribute from the part's `"Content-Disposition"` header.
-    public var name: String? {
-        get { self.headers.getParameter("Content-Disposition", "name") }
-        set { self.headers.setParameter("Content-Disposition", "name", to: newValue, defaultValue: "form-data") }
-    }
+/// Represents a single part of a multipart-encoded message.
+public struct MultipartPart<Body: MultipartPartBodyElement>: Equatable, Sendable {
+    /// The header fields for this part.
+    public var headerFields: HTTPFields
 
-    /// Creates a new `MultipartPart`.
-    ///
-    ///     let part = MultipartPart(headers: ["Content-Type": "text/plain"], body: "hello")
-    ///
-    /// - parameters:
-    ///     - headers: The part's headers.
-    ///     - body: The part's data.
-    public init(headers: HTTPHeaders = .init(), body: String) {
-        self.init(headers: headers, body: [UInt8](body.utf8))
-    }
+    /// The body of this part.
+    public var body: Body
 
-    /// Creates a new `MultipartPart`.
+    /// Creates a new ``MultipartPart``.
     ///
-    ///     let part = MultipartPart(headers: ["Content-Type": "text/plain"], body: "hello")
+    ///     let part = MultipartPart(headerFields: [.contentDisposition: "form-data"], body: Array("Hello, world!".utf8))
     ///
-    /// - parameters:
-    ///     - headers: The part's headers.
-    ///     - body: The part's data.
-    public init<Data>(headers: HTTPHeaders = .init(), body: Data)
-        where Data: DataProtocol
-    {
-        var buffer = ByteBufferAllocator().buffer(capacity: body.count)
-        buffer.writeBytes(body)
-        self.init(headers: headers, body: buffer)
-    }
-    
-    public init(headers: HTTPHeaders = .init(), body: ByteBuffer) {
-        self.headers = headers
+    /// - Parameters:
+    ///  - headerFields: The header fields for this part.
+    ///  - body: The body of this part.
+    public init(headerFields: HTTPFields, body: Body) {
+        self.headerFields = headerFields
         self.body = body
     }
-}
 
-// MARK: Array Extensions
-
-extension Array where Element == MultipartPart {
-    /// Returns the first `MultipartPart` with matching name attribute in `"Content-Disposition"` header.
-    public func firstPart(named name: String) -> MultipartPart? {
-        self.first { $0.name == name }
-    }
-
-    /// Returns all `MultipartPart`s with matching name attribute in `"Content-Disposition"` header.
-    public func allParts(named name: String) -> [MultipartPart] {
-        self.filter { $0.name == name }
+    /// Gets or sets the `name` attribute of the part's `"Content-Disposition"` header.
+    public var name: String? {
+        get { self.headerFields.getParameter(.contentDisposition, "name") }
+        set { self.headerFields.setParameter(.contentDisposition, "name", to: newValue, defaultValue: "form-data") }
     }
 }
