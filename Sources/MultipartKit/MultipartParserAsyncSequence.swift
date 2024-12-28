@@ -1,3 +1,5 @@
+import HTTPTypes
+
 /// A sequence that parses a stream of multipart data into sections asynchronously.
 ///
 /// This sequence is designed to be used with `AsyncStream` to parse a stream of data asynchronously.
@@ -41,10 +43,13 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
 
         private var parser: MultipartParser<BackingSequence.Element>
         private var iterator: BackingSequence.AsyncIterator
+        
+        private var currentCollatedBody: BackingSequence.Element
 
         init(parser: MultipartParser<BackingSequence.Element>, iterator: BackingSequence.AsyncIterator) {
             self.parser = parser
             self.iterator = iterator
+            self.currentCollatedBody = .init()
         }
 
         public mutating func next() async throws -> MultipartSection<BackingSequence.Element>? {
@@ -66,6 +71,31 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
                     return nil
                 }
             }
+        }
+
+        public mutating func nextCollatedPart() async throws -> MultipartSection<BackingSequence.Element>? {
+            var headerFields = HTTPFields()
+            
+            while let part = try await next() {
+                switch part {
+                case .headerFields(let fields):
+                    headerFields.append(contentsOf: fields)
+                case .bodyChunk(let chunk):
+                    self.currentCollatedBody.append(contentsOf: chunk)
+                    if !headerFields.isEmpty {
+                        let returningFields = headerFields
+                        headerFields = .init()
+                        return .headerFields(returningFields)
+                    }
+                case .boundary:
+                    if !currentCollatedBody.isEmpty {
+                        let returningBody = currentCollatedBody
+                        currentCollatedBody = .init()
+                        return .bodyChunk(returningBody)
+                    }
+                }
+            }
+            return nil
         }
     }
 }

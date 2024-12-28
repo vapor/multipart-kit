@@ -1,7 +1,7 @@
 import Collections
 import Synchronization
 
-final class Storage<Body: MultipartPartBodyElement> {    
+final class Storage<Body: MultipartPartBodyElement> {
     var dataContainer: (any DataContainer<Body>)?
 
     var data: MultipartFormData<Body>? {

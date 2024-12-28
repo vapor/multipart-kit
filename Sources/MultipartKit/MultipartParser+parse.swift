@@ -6,7 +6,7 @@ extension MultipartParser {
         var output: [MultipartPart<Body>] = []
         var parser = MultipartParser(boundary: self.boundary)
 
-        var currentHeaders: HTTPFields?
+        var currentHeaders: HTTPFields = .init()
         var currentBody = Body()
 
         // Append data to the parser and process the sections
@@ -21,12 +21,8 @@ extension MultipartParser {
                 case .some(let part):
                     switch part {
                     case .headerFields(let newFields):
-                        if let headers = currentHeaders {
-                            // Merge multiple header fields into the current headers
-                            currentHeaders = HTTPFields(headers + newFields)
-                        } else {
-                            currentHeaders = newFields
-                        }
+                        // Accumulate headers
+                        currentHeaders.append(contentsOf: newFields)
                     case .bodyChunk(let bodyChunk):
                         // Accumulate body chunks
                         currentBody.append(contentsOf: bodyChunk)
@@ -36,8 +32,8 @@ extension MultipartParser {
                             output.append(MultipartPart(headerFields: headers, body: currentBody))
                         }
                         // Reset for the next part
-                        currentHeaders = nil
-                        currentBody = Body()
+                        currentHeaders = .init()
+                        currentBody = .init()
                     }
                 }
             case .needMoreData:
