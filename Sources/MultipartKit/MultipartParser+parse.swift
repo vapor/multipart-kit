@@ -28,8 +28,8 @@ extension MultipartParser {
                         currentBody.append(contentsOf: bodyChunk)
                     case .boundary:
                         // Create a MultipartPart when reaching a boundary
-                        if let headers = currentHeaders {
-                            output.append(MultipartPart(headerFields: headers, body: currentBody))
+                        if !currentHeaders.isEmpty {
+                            output.append(MultipartPart(headerFields: currentHeaders, body: currentBody))
                         }
                         // Reset for the next part
                         currentHeaders = .init()
@@ -43,8 +43,8 @@ extension MultipartParser {
                 throw error
             case .finished:
                 // If finished, add any remaining part
-                if let headers = currentHeaders {
-                    output.append(MultipartPart(headerFields: headers, body: currentBody))
+                if !currentHeaders.isEmpty {
+                    output.append(MultipartPart(headerFields: currentHeaders, body: currentBody))
                 }
                 return output
             }
