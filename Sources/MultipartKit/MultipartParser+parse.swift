@@ -6,43 +6,43 @@ extension MultipartParser {
         var output: [MultipartPart<Body>] = []
         var parser = MultipartParser(boundary: self.boundary)
 
-        var currentHeaders: HTTPFields = .init()
+        var currentHeaders = HTTPFields()
         var currentBody = Body()
 
-        // Append data to the parser and process the sections
+        // Append all data at once since this is synchronous
         parser.append(buffer: data)
 
         while true {
             switch parser.read() {
             case .success(let optionalPart):
-                switch optionalPart {
-                case .none:
-                    continue
-                case .some(let part):
-                    switch part {
-                    case .headerFields(let newFields):
-                        // Accumulate headers
-                        currentHeaders.append(contentsOf: newFields)
-                    case .bodyChunk(let bodyChunk):
-                        // Accumulate body chunks
-                        currentBody.append(contentsOf: bodyChunk)
-                    case .boundary:
-                        // Create a MultipartPart when reaching a boundary
-                        if !currentHeaders.isEmpty {
-                            output.append(MultipartPart(headerFields: currentHeaders, body: currentBody))
-                        }
-                        // Reset for the next part
-                        currentHeaders = .init()
-                        currentBody = .init()
+                guard let part = optionalPart else { continue }
+
+                switch part {
+                case .headerFields(let newFields):
+                    currentHeaders.append(contentsOf: newFields)
+
+                case .bodyChunk(let bodyChunk):
+                    currentBody.append(contentsOf: bodyChunk)
+
+                case .boundary:
+                    if !currentHeaders.isEmpty {
+                        output.append(MultipartPart(headerFields: currentHeaders, body: currentBody))
+                        // Reset for next part
+                        currentHeaders = HTTPFields()
+                        currentBody = Body()
                     }
                 }
+
             case .needMoreData:
-                // No more data is available in synchronous parsing, this should never happen
-                preconditionFailure("More data is needed")
+                // In synchronous parsing with all data provided upfront,
+                // needing more data indicates an incomplete/corrupted message
+                throw MultipartParserSequenceError.unexpectedEndOfFile
+
             case .error(let error):
                 throw error
+
             case .finished:
-                // If finished, add any remaining part
+                // Add final part if exists
                 if !currentHeaders.isEmpty {
                     output.append(MultipartPart(headerFields: currentHeaders, body: currentBody))
                 }

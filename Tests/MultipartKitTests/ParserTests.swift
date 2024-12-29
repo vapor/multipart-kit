@@ -104,6 +104,55 @@ struct ParserTests {
             ])
     }
 
+    @Test("Parse Corrupted Message")
+    func parseCorruptedMessage() async throws {
+        let boundary = "boundary123"
+        let message = ArraySlice(
+            """
+            --\(boundary)\r
+            Content-Disp
+            """.utf8
+        )
+
+        #expect(throws: MultipartParserSequenceError.unexpectedEndOfFile) {
+            _ = try MultipartParser<[UInt8]>(boundary: boundary)
+                .parse([UInt8](message))
+        }
+
+        let stream = makeParsingStream(for: message)
+        var iterator = MultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
+
+        await #expect(throws: MultipartParserSequenceError.unexpectedEndOfFile) {
+            while (try await iterator.next()) != nil {}
+        }
+    }
+
+    @Test("Parse Message with invalid header name")
+    func parseInvalidHeader() async throws {
+        let boundary = "boundary123"
+        let message = ArraySlice(
+            """
+            --\(boundary)\r
+            Content-Typ€: text/plain\r
+            \r
+            --\(boundary)--\r\n
+            """.utf8
+        )
+
+        #expect(throws: MultipartParserError.invalidHeader(reason: "Invalid header name")) {
+            _ = try MultipartParser<[UInt8]>(boundary: boundary)
+                .parse([UInt8](message))
+        }
+
+        let stream = makeParsingStream(for: message)
+        var iterator = MultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
+
+        await #expect(throws: MultipartParserError.invalidHeader(reason: "Invalid header name")) {
+            while (try await iterator.next()) != nil {}
+        }
+
+    }
+
     @Test("Parse non ASCII header")
     func parseNonASCIIHeader() async throws {
         let filename = "Non-ASCII filé namé.txt"
@@ -120,8 +169,7 @@ struct ParserTests {
         let sequence = MultipartParserAsyncSequence(boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn", buffer: stream)
 
         for try await part in sequence {
-            if
-                case let .headerFields(fields) = part,
+            if case let .headerFields(fields) = part,
                 let contentDispositionField = fields.first(where: { $0.name == .contentDisposition })
             {
                 #expect(contentDispositionField.value.contains(filename))

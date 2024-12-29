@@ -2,12 +2,6 @@ import HTTPTypes
 
 /// Parses any kind of multipart encoded data into ``MultipartSection``s.
 public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeReplaceableCollection {
-    enum Error: Swift.Error, Equatable {
-        case invalidBoundary
-        case invalidHeader(reason: String)
-        case invalidBody(reason: String)
-    }
-
     enum State: Equatable {
         enum Part: Equatable {
             case boundary
@@ -21,7 +15,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
     }
 
     let boundary: ArraySlice<UInt8>
-    private var state: State
+    private(set) var state: State
 
     init(boundary: some Collection<UInt8>) {
         self.boundary = .init(boundary)
@@ -36,7 +30,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
     enum ReadResult {
         case finished
         case success(reading: MultipartSection<Body>? = nil)
-        case error(Error)
+        case error(MultipartParserError)
         case needMoreData
     }
 
@@ -73,7 +67,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
     private mutating func parseBoundary(from buffer: ArraySlice<UInt8>) -> ReadResult {
         switch buffer.getIndexAfter(boundary) {
         case .wrongCharacter:  // the boundary is unexpected
-            return .error(Error.invalidBoundary)
+            return .error(.invalidBoundary)
         case .prematureEnd:  // ask for more data and retry
             self.state = .parsing(.boundary, buffer)
             return .needMoreData

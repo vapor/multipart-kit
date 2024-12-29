@@ -43,7 +43,7 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
 
         private var parser: MultipartParser<BackingSequence.Element>
         private var iterator: BackingSequence.AsyncIterator
-        
+
         private var currentCollatedBody: BackingSequence.Element
 
         init(parser: MultipartParser<BackingSequence.Element>, iterator: BackingSequence.AsyncIterator) {
@@ -61,10 +61,16 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
                     case .some(let part): return part
                     }
                 case .needMoreData:
-                    guard let next = try await iterator.next() else {
-                        return nil
+                    if let next = try await iterator.next() {
+                        parser.append(buffer: next)
+                    } else {
+                        switch parser.state {
+                        case .initial, .finished:
+                            return nil
+                        case .parsing:
+                            throw MultipartParserSequenceError.unexpectedEndOfFile
+                        }
                     }
-                    parser.append(buffer: next)
                 case .error(let error):
                     throw error
                 case .finished:
@@ -75,7 +81,7 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
 
         public mutating func nextCollatedPart() async throws -> MultipartSection<BackingSequence.Element>? {
             var headerFields = HTTPFields()
-            
+
             while let part = try await next() {
                 switch part {
                 case .headerFields(let fields):
