@@ -151,7 +151,7 @@ struct ParserTests {
         }
     }
 
-    @Test("Parse Message with invalid header name")
+    @Test("Parse Message with Invalid Header Name")
     func parseInvalidHeader() async throws {
         let boundary = "boundary123"
         let message = ArraySlice(
@@ -163,7 +163,7 @@ struct ParserTests {
             """.utf8
         )
 
-        #expect(throws: MultipartMessageError.invalidHeader(reason: "Invalid header name")) {
+        #expect(throws: MultipartParserError.invalidHeader(reason: "Invalid header name")) {
             _ = try MultipartParser<[UInt8]>(boundary: boundary)
                 .parse([UInt8](message))
         }
@@ -171,12 +171,12 @@ struct ParserTests {
         let stream = makeParsingStream(for: message)
         var iterator = MultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
 
-        await #expect(throws: MultipartMessageError.invalidHeader(reason: "Invalid header name")) {
+        await #expect(throws: MultipartParserError.invalidHeader(reason: "Invalid header name")) {
             while (try await iterator.next()) != nil {}
         }
     }
 
-    @Test("Parse non ASCII header")
+    @Test("Parse non-ASCII header")
     func parseNonASCIIHeader() async throws {
         let filename = "Non-ASCII filé namé.txt"
         let data = ArraySlice(
@@ -197,6 +197,32 @@ struct ParserTests {
             {
                 #expect(contentDispositionField.value.contains(filename))
             }
+        }
+    }
+
+    @Test("Parse Message Missing Final Boundary")
+    func parseMissingFinalBoundary() async throws {
+        let boundary = "boundary123"
+        let message = ArraySlice(
+            """
+            --\(boundary)\r
+            Content-Disposition: form-data; name="id"\r
+            Content-Type: text/plain\r
+            \r
+            123e4567-e89b-12d3-a456-426655440000\r
+            """.utf8
+        )
+
+        #expect(throws: MultipartMessageError.unexpectedEndOfFile) {
+            _ = try MultipartParser<[UInt8]>(boundary: boundary)
+                .parse([UInt8](message))
+        }
+
+        let stream = makeParsingStream(for: message)
+        var iterator = MultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
+
+        await #expect(throws: MultipartMessageError.unexpectedEndOfFile) {
+            while (try await iterator.next()) != nil {}
         }
     }
 
