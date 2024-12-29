@@ -68,7 +68,7 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
                         case .initial, .finished:
                             return nil
                         case .parsing:
-                            throw MultipartParserSequenceError.unexpectedEndOfFile
+                            throw MultipartMessageError.unexpectedEndOfFile
                         }
                     }
                 case .error(let error):

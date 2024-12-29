@@ -104,6 +104,30 @@ struct ParserTests {
             ])
     }
 
+    @Test("Parse Synchronously")
+    func parseSynchronously() async throws {
+        let boundary = "boundary123"
+        let message = """
+            --\(boundary)\r
+            Content-Disposition: form-data; name="id"\r
+            Content-Type: text/plain\r
+            \r
+            123e4567-e89b-12d3-a456-426655440000\r
+            --\(boundary)--
+            """
+
+        let parts = try MultipartParser<[UInt8]>(boundary: boundary)
+            .parse([UInt8](message.utf8))
+
+        #expect(parts.count == 1)
+        #expect(
+            parts[0].headerFields == [
+                .contentDisposition: "form-data; name=\"id\"",
+                .contentType: "text/plain",
+            ])
+        #expect(parts[0].body == Array("123e4567-e89b-12d3-a456-426655440000".utf8))
+    }
+
     @Test("Parse Corrupted Message")
     func parseCorruptedMessage() async throws {
         let boundary = "boundary123"
@@ -114,7 +138,7 @@ struct ParserTests {
             """.utf8
         )
 
-        #expect(throws: MultipartParserSequenceError.unexpectedEndOfFile) {
+        #expect(throws: MultipartMessageError.unexpectedEndOfFile) {
             _ = try MultipartParser<[UInt8]>(boundary: boundary)
                 .parse([UInt8](message))
         }
@@ -122,7 +146,7 @@ struct ParserTests {
         let stream = makeParsingStream(for: message)
         var iterator = MultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
 
-        await #expect(throws: MultipartParserSequenceError.unexpectedEndOfFile) {
+        await #expect(throws: MultipartMessageError.unexpectedEndOfFile) {
             while (try await iterator.next()) != nil {}
         }
     }
@@ -139,7 +163,7 @@ struct ParserTests {
             """.utf8
         )
 
-        #expect(throws: MultipartParserError.invalidHeader(reason: "Invalid header name")) {
+        #expect(throws: MultipartMessageError.invalidHeader(reason: "Invalid header name")) {
             _ = try MultipartParser<[UInt8]>(boundary: boundary)
                 .parse([UInt8](message))
         }
@@ -147,10 +171,9 @@ struct ParserTests {
         let stream = makeParsingStream(for: message)
         var iterator = MultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
 
-        await #expect(throws: MultipartParserError.invalidHeader(reason: "Invalid header name")) {
+        await #expect(throws: MultipartMessageError.invalidHeader(reason: "Invalid header name")) {
             while (try await iterator.next()) != nil {}
         }
-
     }
 
     @Test("Parse non ASCII header")
@@ -175,30 +198,6 @@ struct ParserTests {
                 #expect(contentDispositionField.value.contains(filename))
             }
         }
-    }
-
-    @Test("Parse Synchronously")
-    func parseSynchronously() async throws {
-        let boundary = "boundary123"
-        let message = """
-            --\(boundary)\r
-            Content-Disposition: form-data; name="id"\r
-            Content-Type: text/plain\r
-            \r
-            123e4567-e89b-12d3-a456-426655440000\r
-            --\(boundary)--
-            """
-
-        let parts = try MultipartParser<[UInt8]>(boundary: boundary)
-            .parse([UInt8](message.utf8))
-
-        #expect(parts.count == 1)
-        #expect(
-            parts[0].headerFields == [
-                .contentDisposition: "form-data; name=\"id\"",
-                .contentType: "text/plain",
-            ])
-        #expect(parts[0].body == Array("123e4567-e89b-12d3-a456-426655440000".utf8))
     }
 
     private func makeParsingStream<Body: MultipartPartBodyElement>(for message: Body) -> AsyncStream<Body.SubSequence>

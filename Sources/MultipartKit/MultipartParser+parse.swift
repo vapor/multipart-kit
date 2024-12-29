@@ -36,7 +36,7 @@ extension MultipartParser {
             case .needMoreData:
                 // In synchronous parsing with all data provided upfront,
                 // needing more data indicates an incomplete/corrupted message
-                throw MultipartParserSequenceError.unexpectedEndOfFile
+                throw MultipartMessageError.unexpectedEndOfFile
 
             case .error(let error):
                 throw error
