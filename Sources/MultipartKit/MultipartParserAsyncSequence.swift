@@ -1,9 +1,10 @@
 import HTTPTypes
 
-/// A sequence that parses a stream of multipart data into sections asynchronously.
+/// A sequence that parses a stream of multipart data into parts asynchronously.
 ///
 /// This sequence is designed to be used with `AsyncStream` to parse a stream of data asynchronously.
-/// The sequence will yield ``MultipartSection`` values as they are parsed from the stream.
+/// Different to the ``StreamingMultipartParserAsyncSequence``, this sequence will collate the body
+/// chunks into one section rather than yielding them individually.
 ///
 ///     let boundary = "boundary123"
 ///     var message = ArraySlice(...)
@@ -26,63 +27,20 @@ import HTTPTypes
 ///
 public struct MultipartParserAsyncSequence<BackingSequence: AsyncSequence>: AsyncSequence
 where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollection {
-    private let parser: MultipartParser<BackingSequence.Element>
-    private let buffer: BackingSequence
+    let streamingSequence: StreamingMultipartParserAsyncSequence<BackingSequence>
 
     public init(boundary: String, buffer: BackingSequence) {
-        self.parser = .init(boundary: boundary)
-        self.buffer = buffer
+        self.streamingSequence = .init(boundary: boundary, buffer: buffer)
     }
 
-    public func makeAsyncIterator() -> Iterator {
-        Iterator(parser: parser, iterator: buffer.makeAsyncIterator())
-    }
-
-    public struct Iterator: AsyncIteratorProtocol {
-        public typealias Element = MultipartSection<BackingSequence.Element>
-
-        private var parser: MultipartParser<BackingSequence.Element>
-        private var iterator: BackingSequence.AsyncIterator
-
-        private var currentCollatedBody: BackingSequence.Element
-
-        init(parser: MultipartParser<BackingSequence.Element>, iterator: BackingSequence.AsyncIterator) {
-            self.parser = parser
-            self.iterator = iterator
-            self.currentCollatedBody = .init()
-        }
-
+    public struct AsyncIterator: AsyncIteratorProtocol {
+        var streamingIterator: StreamingMultipartParserAsyncSequence<BackingSequence>.AsyncIterator
+        var currentCollatedBody: BackingSequence.Element = .init()
+        
         public mutating func next() async throws -> MultipartSection<BackingSequence.Element>? {
-            while true {
-                switch parser.read() {
-                case .success(let optionalPart):
-                    switch optionalPart {
-                    case .none: continue
-                    case .some(let part): return part
-                    }
-                case .needMoreData:
-                    if let next = try await iterator.next() {
-                        parser.append(buffer: next)
-                    } else {
-                        switch parser.state {
-                        case .initial, .finished:
-                            return nil
-                        case .parsing:
-                            throw MultipartMessageError.unexpectedEndOfFile
-                        }
-                    }
-                case .error(let error):
-                    throw error
-                case .finished:
-                    return nil
-                }
-            }
-        }
-
-        public mutating func nextCollatedPart() async throws -> MultipartSection<BackingSequence.Element>? {
             var headerFields = HTTPFields()
 
-            while let part = try await next() {
+            while let part = try await streamingIterator.next() {
                 switch part {
                 case .headerFields(let fields):
                     headerFields.append(contentsOf: fields)
@@ -103,5 +61,9 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
             }
             return nil
         }
+    }
+
+    public func makeAsyncIterator() -> AsyncIterator {
+        .init(streamingIterator: self.streamingSequence.makeAsyncIterator())
     }
 }

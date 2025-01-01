@@ -26,7 +26,7 @@ extension MultipartParser {
 
                 case .boundary:
                     if !currentHeaders.isEmpty {
-                        try output.append(MultipartPart(headerFields: currentHeaders, body: currentBody))
+                        output.append(MultipartPart(headerFields: currentHeaders, body: currentBody))
                         // Reset for next part
                         currentHeaders = HTTPFields()
                         currentBody = Body()
@@ -44,7 +44,7 @@ extension MultipartParser {
             case .finished:
                 // Add final part if exists
                 if !currentHeaders.isEmpty {
-                    try output.append(MultipartPart(headerFields: currentHeaders, body: currentBody))
+                    output.append(MultipartPart(headerFields: currentHeaders, body: currentBody))
                 }
                 return output
             }

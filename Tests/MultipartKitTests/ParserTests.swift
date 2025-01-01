@@ -31,7 +31,7 @@ struct ParserTests {
         message.append(contentsOf: "\r\n--\(boundary)--".utf8)
 
         let stream = makeParsingStream(for: message)
-        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: stream)
+        let sequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: stream)
 
         var parts: [MultipartSection<ArraySlice<UInt8>>] = []
         for try await part in sequence {
@@ -87,10 +87,10 @@ struct ParserTests {
         message.append(contentsOf: "\r\n--\(boundary)--".utf8)
 
         let stream = makeParsingStream(for: message)
-        var iterator = MultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
+        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: stream)
 
         var parts: [MultipartSection<ArraySlice<UInt8>>] = []
-        while let part = try await iterator.nextCollatedPart() {
+        for try await part in sequence {
             parts.append(part)
         }
 
@@ -144,7 +144,7 @@ struct ParserTests {
         }
 
         let stream = makeParsingStream(for: message)
-        var iterator = MultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
+        var iterator = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
 
         await #expect(throws: MultipartMessageError.unexpectedEndOfFile) {
             while (try await iterator.next()) != nil {}
@@ -169,7 +169,7 @@ struct ParserTests {
         }
 
         let stream = makeParsingStream(for: message)
-        var iterator = MultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
+        var iterator = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
 
         await #expect(throws: MultipartParserError.invalidHeader(reason: "Invalid header name")) {
             while (try await iterator.next()) != nil {}
@@ -189,7 +189,7 @@ struct ParserTests {
             """.utf8)
 
         let stream = makeParsingStream(for: data)
-        let sequence = MultipartParserAsyncSequence(boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn", buffer: stream)
+        let sequence = StreamingMultipartParserAsyncSequence(boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn", buffer: stream)
 
         for try await part in sequence {
             if case let .headerFields(fields) = part,
@@ -219,7 +219,7 @@ struct ParserTests {
         }
 
         let stream = makeParsingStream(for: message)
-        var iterator = MultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
+        var iterator = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
 
         await #expect(throws: MultipartMessageError.unexpectedEndOfFile) {
             while (try await iterator.next()) != nil {}
