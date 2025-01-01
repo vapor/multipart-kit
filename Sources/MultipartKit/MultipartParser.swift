@@ -23,7 +23,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
     }
 
     public init(boundary: String) {
-        self.boundary = [45, 45] + ArraySlice(boundary.utf8)
+        self.boundary = .twoHyphens + ArraySlice(boundary.utf8)
         self.state = .initial
     }
 
@@ -72,7 +72,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
             self.state = .parsing(.boundary, buffer)
             return .needMoreData
         case let .success(index):
-            switch buffer[index...].getIndexAfter([45, 45]) {  // check if it's the final boundary (ends with "--")
+            switch buffer[index...].getIndexAfter(.twoHyphens) {  // check if it's the final boundary (ends with "--")
             case .success:  // if it is, finish
                 self.state = .finished
                 return .success(reading: .boundary(end: true))
@@ -87,7 +87,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
 
     private mutating func parseBody(from buffer: ArraySlice<UInt8>) -> ReadResult {
         // read until CRLF
-        switch buffer.getFirstRange(of: [13, 10] + boundary) {
+        switch buffer.getFirstRange(of: .crlf + boundary) {
         case .prematureEnd:  // found part of body end, request more data
             self.state = .parsing(.body, buffer)
             return .needMoreData
@@ -109,7 +109,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
     private mutating func parseHeader(from buffer: ArraySlice<UInt8>) -> ReadResult {
         // check for CRLF
         let indexAfterFirstCRLF: ArraySlice<UInt8>.Index
-        switch buffer.getIndexAfter([13, 10]) {
+        switch buffer.getIndexAfter(.crlf) {
         case .success(let index):
             indexAfterFirstCRLF = index
             self.state = .parsing(.header, buffer[index...])
@@ -121,7 +121,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
         }
 
         // check for second CRLF (end of headers)
-        switch buffer[indexAfterFirstCRLF...].getIndexAfter([13, 10]) {
+        switch buffer[indexAfterFirstCRLF...].getIndexAfter(.crlf) {
         case .success(let index):  // end of headers found, move to body
             self.state = .parsing(.body, buffer[index...])
             return .success()
@@ -135,7 +135,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
         // read the header name until ":" or CR
         guard
             let endOfHeaderNameIndex = buffer[indexAfterFirstCRLF...].firstIndex(where: { element in
-                element == 58 || element == 13  // ":" || CR
+                element == .colon || element == .cr
             })
         else {
             self.state = .parsing(.header, buffer)
@@ -147,7 +147,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
 
         // there should be a colon and space after the header name
         let indexAfterColonAndSpace: ArraySlice<UInt8>.Index
-        switch headerWithoutName.getIndexAfter([58, 32]) {  // ": "
+        switch headerWithoutName.getIndexAfter([.colon, .space]) {  // ": "
         case .wrongCharacter(at: let index):
             return .error(.invalidHeader(reason: "Expected ': ' after header name, found \(Character(UnicodeScalar(buffer[index])))"))
         case .prematureEnd:
@@ -159,7 +159,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
 
         // read the header value until CRLF
         let headerValue: ArraySlice<UInt8>
-        switch buffer[indexAfterColonAndSpace...].getFirstRange(of: [13, 10]) {
+        switch buffer[indexAfterColonAndSpace...].getFirstRange(of: .crlf) {
         case .success(let range):
             headerValue = buffer[indexAfterColonAndSpace..<range.lowerBound]
         case .notFound, .prematureEnd:
