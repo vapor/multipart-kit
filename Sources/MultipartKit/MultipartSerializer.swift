@@ -52,16 +52,22 @@ public struct MultipartSerializer: Sendable {
         parts: [MultipartPart<some MultipartPartBodyElement>],
         into buffer: inout OutputBody
     ) throws where OutputBody: RangeReplaceableCollection {
-        let crlf = Array("\r\n".utf8)
         for part in parts {
-            buffer.append(contentsOf: Array("--\(boundary)".utf8) + crlf)
+            buffer.append(.hyphen)
+            buffer.append(.hyphen)
+            buffer.append(contentsOf: boundary.utf8)
+            buffer.append(contentsOf: ArraySlice<UInt8>.crlf)
             for field in part.headerFields {
-                buffer.append(contentsOf: Array("\(field.description)".utf8) + crlf)
+                buffer.append(contentsOf: field.description.utf8)
+                buffer.append(contentsOf: ArraySlice<UInt8>.crlf)
             }
-            buffer.append(contentsOf: crlf)
+            buffer.append(contentsOf: ArraySlice<UInt8>.crlf)
             buffer.append(contentsOf: part.body)
-            buffer.append(contentsOf: crlf)
+            buffer.append(contentsOf: ArraySlice<UInt8>.crlf)
         }
-        buffer.append(contentsOf: Array("--\(boundary)--".utf8) + crlf)
+        buffer.append(.hyphen)
+        buffer.append(.hyphen)
+        buffer.append(contentsOf: boundary.utf8)
+        buffer.append(contentsOf: ArraySlice<UInt8>.crlf)
     }
 }
