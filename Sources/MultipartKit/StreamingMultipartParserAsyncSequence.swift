@@ -67,7 +67,7 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
             }
         }
     }
-    
+
     public func makeAsyncIterator() -> AsyncIterator {
         .init(parser: parser, iterator: buffer.makeAsyncIterator())
     }
