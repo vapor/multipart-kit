@@ -68,6 +68,8 @@ public struct MultipartSerializer: Sendable {
         buffer.append(.hyphen)
         buffer.append(.hyphen)
         buffer.append(contentsOf: boundary.utf8)
+        buffer.append(.hyphen)
+        buffer.append(.hyphen)
         buffer.append(contentsOf: ArraySlice<UInt8>.crlf)
     }
 }
