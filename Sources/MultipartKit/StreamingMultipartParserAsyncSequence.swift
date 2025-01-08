@@ -40,13 +40,39 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
         var parser: MultipartParser<BackingSequence.Element>
         var iterator: BackingSequence.AsyncIterator
 
+        var pendingBodyChunk: BackingSequence.Element?
+
+        var currentCollatedBody = BackingSequence.Element()
+
         public mutating func next() async throws -> MultipartSection<BackingSequence.Element>? {
+            if let pendingBodyChunk {
+                defer { self.pendingBodyChunk = nil }
+                return .bodyChunk(pendingBodyChunk)
+            }
+
+            var headerFields = HTTPFields()
+
             while true {
                 switch parser.read() {
                 case .success(let optionalPart):
                     switch optionalPart {
                     case .none: continue
-                    case .some(let part): return part
+                    case .some(let part):
+                        switch part {
+                        case .headerFields(let fields):
+                            headerFields.append(contentsOf: fields)
+                            continue
+                        case .bodyChunk(let chunk):
+                            if !headerFields.isEmpty {
+                                pendingBodyChunk = chunk
+                                let returningFields = headerFields
+                                headerFields = .init()
+                                return .headerFields(returningFields)
+                            }
+                            return .bodyChunk(chunk)
+                        case .boundary:
+                            return part
+                        }
                     }
                 case .needMoreData:
                     if let next = try await iterator.next() {
@@ -65,6 +91,29 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
                     return nil
                 }
             }
+        }
+
+        public mutating func nextCollatedPart() async throws -> MultipartSection<BackingSequence.Element>? {
+            var headerFields = HTTPFields()
+
+            while let part = try await self.next() {
+                switch part {
+                case .headerFields(let fields):
+                    headerFields.append(contentsOf: fields)
+                case .bodyChunk(let chunk):
+                    self.currentCollatedBody.append(contentsOf: chunk)
+                    if !headerFields.isEmpty {
+                        defer { headerFields = .init() }
+                        return .headerFields(headerFields)
+                    }
+                case .boundary:
+                    if !currentCollatedBody.isEmpty {
+                        defer { currentCollatedBody = .init() }
+                        return .bodyChunk(currentCollatedBody)
+                    }
+                }
+            }
+            return nil
         }
     }
 

@@ -35,31 +35,9 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
 
     public struct AsyncIterator: AsyncIteratorProtocol {
         var streamingIterator: StreamingMultipartParserAsyncSequence<BackingSequence>.AsyncIterator
-        var currentCollatedBody: BackingSequence.Element = .init()
-        
-        public mutating func next() async throws -> MultipartSection<BackingSequence.Element>? {
-            var headerFields = HTTPFields()
 
-            while let part = try await streamingIterator.next() {
-                switch part {
-                case .headerFields(let fields):
-                    headerFields.append(contentsOf: fields)
-                case .bodyChunk(let chunk):
-                    self.currentCollatedBody.append(contentsOf: chunk)
-                    if !headerFields.isEmpty {
-                        let returningFields = headerFields
-                        headerFields = .init()
-                        return .headerFields(returningFields)
-                    }
-                case .boundary:
-                    if !currentCollatedBody.isEmpty {
-                        let returningBody = currentCollatedBody
-                        currentCollatedBody = .init()
-                        return .bodyChunk(returningBody)
-                    }
-                }
-            }
-            return nil
+        public mutating func next() async throws -> MultipartSection<BackingSequence.Element>? {
+            try await streamingIterator.nextCollatedPart()
         }
     }
 
