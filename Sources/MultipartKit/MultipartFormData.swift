@@ -1,14 +1,15 @@
 import Collections
+import Foundation
 
-enum MultipartFormData: Equatable, Sendable {
+enum MultipartFormData<Body: MultipartPartBodyElement>: Equatable, Sendable {
     typealias Keyed = OrderedDictionary<String, MultipartFormData>
 
-    case single(MultipartPart)
+    case single(MultipartPart<Body>)
     case array([MultipartFormData])
     case keyed(Keyed)
     case nestingDepthExceeded
 
-    init(parts: [MultipartPart], nestingDepth: Int) {
+    init(parts: [MultipartPart<Body>], nestingDepth: Int) {
         self = parts.reduce(into: .empty) { result, part in
             result.insert(
                 part,
@@ -18,7 +19,9 @@ enum MultipartFormData: Equatable, Sendable {
         }
     }
 
-    static let empty = MultipartFormData.keyed([:])
+    static var empty: Self {
+        MultipartFormData.keyed([:])
+    }
 
     var array: [MultipartFormData]? {
         guard case let .array(array) = self else { return nil }
@@ -30,7 +33,7 @@ enum MultipartFormData: Equatable, Sendable {
         return dict
     }
 
-    var part: MultipartPart? {
+    var part: MultipartPart<Body>? {
         guard case let .single(part) = self else { return nil }
         return part
     }
@@ -48,15 +51,16 @@ private func makePath(from string: String) -> ArraySlice<Substring> {
 }
 
 extension MultipartFormData {
-    func namedParts() -> [MultipartPart] {
+    func namedParts() -> [MultipartPart<Body>] {
         Self.namedParts(from: self)
     }
 
-    private static func namedParts(from data: MultipartFormData, path: String? = nil) -> [MultipartPart] {
+    private static func namedParts(from data: MultipartFormData, path: String? = nil) -> [MultipartPart<Body>] {
         switch data {
         case .array(let array):
             return array.enumerated().flatMap { offset, element in
-                namedParts(from: element, path: path.map { "\($0)[\(offset)]" }) }
+                namedParts(from: element, path: path.map { "\($0)[\(offset)]" })
+            }
         case .single(var part):
             part.name = path
             return [part]
@@ -70,12 +74,14 @@ extension MultipartFormData {
     }
 }
 
-private extension MultipartFormData {
-    mutating func insert(_ part: MultipartPart, at path: ArraySlice<Substring>, remainingNestingDepth: Int) {
+extension MultipartFormData {
+    fileprivate mutating func insert(_ part: MultipartPart<Body>, at path: ArraySlice<Substring>, remainingNestingDepth: Int) {
         self = inserting(part, at: path, remainingNestingDepth: remainingNestingDepth)
     }
 
-    func inserting(_ part: MultipartPart, at path: ArraySlice<Substring>, remainingNestingDepth: Int) -> MultipartFormData {
+    fileprivate func inserting(_ part: MultipartPart<Body>, at path: ArraySlice<Substring>, remainingNestingDepth: Int)
+        -> MultipartFormData
+    {
         guard let head = path.first else {
             return .single(part)
         }

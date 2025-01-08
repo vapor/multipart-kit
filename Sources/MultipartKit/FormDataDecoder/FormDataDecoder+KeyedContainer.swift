@@ -1,7 +1,7 @@
 extension FormDataDecoder {
-    struct KeyedContainer<K: CodingKey> {
-        let data: MultipartFormData.Keyed
-        let decoder: FormDataDecoder.Decoder
+    struct KeyedContainer<K: CodingKey, Body: MultipartPartBodyElement> {
+        let data: MultipartFormData<Body>.Keyed
+        let decoder: FormDataDecoder.Decoder<Body>
     }
 }
 
@@ -18,10 +18,11 @@ extension FormDataDecoder.KeyedContainer: KeyedDecodingContainerProtocol {
         data.keys.contains(key.stringValue)
     }
 
-    func getValue(forKey key: any CodingKey) throws -> MultipartFormData {
+    func getValue(forKey key: any CodingKey) throws -> MultipartFormData<Body> {
         guard let value = data[key.stringValue] else {
             throw DecodingError.keyNotFound(
-                key, .init(
+                key,
+                .init(
                     codingPath: codingPath,
                     debugDescription: "No value associated with key \"\(key.stringValue)\"."
                 )
@@ -54,7 +55,7 @@ extension FormDataDecoder.KeyedContainer: KeyedDecodingContainerProtocol {
         try decoderForKey(key)
     }
 
-    func decoderForKey(_ key: any CodingKey) throws -> FormDataDecoder.Decoder {
+    func decoderForKey(_ key: any CodingKey) throws -> FormDataDecoder.Decoder<Body> {
         decoder.nested(at: key, with: try getValue(forKey: key))
     }
 }
