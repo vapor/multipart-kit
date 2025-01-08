@@ -38,7 +38,7 @@ struct ParserTests {
             parts.append(part)
         }
 
-        var expectedFields: HTTPFields = [
+        let expectedFields: HTTPFields = [
             .contentDisposition: "form-data; name=\"id\"",
             .contentType: "text/plain",
             .contentDisposition: "form-data; name=\"address\"",
@@ -59,17 +59,19 @@ struct ParserTests {
         expectedBodies.append(contentsOf: pngData)
 
         var actualBodies: ArraySlice<UInt8> = []
+        var actualFields: HTTPFields = [:]
 
         for part in parts {
             switch part {
             case .headerFields(let field):
-                #expect(field.first == expectedFields.removeFirst())
+                actualFields.append(contentsOf: field)
             case .bodyChunk(let chunk):
                 actualBodies.append(contentsOf: chunk)
             case .boundary: break
             }
         }
 
+        #expect(actualFields == expectedFields)
         #expect(actualBodies == expectedBodies)
     }
 
