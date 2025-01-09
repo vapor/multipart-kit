@@ -11,7 +11,7 @@ on:
       - .github/workflows/benchmark.yml 
 
 jobs:
-  benchmar-vs-main:
+  benchmark-vs-main:
     runs-on:
       - runs-on=${{ github.run_id }}
       - runner=2cpu-linux-arm64
