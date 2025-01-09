@@ -13,14 +13,26 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "Benchmarks",
+            name: "Serializer",
             dependencies: [
                 .product(name: "MultipartKit", package: "multipart-kit"),
                 .product(name: "Benchmark", package: "package-benchmark"),
             ],
+            path: "Serializer",
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
             ]
-        )
+        ),
+        .executableTarget(
+            name: "Parser",
+            dependencies: [
+                .product(name: "MultipartKit", package: "multipart-kit"),
+                .product(name: "Benchmark", package: "package-benchmark"),
+            ],
+            path: "Parser",
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
     ]
 )
