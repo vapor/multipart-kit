@@ -1,4 +1,5 @@
 {
-  "mallocCountTotal": 292343,
-  "peakMemoryResident": 1200000000
+  "cpuTotal": 1010000000,
+  "throughput": 1,
+  "wallClock": 881000000
 }

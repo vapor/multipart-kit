@@ -4,24 +4,6 @@ import MultipartKit
 // Note: the throughput benchmarks use streams which yield with a delay
 // to simulate async work.
 let benchmarks: @Sendable () -> Void = {
-    Benchmark.defaultConfiguration = .init(
-        metrics: [.peakMemoryResident, .mallocCountTotal],
-        thresholds: [
-            .peakMemoryResident: .init(
-                /// Tolerate up to 2% of difference compared to the threshold.
-                relative: [.p90: 2],
-                /// Tolerate up to one million bytes of difference compared to the threshold.
-                absolute: [.p90: 1_100_000]
-            ),
-            .mallocCountTotal: .init(
-                /// Tolerate up to 1% of difference compared to the threshold.
-                relative: [.p90: 1],
-                /// Tolerate up to 2 malloc calls of difference compared to the threshold.
-                absolute: [.p90: 2]
-            ),
-        ]
-    )
-
     Benchmark(
         "Streaming Parser Allocations",
         configuration: .init(
