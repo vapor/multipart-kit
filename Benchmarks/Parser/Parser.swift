@@ -5,7 +5,7 @@ import MultipartKit
 // to simulate async work.
 let benchmarks: @Sendable () -> Void = {
     Benchmark(
-        "Streaming Parser Allocations",
+        "StreamingParserAllocations",
         configuration: .init(
             metrics: [.mallocCountTotal]
         )
@@ -22,7 +22,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "Streaming Parser Throughput",
+        "StreamingParserThroughput",
         configuration: .init(
             metrics: [
                 .cpuTotal,
@@ -43,7 +43,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "Collating Parser Allocations",
+        "CollatingParserAllocations",
         configuration: .init(
             metrics: [.mallocCountTotal]
         )
@@ -60,7 +60,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "Collating Parser Throughput",
+        "CollatingParserThroughput",
         configuration: .init(
             metrics: [
                 .cpuTotal,

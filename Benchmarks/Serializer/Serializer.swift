@@ -11,7 +11,7 @@ let example: MultipartPart = .init(
 
 let benchmarks: @Sendable () -> Void = {
     Benchmark(
-        "Serializer Allocations",
+        "SerializerAllocations",
         configuration: .init(
             metrics: [.mallocCountTotal]
         )
@@ -20,7 +20,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "Serializer Throughput",
+        "SerializerThroughput",
         configuration: .init(
             metrics: [
                 .throughput,
