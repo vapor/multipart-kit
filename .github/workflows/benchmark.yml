@@ -21,7 +21,6 @@ jobs:
       labels:
         - runs-on
         - runner=2cpu-4ram
-        - extras=s3-cache
         - run-id=${{ github.run_id }}
 
     container: swift:noble
