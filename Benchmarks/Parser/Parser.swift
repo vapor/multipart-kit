@@ -5,8 +5,8 @@ import MultipartKit
 // to simulate async work.
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
-    let bigMessage = makeMessage(boundary: boundary, size: 1 << 24) // 400MiB: Big message
-    let bigMessageStream = makeParsingStream(for: bigMessage, chunkSize: 1 << 14) // 16KiB: Realistic streaming chunk size
+    let bigMessage = makeMessage(boundary: boundary, size: 1 << 24)  // 400MiB: Big message
+    let bigMessageStream = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)  // 16KiB: Realistic streaming chunk size
 
     Benchmark(
         "StreamingParserAllocations",
@@ -23,12 +23,12 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "StreamingParserCPUTime",
+        "1000xStreamingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser]
         )
     ) { benchmark in
-        for _ in benchmark.scaledIterations {
+        for _ in benchmark.scaledIterations * 1000 {
             let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await element in streamingSequence {
                 blackHole(element)
@@ -51,12 +51,12 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "CollatingParserCPUTime",
+        "1000xCollatingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser]
         )
     ) { benchmark in
-        for _ in benchmark.scaledIterations {
+        for _ in benchmark.scaledIterations * 1000 {
             let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await element in sequence {
                 blackHole(element)
