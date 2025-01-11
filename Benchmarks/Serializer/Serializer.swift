@@ -1,34 +1,38 @@
 import Benchmark
 import MultipartKit
 
-let example: MultipartPart = .init(
-    headerFields: .init([
-        .init(name: .contentDisposition, value: "form-data; name=\"file\"; filename=\"hello.txt\""),
-        .init(name: .contentType, value: "text/plain"),
-    ]),
-    body: ArraySlice("Hello, world!".utf8)
-)
-
 let benchmarks: @Sendable () -> Void = {
+    let examplePart: MultipartPart = .init(
+        headerFields: .init([
+            .init(name: .contentDisposition, value: "form-data; name=\"file\"; filename=\"hello.txt\""),
+            .init(name: .contentType, value: "text/plain"),
+        ]),
+        body: ArraySlice("Hello, world!".utf8)
+    )
+    let onePart: [MultipartPart] = [examplePart]
+    let repeatedParts: [MultipartPart] = .init(repeating: examplePart, count: 1 << 10)
+
     Benchmark(
         "SerializerAllocations",
         configuration: .init(
             metrics: [.mallocCountTotal]
         )
     ) { benchmark in
-        _ = try MultipartSerializer(boundary: "boundary123").serialize(parts: [example])
+        for _ in benchmark.iterations {
+            let seriliazed = try MultipartSerializer(boundary: "boundary123").serialize(parts: onePart)
+            blackHole(seriliazed)
+        }
     }
 
     Benchmark(
-        "SerializerThroughput",
+        "SerializerCPUTime",
         configuration: .init(
             metrics: [.cpuUser]
         )
     ) { benchmark in
-        let parts: [MultipartPart] = .init(repeating: example, count: 1000)
-
-        benchmark.startMeasurement()
-        _ = try MultipartSerializer(boundary: "boundary123").serialize(parts: parts)
-        benchmark.stopMeasurement()
+        for _ in benchmark.iterations {
+            let seriliazed = try MultipartSerializer(boundary: "boundary123").serialize(parts: repeatedParts)
+            blackHole(seriliazed)
+        }
     }
 }

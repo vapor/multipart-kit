@@ -1,41 +1,40 @@
 import Benchmark
 import MultipartKit
 
-// Note: the throughput benchmarks use streams which yield with a delay
+// Note: the `cpuUser` benchmarks use streams which yield with a delay
 // to simulate async work.
 let benchmarks: @Sendable () -> Void = {
+    let boundary = "boundary123"
+    let bigMessage = makeMessage(boundary: boundary, size: 1 << 24) // 400MiB: Big message
+    let bigMessageStream = makeParsingStream(for: bigMessage, chunkSize: 1 << 14) // 16KiB: Realistic streaming chunk size
+
+    let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
+    let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
+
     Benchmark(
         "StreamingParserAllocations",
         configuration: .init(
             metrics: [.mallocCountTotal]
         )
     ) { benchmark in
-        let boundary = "boundary123"
-        let bigMessage = makeMessage(boundary: boundary, size: 500_000_000) // 500MB: Big message
-        let bigMessageStream = makeParsingStream(for: bigMessage, chunkSize: 16 * 1024) // 16KB: Realistic streaming chunk size
-
-        let sequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-
-        benchmark.startMeasurement()
-        for try await _ in sequence {}
-        benchmark.stopMeasurement()
+        for _ in benchmark.iterations {
+            for try await element in streamingSequence {
+                blackHole(element)
+            }
+        }
     }
 
     Benchmark(
-        "StreamingParserThroughput",
+        "StreamingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser]
         )
     ) { benchmark in
-        let boundary = "boundary123"
-        let bigMessage = makeMessage(boundary: boundary, size: 500_000_000)
-        let bigMessageStream = makeParsingStream(for: bigMessage, chunkSize: 16 * 1024, delay: true)
-
-        let sequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-
-        benchmark.startMeasurement()
-        for try await _ in sequence {}
-        benchmark.stopMeasurement()
+        for _ in benchmark.iterations {
+            for try await element in streamingSequence {
+                blackHole(element)
+            }
+        }
     }
 
     Benchmark(
@@ -44,36 +43,30 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.mallocCountTotal]
         )
     ) { benchmark in
-        let boundary = "boundary123"
-        let bigMessage = makeMessage(boundary: boundary, size: 500_000_000)
-        let bigMessageStream = makeParsingStream(for: bigMessage, chunkSize: 16 * 1024)
-
-        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-
-        benchmark.startMeasurement()
-        defer { benchmark.stopMeasurement() }
-        for try await _ in sequence {}
+        for _ in benchmark.iterations {
+            for try await element in sequence {
+                blackHole(element)
+            }
+        }
     }
 
     Benchmark(
-        "CollatingParserThroughput",
+        "CollatingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser]
         )
     ) { benchmark in
-        let boundary = "boundary123"
-        let bigMessage = makeMessage(boundary: boundary, size: 500_000_000)
-        let bigMessageStream = makeParsingStream(for: bigMessage, chunkSize: 16 * 1024, delay: true)
-
-        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-
-        benchmark.startMeasurement()
-        for try await _ in sequence {}
-        benchmark.stopMeasurement()
+        for _ in benchmark.iterations {
+            for try await element in sequence {
+                blackHole(element)
+            }
+        }
     }
 }
 
-private func makeParsingStream<Body: MultipartPartBodyElement>(for message: Body, chunkSize: Int, delay: Bool = false) -> AsyncStream<Body.SubSequence>
+private func makeParsingStream<Body: MultipartPartBodyElement>(for message: Body, chunkSize: Int, delay: Bool = false) -> AsyncStream<
+    Body.SubSequence
+>
 where Body.SubSequence: Sendable {
     AsyncStream<Body.SubSequence> { continuation in
         var offset = message.startIndex
@@ -116,7 +109,7 @@ private func makeMessage(boundary: String, size: Int) -> ArraySlice<UInt8> {
         \r\n
         """.utf8)
 
-    message.append(contentsOf: Array(repeating: UInt8.random(in: 0...255), count: size))
+    message.append(contentsOf: Array(repeating: UInt8.random(in: .min ... .max), count: size))
     message.append(contentsOf: "\r\n--\(boundary)--".utf8)
 
     return message
