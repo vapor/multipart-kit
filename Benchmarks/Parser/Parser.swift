@@ -17,7 +17,7 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.mallocCountTotal]
         )
     ) { benchmark in
-        for _ in benchmark.iterations {
+        for _ in benchmark.scaledIterations {
             for try await element in streamingSequence {
                 blackHole(element)
             }
@@ -30,7 +30,7 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.cpuUser]
         )
     ) { benchmark in
-        for _ in benchmark.iterations {
+        for _ in benchmark.scaledIterations {
             for try await element in streamingSequence {
                 blackHole(element)
             }
@@ -43,7 +43,7 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.mallocCountTotal]
         )
     ) { benchmark in
-        for _ in benchmark.iterations {
+        for _ in benchmark.scaledIterations {
             for try await element in sequence {
                 blackHole(element)
             }
@@ -56,7 +56,7 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.cpuUser]
         )
     ) { benchmark in
-        for _ in benchmark.iterations {
+        for _ in benchmark.scaledIterations {
             for try await element in sequence {
                 blackHole(element)
             }

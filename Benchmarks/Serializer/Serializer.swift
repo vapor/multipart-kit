@@ -18,7 +18,7 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.mallocCountTotal]
         )
     ) { benchmark in
-        for _ in benchmark.iterations {
+        for _ in benchmark.scaledIterations {
             let seriliazed = try MultipartSerializer(boundary: "boundary123").serialize(parts: onePart)
             blackHole(seriliazed)
         }
@@ -30,7 +30,7 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.cpuUser]
         )
     ) { benchmark in
-        for _ in benchmark.iterations {
+        for _ in benchmark.scaledIterations {
             let seriliazed = try MultipartSerializer(boundary: "boundary123").serialize(parts: repeatedParts)
             blackHole(seriliazed)
         }
