@@ -14,7 +14,7 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.mallocCountTotal]
         )
     ) { benchmark in
-        for _ in benchmark.scaledIterations {
+        for _ in benchmark.scaledIterations.lowerBound..<((benchmark.scaledIterations.upperBound - 1) * 1000 + 1) {
             let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await element in streamingSequence {
                 blackHole(element)
@@ -28,7 +28,7 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.cpuUser]
         )
     ) { benchmark in
-        for _ in benchmark.scaledIterations * 1000 {
+        for _ in benchmark.scaledIterations.lowerBound..<((benchmark.scaledIterations.upperBound - 1) * 1000 + 1) {
             let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await element in streamingSequence {
                 blackHole(element)
@@ -42,7 +42,7 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.mallocCountTotal]
         )
     ) { benchmark in
-        for _ in benchmark.scaledIterations {
+        for _ in benchmark.scaledIterations.lowerBound..<((benchmark.scaledIterations.upperBound - 1) * 1000 + 1) {
             let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await element in sequence {
                 blackHole(element)
@@ -56,7 +56,7 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.cpuUser]
         )
     ) { benchmark in
-        for _ in benchmark.scaledIterations * 1000 {
+        for _ in benchmark.scaledIterations.lowerBound..<((benchmark.scaledIterations.upperBound - 1) * 1000 + 1) {
             let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await element in sequence {
                 blackHole(element)
