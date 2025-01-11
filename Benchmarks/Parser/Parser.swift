@@ -6,7 +6,10 @@ import MultipartKit
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
     let bigMessage = makeMessage(boundary: boundary, size: 1 << 24)  // 400MiB: Big message
-    let bigMessageStream = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)  // 16KiB: Realistic streaming chunk size
+    let messageStreams = (0..<10_000).map {
+        _ in makeParsingStream(for: bigMessage, chunkSize: 1 << 14)  // 16KiB: Realistic streaming chunk size
+    }
+    var streamIterator = messageStreams.makeIterator()
 
     Benchmark(
         "StreamingParserAllocations",
@@ -15,6 +18,7 @@ let benchmarks: @Sendable () -> Void = {
         )
     ) { benchmark in
         for _ in benchmark.scaledIterations {
+            let bigMessageStream = streamIterator.next()!
             let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await part in streamingSequence {
                 blackHole(part)
@@ -23,12 +27,13 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "1000xStreamingParserCPUTime",
+        "StreamingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser]
         )
     ) { benchmark in
-        for _ in benchmark.scaledIterations.lowerBound..<((benchmark.scaledIterations.upperBound - 1) * 1000 + 1) {
+        for _ in benchmark.scaledIterations {
+            let bigMessageStream = streamIterator.next()!
             let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await part in streamingSequence {
                 blackHole(part)
@@ -43,6 +48,7 @@ let benchmarks: @Sendable () -> Void = {
         )
     ) { benchmark in
         for _ in benchmark.scaledIterations {
+            let bigMessageStream = streamIterator.next()!
             let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await part in sequence {
                 blackHole(part)
@@ -51,12 +57,13 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "1000xCollatingParserCPUTime",
+        "CollatingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser]
         )
     ) { benchmark in
-        for _ in benchmark.scaledIterations.lowerBound..<((benchmark.scaledIterations.upperBound - 1) * 1000 + 1) {
+        for _ in benchmark.scaledIterations {
+            let bigMessageStream = streamIterator.next()!
             let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await part in sequence {
                 blackHole(part)

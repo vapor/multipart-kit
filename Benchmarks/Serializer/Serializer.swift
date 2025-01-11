@@ -26,12 +26,12 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "1000xSerializerCPUTime",
+        "SerializerCPUTime",
         configuration: .init(
             metrics: [.cpuUser]
         )
     ) { benchmark in
-        for _ in benchmark.scaledIterations.lowerBound..<((benchmark.scaledIterations.upperBound - 1) * 1000 + 1) {
+        for _ in benchmark.scaledIterations {
             let serializer = MultipartSerializer(boundary: "boundary123")
             let seriliazed = try serializer.serialize(parts: repeatedParts)
             blackHole(seriliazed)
