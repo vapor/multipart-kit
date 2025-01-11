@@ -22,11 +22,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "SerializerThroughput",
         configuration: .init(
-            metrics: [
-                .throughput,
-                .wallClock,
-                .cpuTotal
-            ]
+            metrics: [.cpuUser]
         )
     ) { benchmark in
         let parts: [MultipartPart] = .init(repeating: example, count: 1000)

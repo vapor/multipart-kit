@@ -1,5 +1,3 @@
 {
-  "cpuTotal": 990000000,
-  "throughput": 1,
-  "wallClock": 902000000
+  "cpuUser": 990000000
 }

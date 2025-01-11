@@ -24,11 +24,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "StreamingParserThroughput",
         configuration: .init(
-            metrics: [
-                .cpuTotal,
-                .wallClock,
-                .throughput
-            ]
+            metrics: [.cpuUser]
         )
     ) { benchmark in
         let boundary = "boundary123"
@@ -62,11 +58,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "CollatingParserThroughput",
         configuration: .init(
-            metrics: [
-                .cpuTotal,
-                .wallClock,
-                .throughput
-            ]
+            metrics: [.cpuUser]
         )
     ) { benchmark in
         let boundary = "boundary123"
