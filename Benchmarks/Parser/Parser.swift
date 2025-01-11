@@ -17,28 +17,29 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.mallocCountTotal]
         )
     ) { benchmark in
-        for _ in benchmark.scaledIterations {
-            let bigMessageStream = streamIterator.next()!
-            let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-            for try await part in streamingSequence {
-                blackHole(part)
-            }
+        let bigMessageStream = streamIterator.next()!
+        benchmark.startMeasurement()
+        let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
+        for try await part in streamingSequence {
+            blackHole(part)
         }
+        benchmark.stopMeasurement()
     }
 
     Benchmark(
-        "1000xStreamingParserCPUTime",
+        "100xStreamingParserCPUTime",
         configuration: .init(
-            metrics: [.cpuUser],
-            scalingFactor: .kilo
+            metrics: [.cpuUser]
         )
     ) { benchmark in
-        for _ in benchmark.scaledIterations {
+        for _ in 0..<100 {
             let bigMessageStream = streamIterator.next()!
+            benchmark.startMeasurement()
             let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await part in streamingSequence {
                 blackHole(part)
             }
+            benchmark.stopMeasurement()
         }
     }
 
@@ -48,28 +49,29 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.mallocCountTotal]
         )
     ) { benchmark in
-        for _ in benchmark.scaledIterations {
-            let bigMessageStream = streamIterator.next()!
-            let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-            for try await part in sequence {
-                blackHole(part)
-            }
+        let bigMessageStream = streamIterator.next()!
+        benchmark.startMeasurement()
+        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
+        for try await part in sequence {
+            blackHole(part)
         }
+        benchmark.stopMeasurement()
     }
 
     Benchmark(
-        "1000xCollatingParserCPUTime",
+        "100xCollatingParserCPUTime",
         configuration: .init(
-            metrics: [.cpuUser],
-            scalingFactor: .kilo
+            metrics: [.cpuUser]
         )
     ) { benchmark in
-        for _ in benchmark.scaledIterations {
+        for _ in 0..<100 {
             let bigMessageStream = streamIterator.next()!
+            benchmark.startMeasurement()
             let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await part in sequence {
                 blackHole(part)
             }
+            benchmark.stopMeasurement()
         }
     }
 }
