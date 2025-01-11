@@ -33,13 +33,13 @@ jobs:
       PR_COMMENT: null # will be populated later
 
     steps:
+      - name: Configure RunsOn
+        uses: runs-on/action@v1
+
       - name: Check out code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Configure RunsOn
-        uses: runs-on/action@v1
 
       - name: Configure git
         run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
