@@ -16,8 +16,8 @@ let benchmarks: @Sendable () -> Void = {
     ) { benchmark in
         for _ in benchmark.scaledIterations {
             let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-            for try await element in streamingSequence {
-                blackHole(element)
+            for try await part in streamingSequence {
+                blackHole(part)
             }
         }
     }
@@ -30,8 +30,8 @@ let benchmarks: @Sendable () -> Void = {
     ) { benchmark in
         for _ in benchmark.scaledIterations.lowerBound..<((benchmark.scaledIterations.upperBound - 1) * 1000 + 1) {
             let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-            for try await element in streamingSequence {
-                blackHole(element)
+            for try await part in streamingSequence {
+                blackHole(part)
             }
         }
     }
@@ -44,8 +44,8 @@ let benchmarks: @Sendable () -> Void = {
     ) { benchmark in
         for _ in benchmark.scaledIterations {
             let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-            for try await element in sequence {
-                blackHole(element)
+            for try await part in sequence {
+                blackHole(part)
             }
         }
     }
@@ -58,8 +58,8 @@ let benchmarks: @Sendable () -> Void = {
     ) { benchmark in
         for _ in benchmark.scaledIterations.lowerBound..<((benchmark.scaledIterations.upperBound - 1) * 1000 + 1) {
             let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-            for try await element in sequence {
-                blackHole(element)
+            for try await part in sequence {
+                blackHole(part)
             }
         }
     }
