@@ -8,9 +8,6 @@ let benchmarks: @Sendable () -> Void = {
     let bigMessage = makeMessage(boundary: boundary, size: 1 << 24) // 400MiB: Big message
     let bigMessageStream = makeParsingStream(for: bigMessage, chunkSize: 1 << 14) // 16KiB: Realistic streaming chunk size
 
-    let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-    let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-
     Benchmark(
         "StreamingParserAllocations",
         configuration: .init(
@@ -18,6 +15,7 @@ let benchmarks: @Sendable () -> Void = {
         )
     ) { benchmark in
         for _ in benchmark.scaledIterations {
+            let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await element in streamingSequence {
                 blackHole(element)
             }
@@ -31,6 +29,7 @@ let benchmarks: @Sendable () -> Void = {
         )
     ) { benchmark in
         for _ in benchmark.scaledIterations {
+            let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await element in streamingSequence {
                 blackHole(element)
             }
@@ -44,6 +43,7 @@ let benchmarks: @Sendable () -> Void = {
         )
     ) { benchmark in
         for _ in benchmark.scaledIterations {
+            let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await element in sequence {
                 blackHole(element)
             }
@@ -57,6 +57,7 @@ let benchmarks: @Sendable () -> Void = {
         )
     ) { benchmark in
         for _ in benchmark.scaledIterations {
+            let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await element in sequence {
                 blackHole(element)
             }

@@ -19,7 +19,8 @@ let benchmarks: @Sendable () -> Void = {
         )
     ) { benchmark in
         for _ in benchmark.scaledIterations {
-            let seriliazed = try MultipartSerializer(boundary: "boundary123").serialize(parts: onePart)
+            let serializer = MultipartSerializer(boundary: "boundary123")
+            let seriliazed = try serializer.serialize(parts: onePart)
             blackHole(seriliazed)
         }
     }
@@ -31,7 +32,8 @@ let benchmarks: @Sendable () -> Void = {
         )
     ) { benchmark in
         for _ in benchmark.scaledIterations {
-            let seriliazed = try MultipartSerializer(boundary: "boundary123").serialize(parts: repeatedParts)
+            let serializer = MultipartSerializer(boundary: "boundary123")
+            let seriliazed = try serializer.serialize(parts: repeatedParts)
             blackHole(seriliazed)
         }
     }
