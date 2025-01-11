@@ -27,9 +27,10 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "StreamingParserCPUTime",
+        "1000xStreamingParserCPUTime",
         configuration: .init(
-            metrics: [.cpuUser]
+            metrics: [.cpuUser],
+            scalingFactor: .kilo
         )
     ) { benchmark in
         for _ in benchmark.scaledIterations {
@@ -57,9 +58,10 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "CollatingParserCPUTime",
+        "1000xCollatingParserCPUTime",
         configuration: .init(
-            metrics: [.cpuUser]
+            metrics: [.cpuUser],
+            scalingFactor: .kilo
         )
     ) { benchmark in
         for _ in benchmark.scaledIterations {
