@@ -6,77 +6,70 @@ import MultipartKit
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
     let bigMessage = makeMessage(boundary: boundary, size: 1 << 24)  // 400MiB: Big message
-    let messageStreams = (0..<10_000).map {
+    var messageStreams = (0..<500).map {
         _ in makeParsingStream(for: bigMessage, chunkSize: 1 << 14)  // 16KiB: Realistic streaming chunk size
     }
-    var streamIterator = messageStreams.makeIterator()
 
+    let streamingStream = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
     Benchmark(
         "StreamingParserAllocations",
         configuration: .init(
             metrics: [.mallocCountTotal]
         )
     ) { benchmark in
-        let bigMessageStream = streamIterator.next()!
-        benchmark.startMeasurement()
-        let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
+        let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: streamingStream)
         for try await part in streamingSequence {
             blackHole(part)
         }
-        benchmark.stopMeasurement()
     }
 
     Benchmark(
-        "100xStreamingParserCPUTime",
+        "10xStreamingParserCPUTime",
         configuration: .init(
-            metrics: [.cpuUser]
+            metrics: [.cpuUser],
+            maxIterations: 10
         )
     ) { benchmark in
-        for _ in 0..<100 {
-            let bigMessageStream = streamIterator.next()!
-            benchmark.startMeasurement()
+        for _ in 0..<10 {
+            let bigMessageStream = messageStreams.removeFirst()
             let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await part in streamingSequence {
                 blackHole(part)
             }
-            benchmark.stopMeasurement()
         }
     }
 
+    let collatingStream = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
     Benchmark(
         "CollatingParserAllocations",
         configuration: .init(
             metrics: [.mallocCountTotal]
         )
     ) { benchmark in
-        let bigMessageStream = streamIterator.next()!
-        benchmark.startMeasurement()
-        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
+        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: collatingStream)
         for try await part in sequence {
             blackHole(part)
         }
-        benchmark.stopMeasurement()
     }
 
     Benchmark(
-        "100xCollatingParserCPUTime",
+        "10xCollatingParserCPUTime",
         configuration: .init(
-            metrics: [.cpuUser]
+            metrics: [.cpuUser],
+            maxIterations: 10
         )
     ) { benchmark in
-        for _ in 0..<100 {
-            let bigMessageStream = streamIterator.next()!
-            benchmark.startMeasurement()
+        for _ in 0..<10 {
+            let bigMessageStream = messageStreams.removeFirst()
             let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
             for try await part in sequence {
                 blackHole(part)
             }
-            benchmark.stopMeasurement()
         }
     }
 }
 
-private func makeParsingStream<Body: MultipartPartBodyElement>(for message: Body, chunkSize: Int, delay: Bool = false) -> AsyncStream<
+private func makeParsingStream<Body: MultipartPartBodyElement>(for message: Body, chunkSize: Int) -> AsyncStream<
     Body.SubSequence
 >
 where Body.SubSequence: Sendable {
@@ -84,14 +77,6 @@ where Body.SubSequence: Sendable {
         var offset = message.startIndex
         while offset < message.endIndex {
             let endIndex = min(message.endIndex, message.index(offset, offsetBy: chunkSize))
-
-            if delay {
-                // Simulate async work
-                Task.detached {
-                    try? await Task.sleep(for: .milliseconds(1))
-                }
-            }
-
             continuation.yield(message[offset..<endIndex])
             offset = endIndex
         }
