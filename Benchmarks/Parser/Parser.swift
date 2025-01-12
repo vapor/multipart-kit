@@ -1,8 +1,6 @@
 import Benchmark
 import MultipartKit
 
-// Note: the `cpuUser` benchmarks use streams which yield with a delay
-// to simulate async work.
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
     let bigMessage = makeMessage(boundary: boundary, size: 1 << 29)  // 512MiB: Big message
@@ -25,11 +23,11 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "10xStreamingParserCPUTime",
+        "StreamingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser],
-            maxDuration: .seconds(10),
-            maxIterations: 20,
+            maxDuration: .seconds(20),
+            maxIterations: 10,
             thresholds: [
                 .cpuUser: .init(
                     /// `9 - 1 == 8`% tolerance.
@@ -41,12 +39,10 @@ let benchmarks: @Sendable () -> Void = {
             ]
         )
     ) { benchmark in
-        for _ in 0..<10 {
-            let bigMessageStream = messageStreams.removeFirst()
-            let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-            for try await part in streamingSequence {
-                blackHole(part)
-            }
+        let bigMessageStream = messageStreams.removeFirst()
+        let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
+        for try await part in streamingSequence {
+            blackHole(part)
         }
     }
 
@@ -65,11 +61,11 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "10xCollatingParserCPUTime",
+        "CollatingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser],
-            maxDuration: .seconds(10),
-            maxIterations: 20,
+            maxDuration: .seconds(20),
+            maxIterations: 10,
             thresholds: [
                 .cpuUser: .init(
                     /// `10 - 1 == 9`% tolerance.
@@ -81,12 +77,10 @@ let benchmarks: @Sendable () -> Void = {
             ]
         )
     ) { benchmark in
-        for _ in 0..<10 {
-            let bigMessageStream = messageStreams.removeFirst()
-            let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
-            for try await part in sequence {
-                blackHole(part)
-            }
+        let bigMessageStream = messageStreams.removeFirst()
+        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
+        for try await part in sequence {
+            blackHole(part)
         }
     }
 }
