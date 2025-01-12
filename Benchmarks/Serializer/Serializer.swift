@@ -27,7 +27,16 @@ let benchmarks: @Sendable () -> Void = {
         "10xSerializerCPUTime",
         configuration: .init(
             metrics: [.cpuUser],
-            maxIterations: 10
+            maxIterations: 10,
+            thresholds: [
+                .cpuUser: .init(
+                    /// `5 - 1 == 4`% tolerance.
+                    /// Will rely on the absolute threshold as the tighter threshold.
+                    relative: [.p90: 5],
+                    /// 11ms of tolerance.
+                    absolute: [.p90: 11_000_000]
+                )
+            ]
         )
     ) { benchmark in
         for _ in 0..<10 {

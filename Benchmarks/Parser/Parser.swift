@@ -27,7 +27,16 @@ let benchmarks: @Sendable () -> Void = {
         "10xStreamingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser],
-            maxIterations: 10
+            maxIterations: 10,
+            thresholds: [
+                .cpuUser: .init(
+                    /// `8 - 1 == 7`% tolerance.
+                    /// Will rely on the absolute threshold as the tighter threshold.
+                    relative: [.p90: 8],
+                    /// 21ms of tolerance.
+                    absolute: [.p90: 21_000_000]
+                )
+            ]
         )
     ) { benchmark in
         for _ in 0..<10 {
@@ -56,7 +65,16 @@ let benchmarks: @Sendable () -> Void = {
         "10xCollatingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser],
-            maxIterations: 10
+            maxIterations: 10,
+            thresholds: [
+                .cpuUser: .init(
+                    /// `10 - 1 == 9`% tolerance.
+                    /// Will rely on the absolute threshold as the tighter threshold.
+                    relative: [.p90: 9],
+                    /// 26ms of tolerance.
+                    absolute: [.p90: 26_000_000]
+                )
+            ]
         )
     ) { benchmark in
         for _ in 0..<10 {
