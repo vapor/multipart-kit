@@ -4,11 +4,8 @@ import MultipartKit
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
     let bigMessage = makeMessage(boundary: boundary, size: 1 << 29)  // 512MiB: Big message
-    var messageStreams = (0..<500).map {
-        _ in makeParsingStream(for: bigMessage, chunkSize: 1 << 14)  // 16KiB: Realistic streaming chunk size
-    }
 
-    let streamingStream = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
+    let streamingParserAllocationsStream = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
     Benchmark(
         "StreamingParserAllocations",
         configuration: .init(
@@ -16,12 +13,16 @@ let benchmarks: @Sendable () -> Void = {
             maxIterations: 1
         )
     ) { benchmark in
-        let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: streamingStream)
+        let streamingSequence = StreamingMultipartParserAsyncSequence(
+            boundary: boundary,
+            buffer: streamingParserAllocationsStream
+        )
         for try await part in streamingSequence {
             blackHole(part)
         }
     }
 
+    let streamingParserCPUTimeStream = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
     Benchmark(
         "StreamingParserCPUTime",
         configuration: .init(
@@ -39,14 +40,16 @@ let benchmarks: @Sendable () -> Void = {
             ]
         )
     ) { benchmark in
-        let bigMessageStream = messageStreams.removeFirst()
-        let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
+        let streamingSequence = StreamingMultipartParserAsyncSequence(
+            boundary: boundary,
+            buffer: streamingParserCPUTimeStream
+        )
         for try await part in streamingSequence {
             blackHole(part)
         }
     }
 
-    let collatingStream = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
+    let collatingParserAllocationsStream = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
     Benchmark(
         "CollatingParserAllocations",
         configuration: .init(
@@ -54,12 +57,16 @@ let benchmarks: @Sendable () -> Void = {
             maxIterations: 1
         )
     ) { benchmark in
-        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: collatingStream)
+        let sequence = MultipartParserAsyncSequence(
+            boundary: boundary,
+            buffer: collatingParserAllocationsStream
+        )
         for try await part in sequence {
             blackHole(part)
         }
     }
 
+    let collatingParserCPUTimeStream = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
     Benchmark(
         "CollatingParserCPUTime",
         configuration: .init(
@@ -77,17 +84,20 @@ let benchmarks: @Sendable () -> Void = {
             ]
         )
     ) { benchmark in
-        let bigMessageStream = messageStreams.removeFirst()
-        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bigMessageStream)
+        let sequence = MultipartParserAsyncSequence(
+            boundary: boundary,
+            buffer: collatingParserCPUTimeStream
+        )
         for try await part in sequence {
             blackHole(part)
         }
     }
 }
 
-private func makeParsingStream<Body: MultipartPartBodyElement>(for message: Body, chunkSize: Int) -> AsyncStream<
-    Body.SubSequence
->
+private func makeParsingStream<Body: MultipartPartBodyElement>(
+    for message: Body,
+    chunkSize: Int
+) -> AsyncStream<Body.SubSequence>
 where Body.SubSequence: Sendable {
     AsyncStream<Body.SubSequence> { continuation in
         var offset = message.startIndex
