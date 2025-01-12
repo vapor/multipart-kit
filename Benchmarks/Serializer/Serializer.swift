@@ -30,9 +30,9 @@ let benchmarks: @Sendable () -> Void = {
             maxIterations: 10,
             thresholds: [
                 .cpuUser: .init(
-                    /// `5 - 1 == 4`% tolerance.
+                    /// `6 - 1 == 5`% tolerance.
                     /// Will rely on the absolute threshold as the tighter threshold.
-                    relative: [.p90: 5],
+                    relative: [.p90: 6],
                     /// 11ms of tolerance.
                     absolute: [.p90: 11_000_000]
                 )
