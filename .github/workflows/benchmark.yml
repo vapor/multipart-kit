@@ -61,7 +61,7 @@ jobs:
           key: "swiftpm-benchmark-build-${{ runner.os }}-${{ github.event.pull_request.base.sha || github.event.after }}"
           restore-keys: "swiftpm-benchmark-build-${{ runner.os }}-"
 
-      - name: Run benchmarks for branch ${{ github.head_ref || github.ref_name }}
+      - name: Run benchmarks for branch '${{ github.head_ref || github.ref_name }}'
         run: |
           swift package -c release --disable-sandbox \
             --package-path Benchmarks \
@@ -86,7 +86,7 @@ jobs:
           cat result.text >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
 
-      - name: Compare branch ${{ github.head_ref || github.ref_name }} against thresholds
+      - name: Compare branch '${{ github.head_ref || github.ref_name }}' against thresholds
         id: compare-benchmark
         run: |
           set -eu
