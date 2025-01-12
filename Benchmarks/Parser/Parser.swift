@@ -14,7 +14,8 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "StreamingParserAllocations",
         configuration: .init(
-            metrics: [.mallocCountTotal]
+            metrics: [.mallocCountTotal],
+            maxIterations: 1
         )
     ) { benchmark in
         let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: streamingStream)
@@ -53,7 +54,8 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "CollatingParserAllocations",
         configuration: .init(
-            metrics: [.mallocCountTotal]
+            metrics: [.mallocCountTotal],
+            maxIterations: 1
         )
     ) { benchmark in
         let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: collatingStream)

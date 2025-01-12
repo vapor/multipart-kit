@@ -15,7 +15,8 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "SerializerAllocations",
         configuration: .init(
-            metrics: [.mallocCountTotal]
+            metrics: [.mallocCountTotal],
+            maxIterations: 1
         )
     ) { benchmark in
         let serializer = MultipartSerializer(boundary: "boundary123")
