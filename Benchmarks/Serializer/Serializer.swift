@@ -24,7 +24,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "10xSerializerCPUTime",
+        "100xSerializerCPUTime",
         configuration: .init(
             metrics: [.cpuUser],
             maxIterations: 10,
@@ -33,13 +33,13 @@ let benchmarks: @Sendable () -> Void = {
                     /// `5 - 1 == 4`% tolerance.
                     /// Will rely on the absolute threshold as the tighter threshold.
                     relative: [.p90: 5],
-                    /// 1.1ms of tolerance.
-                    absolute: [.p90: 1_100_000]
+                    /// 11ms of tolerance.
+                    absolute: [.p90: 11_000_000]
                 )
             ]
         )
     ) { benchmark in
-        for _ in 0..<10 {
+        for _ in 0..<100 {
             let serializer = MultipartSerializer(boundary: "boundary123")
             let serialized = try serializer.serialize(parts: repeatedParts)
             blackHole(serialized)
