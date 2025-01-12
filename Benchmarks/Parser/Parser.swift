@@ -5,7 +5,7 @@ import MultipartKit
 // to simulate async work.
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
-    let bigMessage = makeMessage(boundary: boundary, size: 1 << 24)  // 400MiB: Big message
+    let bigMessage = makeMessage(boundary: boundary, size: 1 << 29)  // 512MiB: Big message
     var messageStreams = (0..<500).map {
         _ in makeParsingStream(for: bigMessage, chunkSize: 1 << 14)  // 16KiB: Realistic streaming chunk size
     }
