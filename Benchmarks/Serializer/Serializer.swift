@@ -27,7 +27,7 @@ let benchmarks: @Sendable () -> Void = {
         "100xSerializerCPUTime",
         configuration: .init(
             metrics: [.cpuUser],
-            maxDuration: .seconds(5),
+            maxDuration: .seconds(10),
             maxIterations: 20,
             thresholds: [
                 .cpuUser: .init(
