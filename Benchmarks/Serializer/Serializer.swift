@@ -2,6 +2,7 @@ import Benchmark
 import MultipartKit
 
 let benchmarks: @Sendable () -> Void = {
+    let boundary = "boundary123"
     let examplePart: MultipartPart = .init(
         headerFields: .init([
             .init(name: .contentDisposition, value: "form-data; name=\"file\"; filename=\"hello.txt\""),
@@ -9,23 +10,36 @@ let benchmarks: @Sendable () -> Void = {
         ]),
         body: ArraySlice("Hello, world!".utf8)
     )
-    let onePart: [MultipartPart] = [examplePart]
-    let repeatedParts: [MultipartPart] = .init(repeating: examplePart, count: 1 << 10)
+    let emptyParts: [MultipartPart<ArraySlice<UInt8>>] = []
+    let partCount = 1 << 10
+    let repeatedParts: [MultipartPart] = .init(repeating: examplePart, count: partCount)
 
     Benchmark(
-        "SerializerAllocations",
+        "SerializerAllocations_0Parts",
         configuration: .init(
             metrics: [.mallocCountTotal],
             maxIterations: 1
         )
     ) { benchmark in
-        let serializer = MultipartSerializer(boundary: "boundary123")
-        let serialized = try serializer.serialize(parts: onePart)
+        let serializer = MultipartSerializer(boundary: boundary)
+        let serialized = try serializer.serialize(parts: emptyParts)
         blackHole(serialized)
     }
 
     Benchmark(
-        "100xSerializerCPUTime",
+        "SerializerAllocations_\(partCount)Parts",
+        configuration: .init(
+            metrics: [.mallocCountTotal],
+            maxIterations: 1
+        )
+    ) { benchmark in
+        let serializer = MultipartSerializer(boundary: boundary)
+        let serialized = try serializer.serialize(parts: repeatedParts)
+        blackHole(serialized)
+    }
+
+    Benchmark(
+        "100xSerializerCPUTime_\(partCount)Parts",
         configuration: .init(
             metrics: [.cpuUser],
             maxDuration: .seconds(10),
@@ -42,7 +56,7 @@ let benchmarks: @Sendable () -> Void = {
         )
     ) { benchmark in
         for _ in 0..<100 {
-            let serializer = MultipartSerializer(boundary: "boundary123")
+            let serializer = MultipartSerializer(boundary: boundary)
             let serialized = try serializer.serialize(parts: repeatedParts)
             blackHole(serialized)
         }
