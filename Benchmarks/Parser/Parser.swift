@@ -4,8 +4,16 @@ import MultipartKit
 
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
-    // 256MiB: Big message, 16KiB: Chunk size
-    let chunkedMessage = Array(makeMessage(boundary: boundary, size: 1 << 28).chunks(ofCount: 1 << 14))
+    let sizeInMiB = 256
+    let chunkSizeInKiB = 16
+    let chunkedMessage = Array(
+        makeMessage(
+            boundary: boundary,
+            size: sizeInMiB << 20
+        ).chunks(
+            ofCount: chunkSizeInKiB << 10
+        )
+    )
     let cpuBenchsWarmupIterations = 1
     let cpuBenchsMaxIterations = 10
     let cpuBenchsTotalIterations = cpuBenchsWarmupIterations + cpuBenchsMaxIterations
@@ -31,7 +39,7 @@ let benchmarks: @Sendable () -> Void = {
     var streamingParserIterated = 0
     bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in chunkedMessage.async }
     Benchmark(
-        "StreamingParserCPUTime",
+        "StreamingParserCPUTime_\(sizeInMiB)MiB",
         configuration: .init(
             metrics: [.cpuUser],
             warmupIterations: cpuBenchsWarmupIterations,
@@ -79,7 +87,7 @@ let benchmarks: @Sendable () -> Void = {
     var collatingParserIterated = 0
     bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in chunkedMessage.async }
     Benchmark(
-        "CollatingParserCPUTime",
+        "CollatingParserCPUTime_\(sizeInMiB)MiB",
         configuration: .init(
             metrics: [.cpuUser],
             warmupIterations: cpuBenchsWarmupIterations,
