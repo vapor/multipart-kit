@@ -15,7 +15,7 @@ let benchmarks: @Sendable () -> Void = {
     )
 
     let cpuBenchsWarmupIterations = 1
-    let cpuBenchsMaxIterations = 10
+    let cpuBenchsMaxIterations = 20
     let maxBufferStreamsUsedInBenchs = cpuBenchsWarmupIterations + cpuBenchsMaxIterations
 
     var bufferStreams: [AsyncSyncSequence<[ArraySlice<UInt8>]>] = []
