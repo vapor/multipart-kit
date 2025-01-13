@@ -6,20 +6,24 @@ let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
     let sizeInMiB = 256
     let chunkSizeInKiB = 16
-    let chunkedMessage = Array(
-        makeMessage(
-            boundary: boundary,
-            size: sizeInMiB << 20
-        ).chunks(
-            ofCount: chunkSizeInKiB << 10
-        )
+    let message = makeMessage(
+        boundary: boundary,
+        size: sizeInMiB << 20
     )
+
+    func makeStream() -> AsyncStream<ArraySlice<UInt8>> {
+        makeParsingStream(
+            for: message,
+            chunkSize: chunkSizeInKiB << 10
+        )
+    }
+
     let cpuBenchsWarmupIterations = 1
     let cpuBenchsMaxIterations = 10
     let cpuBenchsTotalIterations = cpuBenchsWarmupIterations + cpuBenchsMaxIterations
-    var bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in chunkedMessage.async }
+    var bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in makeStream() }
 
-    bufferStreams[0] = chunkedMessage.async
+    bufferStreams[0] = makeStream()
     Benchmark(
         "StreamingParserAllocations",
         configuration: .init(
@@ -37,7 +41,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     var streamingParserIterated = 0
-    bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in chunkedMessage.async }
+    bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in makeStream() }
     Benchmark(
         "StreamingParserCPUTime_\(sizeInMiB)MiB",
         configuration: .init(
@@ -67,7 +71,7 @@ let benchmarks: @Sendable () -> Void = {
         }
     }
 
-    bufferStreams[0] = chunkedMessage.async
+    bufferStreams[0] = makeStream()
     Benchmark(
         "CollatingParserAllocations",
         configuration: .init(
@@ -85,7 +89,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     var collatingParserIterated = 0
-    bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in chunkedMessage.async }
+    bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in makeStream() }
     Benchmark(
         "CollatingParserCPUTime_\(sizeInMiB)MiB",
         configuration: .init(
@@ -113,6 +117,21 @@ let benchmarks: @Sendable () -> Void = {
         for try await part in sequence {
             blackHole(part)
         }
+    }
+}
+
+private func makeParsingStream(
+    for message: ArraySlice<UInt8>,
+    chunkSize: Int
+) -> AsyncStream<ArraySlice<UInt8>> {
+    AsyncStream { continuation in
+        var offset = message.startIndex
+        while offset < message.endIndex {
+            let endIndex = min(message.endIndex, message.index(offset, offsetBy: chunkSize))
+            continuation.yield(message[offset..<endIndex])
+            offset = endIndex
+        }
+        continuation.finish()
     }
 }
 
