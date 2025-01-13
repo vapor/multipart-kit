@@ -4,7 +4,6 @@ import Benchmark
 import MultipartKit
 
 let benchmarks: @Sendable () -> Void = {
-    print("Starting benchmarks")
     let boundary = "boundary123"
     // 64MiB: Big message, 16KiB: Chunk size
     let chunkedMessage = makeMessage(boundary: boundary, size: 1 << 26).chunks(ofCount: 1 << 14)
