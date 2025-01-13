@@ -66,8 +66,8 @@ let benchmarks: @Sendable () -> Void = {
                     /// `2 - 1 == 1`% tolerance.
                     /// Will rely on the absolute threshold as the tighter threshold.
                     relative: [.p90: 2],
-                    /// 500 allocations of tolerance.
-                    absolute: [.p90: 500]
+                    /// 1000 allocations of tolerance.
+                    absolute: [.p90: 1000]
                 )
             ]
         )
@@ -126,8 +126,8 @@ let benchmarks: @Sendable () -> Void = {
                     /// `2 - 1 == 1`% tolerance.
                     /// Will rely on the absolute threshold as the tighter threshold.
                     relative: [.p90: 2],
-                    /// 500 allocations of tolerance.
-                    absolute: [.p90: 500]
+                    /// 1000 allocations of tolerance.
+                    absolute: [.p90: 1000]
                 )
             ]
         )
