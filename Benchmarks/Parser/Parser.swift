@@ -3,36 +3,28 @@ import MultipartKit
 
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
-    let bigMessage = makeMessage(boundary: boundary, size: 1 << 27)  // 128MiB: Big message
-    nonisolated(unsafe) var bufferStream1 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-    nonisolated(unsafe) var bufferStream2 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-    nonisolated(unsafe) var bufferStream3 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-    nonisolated(unsafe) var bufferStream4 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-    nonisolated(unsafe) var bufferStream5 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-    nonisolated(unsafe) var bufferStream6 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-    nonisolated(unsafe) var bufferStream7 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-    nonisolated(unsafe) var bufferStream8 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-    nonisolated(unsafe) var bufferStream9 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-    nonisolated(unsafe) var bufferStream10 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
+    let bigMessage = makeMessage(boundary: boundary, size: 1 << 26)  // 64MiB: Big message
+    var bufferStreams = (0..<100).map { _ in
+        // 100 empty streams
+        AsyncStream<ArraySlice<UInt8>> { $0.finish() }
+    }
 
     Benchmark(
         "StreamingParserAllocations",
         configuration: .init(
             metrics: [.mallocCountTotal],
             maxIterations: 1,
-            teardown: {
-                bufferStream1 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
+            setup: {
+                bufferStreams[0] = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
             }
         )
     ) { benchmark in
-        let streamingSequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream1)
-        for try await part in streamingSequence {
-            blackHole(part)
-        }
+        let sequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStreams[0])
+        for try await part in sequence { blackHole(part) }
     }
 
     Benchmark(
-        "10xStreamingParserCPUTime",
+        "100xStreamingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser],
             maxDuration: .seconds(20),
@@ -46,49 +38,15 @@ let benchmarks: @Sendable () -> Void = {
                     absolute: [.p90: 26_000_000]
                 )
             ],
-            teardown: {
-                bufferStream1 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream2 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream3 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream4 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream5 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream6 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream7 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream8 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream9 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream10 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
+            setup: {
+                bufferStreams = (0..<100).map { _ in makeParsingStream(for: bigMessage, chunkSize: 1 << 14) }
             }
         )
     ) { benchmark in
-        let sequence1 = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream1)
-        for try await part in sequence1 { blackHole(part) }
-
-        let sequence2 = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream2)
-        for try await part in sequence2 { blackHole(part) }
-
-        let sequence3 = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream3)
-        for try await part in sequence3 { blackHole(part) }
-
-        let sequence4 = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream4)
-        for try await part in sequence4 { blackHole(part) }
-
-        let sequence5 = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream5)
-        for try await part in sequence5 { blackHole(part) }
-
-        let sequence6 = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream6)
-        for try await part in sequence6 { blackHole(part) }
-
-        let sequence7 = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream7)
-        for try await part in sequence7 { blackHole(part) }
-
-        let sequence8 = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream8)
-        for try await part in sequence8 { blackHole(part) }
-
-        let sequence9 = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream9)
-        for try await part in sequence9 { blackHole(part) }
-
-        let sequence10 = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream10)
-        for try await part in sequence10 { blackHole(part) }
+        for bufferStream in bufferStreams {
+            let sequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream)
+            for try await part in sequence { blackHole(part) }
+        }
     }
 
     Benchmark(
@@ -96,17 +54,17 @@ let benchmarks: @Sendable () -> Void = {
         configuration: .init(
             metrics: [.mallocCountTotal],
             maxIterations: 1,
-            teardown: {
-                bufferStream1 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
+            setup: {
+                bufferStreams[0] = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
             }
         )
     ) { benchmark in
-        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream1)
+        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStreams[0])
         for try await part in sequence { blackHole(part) }
     }
 
     Benchmark(
-        "10xCollatingParserCPUTime",
+        "100xCollatingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser],
             maxDuration: .seconds(20),
@@ -120,49 +78,15 @@ let benchmarks: @Sendable () -> Void = {
                     absolute: [.p90: 26_000_000]
                 )
             ],
-            teardown: {
-                bufferStream1 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream2 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream3 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream4 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream5 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream6 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream7 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream8 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream9 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
-                bufferStream10 = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
+            setup: {
+                bufferStreams = (0..<100).map { _ in makeParsingStream(for: bigMessage, chunkSize: 1 << 14) }
             }
         )
     ) { benchmark in
-        let sequence1 = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream1)
-        for try await part in sequence1 { blackHole(part) }
-
-        let sequence2 = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream2)
-        for try await part in sequence2 { blackHole(part) }
-
-        let sequence3 = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream3)
-        for try await part in sequence3 { blackHole(part) }
-
-        let sequence4 = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream4)
-        for try await part in sequence4 { blackHole(part) }
-
-        let sequence5 = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream5)
-        for try await part in sequence5 { blackHole(part) }
-
-        let sequence6 = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream6)
-        for try await part in sequence6 { blackHole(part) }
-
-        let sequence7 = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream7)
-        for try await part in sequence7 { blackHole(part) }
-
-        let sequence8 = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream8)
-        for try await part in sequence8 { blackHole(part) }
-
-        let sequence9 = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream9)
-        for try await part in sequence9 { blackHole(part) }
-
-        let sequence10 = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream10)
-        for try await part in sequence10 { blackHole(part) }
+        for bufferStream in bufferStreams {
+            let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream)
+            for try await part in sequence { blackHole(part) }
+        }
     }
 }
 
