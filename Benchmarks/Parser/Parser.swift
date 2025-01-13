@@ -1,74 +1,42 @@
 import Algorithms
-import AsyncAlgorithms
 import Benchmark
 import MultipartKit
 
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
-    // 128MiB: Big message, 16KiB: Chunk size
-    let chunkedMessage = Array(makeMessage(boundary: boundary, size: 1 << 27).chunks(ofCount: 1 << 14))
-    var bufferStreams = (0..<10).map { _ in chunkedMessage.async }
+    // 256MiB: Big message, 16KiB: Chunk size
+    let chunkedMessage = Array(makeMessage(boundary: boundary, size: 1 << 28).chunks(ofCount: 1 << 14))
+    let cpuBenchsWarmupIterations = 1
+    let cpuBenchsMaxIterations = 10
+    let cpuBenchsTotalIterations = cpuBenchsWarmupIterations + cpuBenchsMaxIterations
+    var bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in chunkedMessage.async }
 
+    bufferStreams[0] = chunkedMessage.async
     Benchmark(
         "StreamingParserAllocations",
         configuration: .init(
             metrics: [.mallocCountTotal],
-            maxIterations: 1,
-            setup: {
-                bufferStreams[0] = chunkedMessage.async
-            }
+            maxIterations: 1
         )
     ) { benchmark in
-        let sequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStreams[0])
-        for try await part in sequence { blackHole(part) }
+        let sequence = StreamingMultipartParserAsyncSequence(
+            boundary: boundary,
+            buffer: bufferStreams[0]
+        )
+        for try await part in sequence {
+            blackHole(part)
+        }
     }
 
+    var streamingParserIterated = 0
+    bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in chunkedMessage.async }
     Benchmark(
         "StreamingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser],
+            warmupIterations: cpuBenchsWarmupIterations,
             maxDuration: .seconds(20),
-            maxIterations: 10,
-            thresholds: [
-                .cpuUser: .init(
-                    /// `9 - 1 == 8`% tolerance.
-                    /// Will rely on the absolute threshold as the tighter threshold.
-                    relative: [.p90: 9],
-                    /// 26ms of tolerance.
-                    absolute: [.p90: 26_000_000]
-                )
-            ],
-            setup: {
-                bufferStreams = (0..<10).map { _ in chunkedMessage.async }
-            }
-        )
-    ) { benchmark in
-        for bufferStream in bufferStreams {
-            let sequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream)
-            for try await part in sequence { blackHole(part) }
-        }
-    }
-
-    Benchmark(
-        "CollatingParserAllocations",
-        configuration: .init(
-            metrics: [.mallocCountTotal],
-            maxIterations: 1,
-            setup: {
-                bufferStreams[0] = chunkedMessage.async
-            }
-        )
-    ) { benchmark in
-        let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStreams[0])
-        for try await part in sequence { blackHole(part) }
-    }
-
-    Benchmark(
-        "CollatingParserCPUTime",
-        configuration: .init(
-            metrics: [.cpuUser],
-            maxDuration: .seconds(20),
-            maxIterations: 10,
+            maxIterations: cpuBenchsMaxIterations,
             thresholds: [
                 .cpuUser: .init(
                     /// `10 - 1 == 9`% tolerance.
@@ -77,15 +45,65 @@ let benchmarks: @Sendable () -> Void = {
                     /// 26ms of tolerance.
                     absolute: [.p90: 26_000_000]
                 )
-            ],
-            setup: {
-                bufferStreams = (0..<10).map { _ in chunkedMessage.async }
-            }
+            ]
         )
     ) { benchmark in
-        for bufferStream in bufferStreams {
-            let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream)
-            for try await part in sequence { blackHole(part) }
+        defer { streamingParserIterated += 1 }
+
+        let sequence = StreamingMultipartParserAsyncSequence(
+            boundary: boundary,
+            buffer: bufferStreams[streamingParserIterated]
+        )
+        for try await part in sequence {
+            blackHole(part)
+        }
+    }
+
+    bufferStreams[0] = chunkedMessage.async
+    Benchmark(
+        "CollatingParserAllocations",
+        configuration: .init(
+            metrics: [.mallocCountTotal],
+            maxIterations: 1
+        )
+    ) { benchmark in
+        let sequence = MultipartParserAsyncSequence(
+            boundary: boundary,
+            buffer: bufferStreams[0]
+        )
+        for try await part in sequence {
+            blackHole(part)
+        }
+    }
+
+    var collatingParserIterated = 0
+    bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in chunkedMessage.async }
+    Benchmark(
+        "CollatingParserCPUTime",
+        configuration: .init(
+            metrics: [.cpuUser],
+            warmupIterations: cpuBenchsWarmupIterations,
+            maxDuration: .seconds(20),
+            maxIterations: cpuBenchsMaxIterations,
+            thresholds: [
+                .cpuUser: .init(
+                    /// `10 - 1 == 9`% tolerance.
+                    /// Will rely on the absolute threshold as the tighter threshold.
+                    relative: [.p90: 9],
+                    /// 26ms of tolerance.
+                    absolute: [.p90: 26_000_000]
+                )
+            ]
+        )
+    ) { benchmark in
+        defer { collatingParserIterated += 1 }
+
+        let sequence = MultipartParserAsyncSequence(
+            boundary: boundary,
+            buffer: bufferStreams[collatingParserIterated]
+        )
+        for try await part in sequence {
+            blackHole(part)
         }
     }
 }
