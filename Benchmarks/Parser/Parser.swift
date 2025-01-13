@@ -6,7 +6,7 @@ import MultipartKit
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
     // 128MiB: Big message, 16KiB: Chunk size
-    let chunkedMessage = ArraySlice(makeMessage(boundary: boundary, size: 1 << 27).chunks(ofCount: 1 << 14))
+    let chunkedMessage = Array(makeMessage(boundary: boundary, size: 1 << 27).chunks(ofCount: 1 << 14))
     var bufferStreams = (0..<10).map { _ in chunkedMessage.async }
 
     Benchmark(
