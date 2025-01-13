@@ -7,7 +7,7 @@ let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
     // 64MiB: Big message, 16KiB: Chunk size
     let chunkedMessage = makeMessage(boundary: boundary, size: 1 << 26).chunks(ofCount: 1 << 14)
-    var bufferStreams: [AsyncSyncSequence<ChunksOfCountCollection<ArraySlice<UInt8>>>] = .init(unsafeUninitializedCapacity: 10) { _, _ in }
+    var bufferStreams = (0..<10).map { _ in chunkedMessage.async }
 
     Benchmark(
         "StreamingParserAllocations",
