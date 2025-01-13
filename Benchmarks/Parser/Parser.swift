@@ -4,28 +4,28 @@ import MultipartKit
 
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
-    let sizeInMiB = 256
+    let approxSizeInMiB = 256
     let chunkSizeInKiB = 16
     let message = makeMessage(
         boundary: boundary,
-        size: sizeInMiB << 20
+        size: approxSizeInMiB << 20
     )
-
-    func makeStream() -> AsyncStream<ArraySlice<UInt8>> {
-        makeParsingStream(
-            for: message,
-            chunkSize: chunkSizeInKiB << 10
-        )
-    }
+    let chunkedMessage = makeChunks(for: message, chunkSize: chunkSizeInKiB << 10)
 
     let cpuBenchsWarmupIterations = 1
     let cpuBenchsMaxIterations = 10
-    let cpuBenchsTotalIterations = cpuBenchsWarmupIterations + cpuBenchsMaxIterations
-    var bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in makeStream() }
+    let maxBufferStreamsUsedInBenchs = cpuBenchsWarmupIterations + cpuBenchsMaxIterations
+    var bufferStreams: [AsyncSyncSequence<[ArraySlice<UInt8>]>] = []
+    var benchmarkIterated = 0
 
-    bufferStreams[0] = makeStream()
+    func refreshBufferStreams() {
+        bufferStreams = (0..<maxBufferStreamsUsedInBenchs).map { _ in
+            chunkedMessage.async
+        }
+    }
+
     Benchmark(
-        "StreamingParserAllocations",
+        "StreamingParserAllocations_0MiB",
         configuration: .init(
             metrics: [.mallocCountTotal],
             maxIterations: 1
@@ -33,17 +33,37 @@ let benchmarks: @Sendable () -> Void = {
     ) { benchmark in
         let sequence = StreamingMultipartParserAsyncSequence(
             boundary: boundary,
-            buffer: bufferStreams[0]
+            buffer: [ArraySlice<UInt8>]().async
         )
         for try await part in sequence {
             blackHole(part)
         }
     }
 
-    var streamingParserIterated = 0
-    bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in makeStream() }
+    benchmarkIterated = 0
+    refreshBufferStreams()
     Benchmark(
-        "StreamingParserCPUTime_\(sizeInMiB)MiB",
+        "StreamingParserAllocations_\(approxSizeInMiB)MiB",
+        configuration: .init(
+            metrics: [.mallocCountTotal],
+            maxIterations: 1
+        )
+    ) { benchmark in
+        defer { benchmarkIterated += 1 }
+
+        let sequence = StreamingMultipartParserAsyncSequence(
+            boundary: boundary,
+            buffer: bufferStreams[benchmarkIterated]
+        )
+        for try await part in sequence {
+            blackHole(part)
+        }
+    }
+
+    benchmarkIterated = 0
+    refreshBufferStreams()
+    Benchmark(
+        "StreamingParserCPUTime_\(approxSizeInMiB)MiB",
         configuration: .init(
             metrics: [.cpuUser],
             warmupIterations: cpuBenchsWarmupIterations,
@@ -60,20 +80,19 @@ let benchmarks: @Sendable () -> Void = {
             ]
         )
     ) { benchmark in
-        defer { streamingParserIterated += 1 }
+        defer { benchmarkIterated += 1 }
 
         let sequence = StreamingMultipartParserAsyncSequence(
             boundary: boundary,
-            buffer: bufferStreams[streamingParserIterated]
+            buffer: bufferStreams[benchmarkIterated]
         )
         for try await part in sequence {
             blackHole(part)
         }
     }
 
-    bufferStreams[0] = makeStream()
     Benchmark(
-        "CollatingParserAllocations",
+        "CollatingParserAllocations_0MiB",
         configuration: .init(
             metrics: [.mallocCountTotal],
             maxIterations: 1
@@ -81,17 +100,37 @@ let benchmarks: @Sendable () -> Void = {
     ) { benchmark in
         let sequence = MultipartParserAsyncSequence(
             boundary: boundary,
-            buffer: bufferStreams[0]
+            buffer: [ArraySlice<UInt8>]().async
         )
         for try await part in sequence {
             blackHole(part)
         }
     }
 
-    var collatingParserIterated = 0
-    bufferStreams = (0..<cpuBenchsTotalIterations).map { _ in makeStream() }
+    benchmarkIterated = 0
+    refreshBufferStreams()
     Benchmark(
-        "CollatingParserCPUTime_\(sizeInMiB)MiB",
+        "CollatingParserAllocations_\(approxSizeInMiB)MiB",
+        configuration: .init(
+            metrics: [.mallocCountTotal],
+            maxIterations: 1
+        )
+    ) { benchmark in
+        defer { benchmarkIterated += 1 }
+
+        let sequence = MultipartParserAsyncSequence(
+            boundary: boundary,
+            buffer: bufferStreams[benchmarkIterated]
+        )
+        for try await part in sequence {
+            blackHole(part)
+        }
+    }
+
+    benchmarkIterated = 0
+    refreshBufferStreams()
+    Benchmark(
+        "CollatingParserCPUTime_\(approxSizeInMiB)MiB",
         configuration: .init(
             metrics: [.cpuUser],
             warmupIterations: cpuBenchsWarmupIterations,
@@ -108,11 +147,11 @@ let benchmarks: @Sendable () -> Void = {
             ]
         )
     ) { benchmark in
-        defer { collatingParserIterated += 1 }
+        defer { benchmarkIterated += 1 }
 
         let sequence = MultipartParserAsyncSequence(
             boundary: boundary,
-            buffer: bufferStreams[collatingParserIterated]
+            buffer: bufferStreams[benchmarkIterated]
         )
         for try await part in sequence {
             blackHole(part)
@@ -120,19 +159,23 @@ let benchmarks: @Sendable () -> Void = {
     }
 }
 
-private func makeParsingStream(
+private func makeChunks(
     for message: ArraySlice<UInt8>,
     chunkSize: Int
-) -> AsyncStream<ArraySlice<UInt8>> {
-    AsyncStream { continuation in
-        var offset = message.startIndex
-        while offset < message.endIndex {
-            let endIndex = min(message.endIndex, message.index(offset, offsetBy: chunkSize))
-            continuation.yield(message[offset..<endIndex])
-            offset = endIndex
-        }
-        continuation.finish()
+) -> [ArraySlice<UInt8>] {
+    var chunks: [ArraySlice<UInt8>] = []
+    let approxChunksCount = (message.count / chunkSize) + 2
+    chunks.reserveCapacity(approxChunksCount)
+
+    var offset = message.startIndex
+    let endIndex = message.endIndex
+    while offset < endIndex {
+        let chunkEndIndex = min(endIndex, message.index(offset, offsetBy: chunkSize))
+        chunks.append(message[offset..<chunkEndIndex])
+        offset = chunkEndIndex
     }
+
+    return chunks
 }
 
 private func makeMessage(boundary: String, size: Int) -> ArraySlice<UInt8> {
