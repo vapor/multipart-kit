@@ -1,13 +1,14 @@
+import Algorithms
+import AsyncAlgorithms
 import Benchmark
 import MultipartKit
 
 let benchmarks: @Sendable () -> Void = {
+    print("Starting benchmarks")
     let boundary = "boundary123"
-    let bigMessage = makeMessage(boundary: boundary, size: 1 << 26)  // 64MiB: Big message
-    var bufferStreams = (0..<100).map { _ in
-        // 100 empty streams
-        AsyncStream<ArraySlice<UInt8>> { $0.finish() }
-    }
+    // 64MiB: Big message, 16KiB: Chunk size
+    let chunkedMessage = makeMessage(boundary: boundary, size: 1 << 26).chunks(ofCount: 1 << 14)
+    var bufferStreams: [AsyncSyncSequence<ChunksOfCountCollection<ArraySlice<UInt8>>>] = .init(unsafeUninitializedCapacity: 10) { _, _ in }
 
     Benchmark(
         "StreamingParserAllocations",
@@ -15,7 +16,7 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.mallocCountTotal],
             maxIterations: 1,
             setup: {
-                bufferStreams[0] = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
+                bufferStreams[0] = chunkedMessage.async
             }
         )
     ) { benchmark in
@@ -24,7 +25,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "100xStreamingParserCPUTime",
+        "10xStreamingParserCPUTime",
         configuration: .init(
             metrics: [.cpuUser],
             maxDuration: .seconds(20),
@@ -39,7 +40,7 @@ let benchmarks: @Sendable () -> Void = {
                 )
             ],
             setup: {
-                bufferStreams = (0..<100).map { _ in makeParsingStream(for: bigMessage, chunkSize: 1 << 14) }
+                bufferStreams = (0..<10).map { _ in chunkedMessage.async }
             }
         )
     ) { benchmark in
@@ -55,7 +56,7 @@ let benchmarks: @Sendable () -> Void = {
             metrics: [.mallocCountTotal],
             maxIterations: 1,
             setup: {
-                bufferStreams[0] = makeParsingStream(for: bigMessage, chunkSize: 1 << 14)
+                bufferStreams[0] = chunkedMessage.async
             }
         )
     ) { benchmark in
@@ -64,9 +65,9 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "100xCollatingParserCPUTime",
+        "10xCollatingParserCPUTime",
         configuration: .init(
-            metrics: [.cpuUser],
+            metrics: [.cpuUser, .peakMemoryResident],
             maxDuration: .seconds(20),
             maxIterations: 10,
             thresholds: [
@@ -79,7 +80,7 @@ let benchmarks: @Sendable () -> Void = {
                 )
             ],
             setup: {
-                bufferStreams = (0..<100).map { _ in makeParsingStream(for: bigMessage, chunkSize: 1 << 14) }
+                bufferStreams = (0..<10).map { _ in chunkedMessage.async }
             }
         )
     ) { benchmark in
@@ -87,21 +88,6 @@ let benchmarks: @Sendable () -> Void = {
             let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: bufferStream)
             for try await part in sequence { blackHole(part) }
         }
-    }
-}
-
-private func makeParsingStream(
-    for message: ArraySlice<UInt8>,
-    chunkSize: Int
-) -> AsyncStream<ArraySlice<UInt8>> {
-    AsyncStream { continuation in
-        var offset = message.startIndex
-        while offset < message.endIndex {
-            let endIndex = min(message.endIndex, message.index(offset, offsetBy: chunkSize))
-            continuation.yield(message[offset..<endIndex])
-            offset = endIndex
-        }
-        continuation.finish()
     }
 }
 
