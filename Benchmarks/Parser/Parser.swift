@@ -60,7 +60,16 @@ let benchmarks: @Sendable () -> Void = {
         "StreamingParserAllocations_\(approxSizeInMiB)MiB",
         configuration: .init(
             metrics: [.mallocCountTotal],
-            maxIterations: 1
+            maxIterations: 1,
+            thresholds: [
+                .mallocCountTotal: .init(
+                    /// `2 - 1 == 1`% tolerance.
+                    /// Will rely on the absolute threshold as the tighter threshold.
+                    relative: [.p90: 2],
+                    /// 500 allocations of tolerance.
+                    absolute: [.p90: 500]
+                )
+            ]
         )
     ) { benchmark in
         defer { benchmarkIterated += 1 }
@@ -111,7 +120,16 @@ let benchmarks: @Sendable () -> Void = {
         "CollatingParserAllocations_Empty",
         configuration: .init(
             metrics: [.mallocCountTotal],
-            maxIterations: 1
+            maxIterations: 1,
+            thresholds: [
+                .mallocCountTotal: .init(
+                    /// `2 - 1 == 1`% tolerance.
+                    /// Will rely on the absolute threshold as the tighter threshold.
+                    relative: [.p90: 2],
+                    /// 500 allocations of tolerance.
+                    absolute: [.p90: 500]
+                )
+            ]
         )
     ) { benchmark in
         defer { benchmarkIterated += 1 }
