@@ -15,7 +15,9 @@ let benchmarks: @Sendable () -> Void = {
     let cpuBenchsWarmupIterations = 1
     let cpuBenchsMaxIterations = 10
     let maxBufferStreamsUsedInBenchs = cpuBenchsWarmupIterations + cpuBenchsMaxIterations
+
     var bufferStreams: [AsyncSyncSequence<[ArraySlice<UInt8>]>] = []
+    var bufferStreamsWithNoContents: [AsyncStream<ArraySlice<UInt8>>] = []
     var benchmarkIterated = 0
 
     func refreshBufferStreams() {
@@ -25,8 +27,8 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     func refreshBufferStreamsWithNoContents() {
-        bufferStreams = (0..<maxBufferStreamsUsedInBenchs).map { _ in
-            [ArraySlice<UInt8>]().async
+        bufferStreamsWithNoContents = (0..<maxBufferStreamsUsedInBenchs).map { _ in
+            AsyncStream { $0.finish() }
         }
     }
 
@@ -43,7 +45,7 @@ let benchmarks: @Sendable () -> Void = {
 
         let sequence = StreamingMultipartParserAsyncSequence(
             boundary: boundary,
-            buffer: bufferStreams[benchmarkIterated]
+            buffer: bufferStreamsWithNoContents[benchmarkIterated]
         )
         for try await part in sequence {
             blackHole(part)
@@ -114,7 +116,7 @@ let benchmarks: @Sendable () -> Void = {
 
         let sequence = MultipartParserAsyncSequence(
             boundary: boundary,
-            buffer: bufferStreams[benchmarkIterated]
+            buffer: bufferStreamsWithNoContents[benchmarkIterated]
         )
         for try await part in sequence {
             blackHole(part)
