@@ -6,11 +6,13 @@ let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
     let approxSizeInMiB = 256
     let chunkSizeInKiB = 16
-    let message = makeMessage(
-        boundary: boundary,
-        size: approxSizeInMiB << 20
+    let chunkedMessage = makeChunks(
+        for: makeMessage(
+            boundary: boundary,
+            size: approxSizeInMiB << 20
+        ),
+        chunkSize: chunkSizeInKiB << 10
     )
-    let chunkedMessage = makeChunks(for: message, chunkSize: chunkSizeInKiB << 10)
 
     let cpuBenchsWarmupIterations = 1
     let cpuBenchsMaxIterations = 10
