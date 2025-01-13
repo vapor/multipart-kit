@@ -4,10 +4,7 @@ import MultipartKit
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
     let bigMessage = makeMessage(boundary: boundary, size: 1 << 26)  // 64MiB: Big message
-    var bufferStreams = (0..<100).map { _ in
-        // 100 empty streams
-        AsyncStream<ArraySlice<UInt8>> { $0.finish() }
-    }
+    var bufferStreams: [AsyncStream<ArraySlice<UInt8>>] = .init(unsafeUninitializedCapacity: 100) { _, _ in }
 
     Benchmark(
         "StreamingParserAllocations",
