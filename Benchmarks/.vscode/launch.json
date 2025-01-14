@@ -1,0 +1,40 @@
+{
+    "configurations": [
+        {
+            "type": "swift-lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Benchmarks}",
+            "name": "Debug Serializer",
+            "program": "${workspaceFolder:Benchmarks}/.build/debug/Serializer",
+            "preLaunchTask": "swift: Build Debug Serializer"
+        },
+        {
+            "type": "swift-lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Benchmarks}",
+            "name": "Release Serializer",
+            "program": "${workspaceFolder:Benchmarks}/.build/release/Serializer",
+            "preLaunchTask": "swift: Build Release Serializer"
+        },
+        {
+            "type": "swift-lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Benchmarks}",
+            "name": "Debug Parser",
+            "program": "${workspaceFolder:Benchmarks}/.build/debug/Parser",
+            "preLaunchTask": "swift: Build Debug Parser"
+        },
+        {
+            "type": "swift-lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Benchmarks}",
+            "name": "Release Parser",
+            "program": "${workspaceFolder:Benchmarks}/.build/release/Parser",
+            "preLaunchTask": "swift: Build Release Parser"
+        }
+    ]
+}
