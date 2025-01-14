@@ -14,6 +14,7 @@ let benchmarks: @Sendable () -> Void = {
         chunkSize: chunkSizeInKiB << 10
     )
 
+    let cpuBenchsMaxDuration: Duration = .seconds(20)
     let cpuBenchsWarmupIterations = 5
     let cpuBenchsMaxIterations = 20
     let maxBufferStreamsUsedInBenchs = cpuBenchsWarmupIterations + cpuBenchsMaxIterations
@@ -79,7 +80,7 @@ let benchmarks: @Sendable () -> Void = {
         configuration: .init(
             metrics: [.cpuUser],
             warmupIterations: cpuBenchsWarmupIterations,
-            maxDuration: .seconds(20),
+            maxDuration: cpuBenchsMaxDuration,
             maxIterations: cpuBenchsMaxIterations,
             thresholds: [
                 .cpuUser: .init(
@@ -155,7 +156,7 @@ let benchmarks: @Sendable () -> Void = {
         configuration: .init(
             metrics: [.cpuUser],
             warmupIterations: cpuBenchsWarmupIterations,
-            maxDuration: .seconds(20),
+            maxDuration: cpuBenchsMaxDuration,
             maxIterations: cpuBenchsMaxIterations,
             thresholds: [
                 .cpuUser: .init(

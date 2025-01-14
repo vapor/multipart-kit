@@ -24,7 +24,7 @@ final class AsyncSyncSequence<Base: Sequence>: AsyncSequence {
         }
     }
 
-    var base: Base?
+    private var base: Base?
 
     init(_ base: Base) {
         self.base = base
