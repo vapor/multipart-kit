@@ -14,9 +14,9 @@ let benchmarks: @Sendable () -> Void = {
         chunkSize: chunkSizeInKiB << 10
     )
 
-    let cpuBenchsMaxDuration: Duration = .seconds(20)
     let cpuBenchsWarmupIterations = 5
     let cpuBenchsMaxIterations = 20
+    let cpuBenchsMaxDuration: Duration = .seconds(cpuBenchsMaxIterations + cpuBenchsWarmupIterations)
     let maxBufferStreamsUsedInBenchs = cpuBenchsWarmupIterations + cpuBenchsMaxIterations
 
     var bufferStreams: [AsyncSyncSequence<[ArraySlice<UInt8>]>] = []
