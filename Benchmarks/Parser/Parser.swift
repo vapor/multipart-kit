@@ -14,12 +14,11 @@ let benchmarks: @Sendable () -> Void = {
         chunkSize: chunkSizeInKiB << 10
     )
 
-    let cpuBenchsWarmupIterations = 1
+    let cpuBenchsWarmupIterations = 5
     let cpuBenchsMaxIterations = 20
     let maxBufferStreamsUsedInBenchs = cpuBenchsWarmupIterations + cpuBenchsMaxIterations
 
     var bufferStreams: [AsyncSyncSequence<[ArraySlice<UInt8>]>] = []
-    var bufferStreamsWithNoContents: [AsyncStream<ArraySlice<UInt8>>] = []
     var benchmarkIterated = 0
 
     func refreshBufferStreams() {
@@ -28,14 +27,6 @@ let benchmarks: @Sendable () -> Void = {
         }
     }
 
-    func refreshBufferStreamsWithNoContents() {
-        bufferStreamsWithNoContents = (0..<maxBufferStreamsUsedInBenchs).map { _ in
-            AsyncStream { $0.finish() }
-        }
-    }
-
-    benchmarkIterated = 0
-    refreshBufferStreamsWithNoContents()
     Benchmark(
         "StreamingParserAllocations_Empty",
         configuration: .init(
@@ -43,11 +34,9 @@ let benchmarks: @Sendable () -> Void = {
             maxIterations: 1
         )
     ) { benchmark in
-        defer { benchmarkIterated += 1 }
-
         let sequence = StreamingMultipartParserAsyncSequence(
             boundary: boundary,
-            buffer: bufferStreamsWithNoContents[benchmarkIterated]
+            buffer: NoOpAsyncSequence()
         )
         for try await part in sequence {
             blackHole(part)
@@ -114,8 +103,6 @@ let benchmarks: @Sendable () -> Void = {
         }
     }
 
-    benchmarkIterated = 0
-    refreshBufferStreamsWithNoContents()
     Benchmark(
         "CollatingParserAllocations_Empty",
         configuration: .init(
@@ -123,11 +110,9 @@ let benchmarks: @Sendable () -> Void = {
             maxIterations: 1
         )
     ) { benchmark in
-        defer { benchmarkIterated += 1 }
-
         let sequence = MultipartParserAsyncSequence(
             boundary: boundary,
-            buffer: bufferStreamsWithNoContents[benchmarkIterated]
+            buffer: NoOpAsyncSequence()
         )
         for try await part in sequence {
             blackHole(part)
