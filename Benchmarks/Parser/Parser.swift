@@ -4,12 +4,12 @@ import MultipartKit
 
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"
-    let approxSizeInMiB = 256
+    let fileSizeInMiB = 256
     let chunkSizeInKiB = 16
     let chunkedMessage = makeChunks(
         for: makeMessage(
             boundary: boundary,
-            size: approxSizeInMiB << 20
+            fileSize: fileSizeInMiB << 20
         ),
         chunkSize: chunkSizeInKiB << 10
     )
@@ -47,7 +47,7 @@ let benchmarks: @Sendable () -> Void = {
     benchmarkIterated = 0
     refreshBufferStreams()
     Benchmark(
-        "StreamingParserAllocations_\(approxSizeInMiB)MiB",
+        "StreamingParserAllocations_\(fileSizeInMiB)MiB",
         configuration: .init(
             metrics: [.mallocCountTotal],
             maxIterations: 1,
@@ -76,7 +76,7 @@ let benchmarks: @Sendable () -> Void = {
     benchmarkIterated = 0
     refreshBufferStreams()
     Benchmark(
-        "StreamingParserCPUTime_\(approxSizeInMiB)MiB",
+        "StreamingParserCPUTime_\(fileSizeInMiB)MiB",
         configuration: .init(
             metrics: [.cpuUser],
             warmupIterations: cpuBenchsWarmupIterations,
@@ -123,7 +123,7 @@ let benchmarks: @Sendable () -> Void = {
     benchmarkIterated = 0
     refreshBufferStreams()
     Benchmark(
-        "CollatingParserAllocations_\(approxSizeInMiB)MiB",
+        "CollatingParserAllocations_\(fileSizeInMiB)MiB",
         configuration: .init(
             metrics: [.mallocCountTotal],
             maxIterations: 1,
@@ -152,7 +152,7 @@ let benchmarks: @Sendable () -> Void = {
     benchmarkIterated = 0
     refreshBufferStreams()
     Benchmark(
-        "CollatingParserCPUTime_\(approxSizeInMiB)MiB",
+        "CollatingParserCPUTime_\(fileSizeInMiB)MiB",
         configuration: .init(
             metrics: [.cpuUser],
             warmupIterations: cpuBenchsWarmupIterations,
@@ -200,7 +200,7 @@ private func makeChunks(
     return chunks
 }
 
-private func makeMessage(boundary: String, size: Int) -> ArraySlice<UInt8> {
+private func makeMessage(boundary: String, fileSize: Int) -> ArraySlice<UInt8> {
     var message = ArraySlice(
         """
         --\(boundary)\r
