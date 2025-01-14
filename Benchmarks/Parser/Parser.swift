@@ -222,7 +222,7 @@ private func makeMessage(boundary: String, fileSize: Int) -> ArraySlice<UInt8> {
         \r\n
         """.utf8)
 
-    message.append(contentsOf: (0..<size).map { UInt8($0 & 255) })
+    message.append(contentsOf: (0..<fileSize).map { UInt8($0 & 255) })
     message.append(contentsOf: "\r\n--\(boundary)--".utf8)
 
     return message
