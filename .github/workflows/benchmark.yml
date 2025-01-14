@@ -128,13 +128,6 @@ jobs:
 
           echo 'PR_COMMENT<<EOF' >> "${GITHUB_ENV}"
 
-          # The fact that the comment starts with <!-- benchmark ci tag. exit code: ' is used
-          # in a other steps to find this comment again.
-          # Be wary of that when changing this line.
-          echo "<!-- benchmark ci tag. exit code: $EXIT_CODE -->" >> "${GITHUB_ENV}"
-
-          echo '' >> "${GITHUB_ENV}"
-
           echo '## [Benchmark](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) Report' >> "${GITHUB_ENV}"
 
           case "${EXIT_CODE}" in
