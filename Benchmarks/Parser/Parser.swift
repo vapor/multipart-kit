@@ -222,7 +222,7 @@ private func makeMessage(boundary: String, size: Int) -> ArraySlice<UInt8> {
         \r\n
         """.utf8)
 
-    message.append(contentsOf: Array(repeating: UInt8.random(in: .min ... .max), count: size))
+    message.append(contentsOf: (0..<size).map { UInt8($0 & 255) })
     message.append(contentsOf: "\r\n--\(boundary)--".utf8)
 
     return message

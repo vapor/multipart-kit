@@ -15,7 +15,7 @@ let benchmarks: @Sendable () -> Void = {
     let repeatedParts: [MultipartPart] = .init(repeating: examplePart, count: partCount)
 
     Benchmark(
-        "SerializerAllocations_0Parts",
+        "SerializerAllocations_Empty",
         configuration: .init(
             metrics: [.mallocCountTotal],
             maxIterations: 1
