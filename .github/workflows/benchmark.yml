@@ -179,7 +179,7 @@ jobs:
       # There is a '<!-- benchmark ci tag. exit code: {some_number} -->' comment at the beginning of the benchamrk report comment.
       # The number in that comment is the exit code of the last benchmark run.
       - name: Find existing comment ID
-        if: github.event_name == 'pull_request'
+        if: startsWith(github.event_name, 'pull_request')
         id: existing-comment
         run: |
           set -eu
@@ -233,7 +233,7 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
 
       - name: Comment in PR
-        if: github.event_name == 'pull_request'
+        if: startsWith(github.event_name, 'pull_request')
         run: |
           set -eu
 
