@@ -15,7 +15,7 @@ on:
 
 jobs:
   benchmark:
-    # Run the job only if it's a manual workflow dispatch, or if this event is a pull-request approval event, or if someone has rerun the job.
-    if: github.event_name == 'workflow_dispatch' || github.event.review.state == 'approved' || github.run_attempt > 1
+    # If this is a pull-request related event, make sure this is a pr-approval event or someone has rerun the job.
+    if: (startsWith(github.event_name, 'pull_request') && (github.event.review.state == 'approved' || github.run_attempt > 1)) || true
     uses: vapor/ci/.github/workflows/run-benchmark.yml@mmbm-benchmark
     secrets: inherit
