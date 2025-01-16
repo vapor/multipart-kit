@@ -16,6 +16,6 @@ on:
 jobs:
   benchmark:
     # If this is a pull-request related event, make sure this is a pr-approval event or someone has rerun the job.
-    if: (startsWith(github.event_name, 'pull_request') && (github.event.review.state == 'approved' || github.run_attempt > 1)) || true
+    if: startsWith(github.event_name, 'pull_request') == 'true'
     uses: vapor/ci/.github/workflows/run-benchmark.yml@mmbm-benchmark
     secrets: inherit
