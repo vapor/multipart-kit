@@ -31,7 +31,7 @@ final class AsyncSyncSequence<Base: Sequence>: AsyncSequence {
     }
 
     func makeAsyncIterator() -> Iterator {
-        defer { self.base = nil } // release the reference so no CoW is triggered
+        defer { self.base = nil }  // release the reference so no CoW is triggered
         return Iterator(base.unsafelyUnwrapped.makeIterator())
     }
 }
