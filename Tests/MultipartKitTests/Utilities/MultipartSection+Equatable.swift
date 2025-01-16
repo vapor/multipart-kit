@@ -1,3 +1,5 @@
+import MultipartKit
+
 extension MultipartSection: Equatable where Body: Equatable {
     public static func == (lhs: MultipartKit.MultipartSection<Body>, rhs: MultipartKit.MultipartSection<Body>) -> Bool {
         switch (lhs, rhs) {
