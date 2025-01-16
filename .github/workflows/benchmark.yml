@@ -1,6 +1,8 @@
 name: benchmark
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
   pull_request_review:
     types: [submitted]
   pull_request:
@@ -12,7 +14,7 @@ on:
       - .github/workflows/benchmark.yml
 
 jobs:
-  benchmark-vs-thresholds:
+  benchmark:
     # Run the job only if it's a manual workflow dispatch, or if this event is a pull-request approval event, or if someone has rerun the job.
     if: github.event_name == 'workflow_dispatch' || github.event.review.state == 'approved' || github.run_attempt > 1
     uses: vapor/ci/.github/workflows/run-benchmark.yml@mmbm-benchmark
