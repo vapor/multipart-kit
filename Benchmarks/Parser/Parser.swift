@@ -18,15 +18,6 @@ let benchmarks: @Sendable () -> Void = {
     let cpuBenchsMaxDuration: Duration = .seconds(cpuBenchsMaxIterations + cpuBenchsWarmupIterations)
     let maxBufferStreamsUsedInBenchs = cpuBenchsWarmupIterations + cpuBenchsMaxIterations
 
-    var bufferStreams: [AsyncSyncSequence<[ArraySlice<UInt8>]>] = []
-    var benchmarkIterated = 0
-
-    func refreshBufferStreams() {
-        bufferStreams = (0..<maxBufferStreamsUsedInBenchs).map { _ in
-            chunkedMessage.async
-        }
-    }
-
     Benchmark(
         "StreamingParserAllocations_Empty",
         configuration: .init(
@@ -43,8 +34,6 @@ let benchmarks: @Sendable () -> Void = {
         }
     }
 
-    benchmarkIterated = 0
-    refreshBufferStreams()
     Benchmark(
         "StreamingParserAllocations_\(fileSizeInMiB)MiB",
         configuration: .init(
@@ -61,19 +50,18 @@ let benchmarks: @Sendable () -> Void = {
             ]
         )
     ) { benchmark in
-        defer { benchmarkIterated += 1 }
+        let bufferStream = chunkedMessage.async
 
+        benchmark.startMeasurement()
         let sequence = StreamingMultipartParserAsyncSequence(
             boundary: boundary,
-            buffer: bufferStreams[benchmarkIterated]
+            buffer: bufferStream
         )
         for try await part in sequence {
             blackHole(part)
         }
     }
 
-    benchmarkIterated = 0
-    refreshBufferStreams()
     Benchmark(
         "StreamingParserCPUTime_\(fileSizeInMiB)MiB",
         configuration: .init(
@@ -92,11 +80,12 @@ let benchmarks: @Sendable () -> Void = {
             ]
         )
     ) { benchmark in
-        defer { benchmarkIterated += 1 }
+        let bufferStream = chunkedMessage.async
 
+        benchmark.startMeasurement()
         let sequence = StreamingMultipartParserAsyncSequence(
             boundary: boundary,
-            buffer: bufferStreams[benchmarkIterated]
+            buffer: bufferStream
         )
         for try await part in sequence {
             blackHole(part)
@@ -119,8 +108,6 @@ let benchmarks: @Sendable () -> Void = {
         }
     }
 
-    benchmarkIterated = 0
-    refreshBufferStreams()
     Benchmark(
         "CollatingParserAllocations_\(fileSizeInMiB)MiB",
         configuration: .init(
@@ -137,19 +124,18 @@ let benchmarks: @Sendable () -> Void = {
             ]
         )
     ) { benchmark in
-        defer { benchmarkIterated += 1 }
+        let bufferStream = chunkedMessage.async
 
+        benchmark.startMeasurement()
         let sequence = MultipartParserAsyncSequence(
             boundary: boundary,
-            buffer: bufferStreams[benchmarkIterated]
+            buffer: bufferStream
         )
         for try await part in sequence {
             blackHole(part)
         }
     }
 
-    benchmarkIterated = 0
-    refreshBufferStreams()
     Benchmark(
         "CollatingParserCPUTime_\(fileSizeInMiB)MiB",
         configuration: .init(
@@ -168,11 +154,12 @@ let benchmarks: @Sendable () -> Void = {
             ]
         )
     ) { benchmark in
-        defer { benchmarkIterated += 1 }
+        let bufferStream = chunkedMessage.async
 
+        benchmark.startMeasurement()
         let sequence = MultipartParserAsyncSequence(
             boundary: boundary,
-            buffer: bufferStreams[benchmarkIterated]
+            buffer: bufferStream
         )
         for try await part in sequence {
             blackHole(part)
