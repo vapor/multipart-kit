@@ -15,7 +15,7 @@ public struct MultipartParserError: Swift.Error, Equatable {
 
     public static let invalidBoundary = MultipartParserError(reason: .invalidBoundary)
     
-    public static func invalidHeader(_ reason: String) -> MultipartParserError {
+    public static func invalidHeader(reason: String) -> MultipartParserError {
         return MultipartParserError(reason: .invalidHeader(reason: reason))
     }
     public static func invalidBody(_ reason: String) -> MultipartParserError {
