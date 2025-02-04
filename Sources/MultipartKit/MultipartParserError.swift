@@ -20,6 +20,6 @@ public struct MultipartParserError: Swift.Error, Equatable {
         return MultipartParserError(base: .invalidHeader(reason: reason))
     }
     public static func invalidBody(reason: String) -> MultipartParserError {
-        return MultipartParserError(base: .invalidBody(reason: reason))
+        return MultipartParserError(base: .invalidBody(reason: reason))    
     }
 }
