@@ -1,36 +1,24 @@
 /// Technical parsing error, such as malformed data or invalid characters.
 /// This is mainly used by ``MultipartParser``.
+public struct MultipartParserError: Swift.Error, Equatable {
+    public let reason: Reason
 
-public struct InvalidBoundaryError: MultipartParserError {
-    public init() {}
-}
-
-public struct InvalidHeaderError: MultipartParserError {
-    public let reason: String
-    
-    public init(reason: String) {
+    private init(reason: Reason) {
         self.reason = reason
     }
-}
 
-public struct InvalidBodyError: MultipartParserError {
-    public let reason: String
-    
-    public init(reason: String) {
-        self.reason = reason
+    public enum Reason: Equatable {
+        case invalidBoundary
+        case invalidHeader(reason: String)
+        case invalidBody(reason: String)
     }
-}
 
-public enum MultipartParserErrorType {
-    case invalidBoundary
-    case invalidHeader(String)
-    case invalidBody(String)
-}
-
-public struct MultipartParserErrorWrapper: MultipartParserError {
-    public let type: MultipartParserErrorType
+    public static let invalidBoundary = MultipartParserError(reason: .invalidBoundary)
     
-    public init(type: MultipartParserErrorType) {
-        self.type = type
+    public static func invalidHeader(_ reason: String) -> MultipartParserError {
+        return MultipartParserError(reason: .invalidHeader(reason: reason))
+    }
+    public static func invalidBody(_ reason: String) -> MultipartParserError {
+        return MultipartParserError(reason: .invalidBody(reason: reason))
     }
 }
