@@ -1,6 +1,5 @@
 /// Technical parsing error, such as malformed data or invalid characters.
 /// This is mainly used by ``MultipartParser``.
-public protocol MultipartParserError: Swift.Error, Equatable {}
 
 public struct InvalidBoundaryError: MultipartParserError {
     public init() {}
