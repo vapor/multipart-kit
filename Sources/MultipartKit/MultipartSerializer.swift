@@ -49,7 +49,6 @@ public struct MultipartSerializer: Sendable {
     /// - Parameters:
     ///   - parts: One or more ``MultipartPart``s to serialize into a buffer.
     ///   - buffer: Buffer to write to.
-    ///
     /// - Note: `ByteBuffer` directly won't work because we have no dependency on NIO.
     ///   You can use `ByteBufferView` via `ByteBuffer.readableBytesView`.
     public func serialize<OutputBody: MultipartPartBodyElement>(
