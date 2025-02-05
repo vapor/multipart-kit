@@ -194,7 +194,7 @@ struct ParserTests {
         let sequence = StreamingMultipartParserAsyncSequence(boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn", buffer: stream)
 
         for try await part in sequence {
-            if case let .headerFields(fields) = part,
+            if case .headerFields(let fields) = part,
                 let contentDispositionField = fields.first(where: { $0.name == .contentDisposition })
             {
                 #expect(contentDispositionField.value.contains(filename))

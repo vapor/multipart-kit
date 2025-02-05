@@ -71,7 +71,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
         case .prematureEnd:  // ask for more data and retry
             self.state = .parsing(.boundary, buffer)
             return .needMoreData
-        case let .success(index):
+        case .success(let index):
             switch buffer[index...].getIndexAfter(.twoHyphens) {  // check if it's the final boundary (ends with "--")
             case .success:  // if it is, finish
                 self.state = .finished
