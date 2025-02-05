@@ -10,16 +10,16 @@ public struct MultipartParserError: Swift.Error, Equatable {
 
     let base: Base
 
-    private init(base: Base) {
+    private init(_ base: Base) {
         self.base = base
     }
 
-    public static let invalidBoundary = MultipartParserError(base: .invalidBoundary)
+    public static let invalidBoundary = MultipartParserError(.invalidBoundary)
 
     public static func invalidHeader(reason: String) -> MultipartParserError {
-        return MultipartParserError(base: .invalidHeader(reason: reason))
+        return MultipartParserError(.invalidHeader(reason: reason))
     }
     public static func invalidBody(reason: String) -> MultipartParserError {
-        return MultipartParserError(base: .invalidBody(reason: reason))    
+        return MultipartParserError(.invalidBody(reason: reason))    
     }
 }
