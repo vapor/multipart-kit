@@ -15,7 +15,6 @@ public struct MultipartSerializer: Sendable {
     ///
     /// - Parameters:
     ///   - parts: One or more ``MultipartPart``s to serialize into some ``MultipartPartBodyElement``.
-    ///
     /// - Returns: some `multipart`-encoded ``MultipartPartBodyElement``.
     public func serialize<Body: MultipartPartBodyElement>(parts: [MultipartPart<some MultipartPartBodyElement>]) -> Body
     where Body: RangeReplaceableCollection {
