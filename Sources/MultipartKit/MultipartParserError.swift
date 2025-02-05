@@ -1,6 +1,6 @@
 /// Technical parsing error, such as malformed data or invalid characters.
 /// This is mainly used by ``MultipartParser``.
-public struct MultipartParserError: Swift.Error, Equatable {
+public struct MultipartParserError: Swift.Error, Equatable, Sendable {
     enum Base: Equatable {
         case invalidBoundary
         case invalidHeader(reason: String)
@@ -16,10 +16,10 @@ public struct MultipartParserError: Swift.Error, Equatable {
     public static let invalidBoundary = MultipartParserError(.invalidBoundary)
 
     public static func invalidHeader(reason: String) -> MultipartParserError {
-        return MultipartParserError(.invalidHeader(reason: reason))
+        .init(.invalidHeader(reason: reason))
     }
     
     public static func invalidBody(reason: String) -> MultipartParserError {
-        return MultipartParserError(.invalidBody(reason: reason))    
+        .init(.invalidBody(reason: reason))    
     }
 }
