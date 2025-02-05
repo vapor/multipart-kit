@@ -12,8 +12,10 @@ public struct FormDataEncoder: Sendable {
 
     /// Encodes an `Encodable` item to `String` using the supplied boundary.
     ///
-    ///     let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
-    ///     let data = try FormDataEncoder().encode(a, boundary: "123")
+    /// ```swift
+    /// let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
+    /// let data = try FormDataEncoder().encode(a, boundary: "123")
+    /// ```
     ///
     /// - parameters:
     ///     - encodable: Generic `Encodable` item.
@@ -27,14 +29,16 @@ public struct FormDataEncoder: Sendable {
 
     /// Encodes an `Encodable` item into some ``MultipartPartBodyElement`` using the supplied boundary.
     ///
-    ///     let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
-    ///     var buffer = ByteBuffer()
-    ///     let data = try FormDataEncoder().encode(a, boundary: "123", into: &buffer)
+    /// ```swift
+    /// let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
+    /// var buffer = ByteBuffer()
+    /// let data = try FormDataEncoder().encode(a, boundary: "123", into: &buffer)
+    /// ```
     ///
     /// - parameters:
     ///     - encodable: Generic `Encodable` item.
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
-    ///     - buffer: Buffer to write to.
+    ///     - to: Buffer to write to.
     /// - throws: Any errors encoding the model with `Codable` or serializing the data.
     public func encode<E: Encodable, Body: MultipartPartBodyElement>(
         _ encodable: E,

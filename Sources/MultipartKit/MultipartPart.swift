@@ -12,7 +12,9 @@ public struct MultipartPart<Body: MultipartPartBodyElement>: Sendable {
 
     /// Creates a new ``MultipartPart``.
     ///
-    ///     let part = MultipartPart(headerFields: [.contentDisposition: "form-data"], body: Array("Hello, world!".utf8))
+    /// ```swift
+    /// let part = MultipartPart(headerFields: [.contentDisposition: "form-data"], body: Array("Hello, world!".utf8))
+    /// ```
     ///
     /// - Parameters:
     ///  - headerFields: The header fields for this part.

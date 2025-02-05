@@ -7,8 +7,8 @@ extension Sequence {
 /// An asynchronous sequence composed from a synchronous sequence, that releases the reference to
 /// the base sequence when an iterator is created. So you can only iterate once.
 ///
-/// Not safe. Only for testing purposes.
-/// Use `swift-algorithms`'s `AsyncSyncSequence`` instead if you're looking for something like this.
+/// > Warning: Not safe. Only for testing purposes.
+/// Use `swift-algorithms`'s `AsyncSyncSequence` instead if you're looking for something like this.
 final class AsyncSyncSequence<Base: Sequence>: AsyncSequence {
     typealias Element = Base.Element
 
