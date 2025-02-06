@@ -7,7 +7,7 @@ on:
     types: [submitted]
   pull_request_target:
     branches: [main]
-    types: [synchronize]
+    types: [opened, reopened, synchronize, ready_for_review]
     paths:
       - Sources/*.swift
       - Benchmarks/
