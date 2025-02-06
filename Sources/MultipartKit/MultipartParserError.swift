@@ -1,47 +1,63 @@
 /// Technical parsing error, such as malformed data or invalid characters.
 /// This is mainly used by ``MultipartParser``.
-public struct MultipartParserError: Swift.Error, Equatable, Sendable, CustomStringConvertible {
-    enum Base: Equatable {
-        case invalidBoundary
-        case invalidHeader(reason: String)
-        case invalidBody(reason: String)
-    }
+public struct MultipartParserError: Swift.Error, Equatable, Sendable {
+    public struct ErrorType: Equatable, CustomStringConvertible {
+        enum Base: String, Equatable {
+            case invalidBoundary
+            case invalidHeader
+            case invalidBody
+        }
 
-    let base: Base
+        let base: Base
 
-    private init(_ base: Base) {
-        self.base = base
-    }
+        private init(_ base: Base) {
+            self.base = base
+        }
 
-    public static let invalidBoundary = MultipartParserError(.invalidBoundary)
+        public static let invalidBoundary = Self(.invalidBoundary)
+        public static let invalidHeader = Self(.invalidHeader)
+        public static let invalidBody = Self(.invalidBody)
 
-    public static func invalidHeader(reason: String) -> MultipartParserError {
-        .init(.invalidHeader(reason: reason))
-    }
-    
-    public static func invalidBody(reason: String) -> MultipartParserError {
-        .init(.invalidBody(reason: reason))    
-    }
-
-    public var reason: String? {
-        switch base {
-        case .invalidHeader(let reason), .invalidBody(let reason):
-            return reason
-        case .invalidBoundary:
-            return nil
+        public var description: String {
+            base.rawValue
         }
     }
 
+    private struct Backing: Equatable, Sendable {
+        let errorType: ErrorType
+        let reason: String?
+    }
+
+    private var backing: Backing
+
+    public var errorType: ErrorType { backing.errorType }
+    public var reason: String? { backing.reason }
+
+    private init(backing: Backing) {
+        self.backing = backing
+    }
+
+    private init(errorType: ErrorType) {
+        self.backing = .init(errorType: errorType, reason: nil)
+    }
+
+    public static let invalidBoundary = Self(errorType: .invalidBoundary)
+
+    public static func invalidHeader(reason: String) -> Self {
+        .init(backing: .init(errorType: .invalidHeader, reason: reason))
+    }
+    
+    public static func invalidBody(reason: String) -> Self {
+        .init(backing: .init(errorType: .invalidBody, reason: reason))
+    }
 
     public var description: String {
-        switch base {
-        case .invalidBoundary:
-            return "MultipartParserError: Invalid boundary."
-        case .invalidHeader(let reason):
-            return "MultipartParserError: Invalid header. Reason: \(reason)"
-        case .invalidBody(let reason):
-            return "MultipartParserError: Invalid body. Reason: \(reason)"
+        if let reason = reason {
+            return "MultipartParserError(errorType: \(errorType), reason: \(reason))"
+        } else {
+            return "MultipartParserError(errorType: \(errorType))"
         }
     }
 }
+
 
