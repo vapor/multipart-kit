@@ -11,7 +11,7 @@ let benchmarks: @Sendable () -> Void = {
         body: ArraySlice("Hello, world!".utf8)
     )
     let emptyParts: [MultipartPart<ArraySlice<UInt8>>] = []
-    let partCount = 1 << 10
+    let partCount = 1 << 6
     let repeatedParts: [MultipartPart] = .init(repeating: examplePart, count: partCount)
 
     Benchmark(
