@@ -24,7 +24,7 @@ public struct FormDataEncoder: Sendable {
     /// - returns: `multipart/form-data`-encoded `String`.
     public func encode<E: Encodable>(_ encodable: E, boundary: String) throws -> String {
         let parts: [MultipartPart<[UInt8]>] = try self.parts(from: encodable)
-        return try MultipartSerializer(boundary: boundary).serialize(parts: parts)
+        return MultipartSerializer(boundary: boundary).serialize(parts: parts)
     }
 
     /// Encodes an `Encodable` item into some ``MultipartPartBodyElement`` using the supplied boundary.
@@ -46,7 +46,7 @@ public struct FormDataEncoder: Sendable {
         to: Body.Type = Body.self
     ) throws -> Body where Body: RangeReplaceableCollection {
         let parts: [MultipartPart<Body>] = try self.parts(from: encodable)
-        return try MultipartSerializer(boundary: boundary).serialize(parts: parts)
+        return MultipartSerializer(boundary: boundary).serialize(parts: parts)
     }
 
     private func parts<E: Encodable, Body: MultipartPartBodyElement>(from encodable: E) throws -> [MultipartPart<Body>]
