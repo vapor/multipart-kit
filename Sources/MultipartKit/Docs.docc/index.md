@@ -2,6 +2,8 @@
 
 Parser, serializer, and `Codable` support for `multipart/form-data`.
 
+## Overview
+
 MultipartKit is a Swift package for parsing and serializing `multipart/form-data` requests. It provides hooks for encoding and decoding requests in Swift and `Codable` support for handling `multipart/form-data` data through a ``FormDataEncoder`` and ``FormDataDecoder``. The parser delivers its output as it is parsed through callbacks suitable for streaming.
 
 ### Multipart Form Data

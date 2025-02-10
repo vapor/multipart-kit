@@ -71,7 +71,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
         case .prematureEnd:  // ask for more data and retry
             self.state = .parsing(.boundary, buffer)
             return .needMoreData
-        case let .success(index):
+        case .success(let index):
             switch buffer[index...].getIndexAfter(.twoHyphens) {  // check if it's the final boundary (ends with "--")
             case .success:  // if it is, finish
                 self.state = .finished
@@ -180,13 +180,13 @@ public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeR
 }
 
 extension ArraySlice where Element == UInt8 {
-    /// The result of a `getIndexAfter(_:)` call.
-    /// - success: The slice was found at the given index. The index is the index after the slice.
-    /// - wrongCharacter: The buffer did not match the slice. The index is the index of the first mismatching character.
-    /// - prematureEnd: The buffer was too short to contain the slice. The index is the index of the last character.
+    /// The result of a ``Swift/ArraySlice/getIndexAfter(_:)`` call.
     enum IndexAfterSlice {
+        /// The slice was found at the given index. The index is the index after the slice.
         case success(ArraySlice<UInt8>.Index)
+        /// The buffer did not match the slice. The index is the index of the first mismatching character.
         case wrongCharacter(at: ArraySlice<UInt8>.Index)
+        /// The buffer was too short to contain the slice. The index is the index of the last character.
         case prematureEnd(at: ArraySlice<UInt8>.Index)
     }
 
@@ -211,11 +211,11 @@ extension ArraySlice where Element == UInt8 {
         return .success(resultIndex)
     }
 
-    /// The result of a `firstIndexOf(_:)` call.
-    /// - Parameter success: The slice was found. The associated index is the index before the slice.
-    /// - Parameter notFound: The slice was not found in the buffer.
+    /// The result of a ``Swift/ArraySlice/getFirstRange(of:)`` call.
     enum FirstIndexOfSliceResult {
+        /// The slice was found. The associated index is the index before the slice.
         case success(Range<Index>)
+        /// The slice was not found in the buffer.
         case notFound
         case prematureEnd
     }

@@ -9,4 +9,10 @@ on:
 jobs:
   unit-tests:
     uses: vapor/ci/.github/workflows/run-unit-tests.yml@main
+    with:
+      warnings_as_errors: true
+      with_linting: true
+      with_windows: true
+      with_musl: true
+      ios_scheme_name: multipart-kit
     secrets: inherit
