@@ -19,8 +19,7 @@ public struct MultipartSerializer: Sendable {
     public func serialize<Body: MultipartPartBodyElement>(
         parts: [MultipartPart<some MultipartPartBodyElement>],
         into: Body.Type = Body.self
-    ) -> Body
-    where Body: RangeReplaceableCollection {
+    ) -> Body where Body: RangeReplaceableCollection {
         var buffer = Body()
         self.serialize(parts: parts, into: &buffer)
         return buffer
