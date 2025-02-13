@@ -16,27 +16,13 @@ public struct MultipartSerializer: Sendable {
     /// - Parameters:
     ///   - parts: One or more ``MultipartPart``s to serialize into some ``MultipartPartBodyElement``.
     /// - Returns: some `multipart`-encoded ``MultipartPartBodyElement``.
-    public func serialize<Body: MultipartPartBodyElement>(parts: [MultipartPart<some MultipartPartBodyElement>]) -> Body
-    where Body: RangeReplaceableCollection {
+    public func serialize<Body: MultipartPartBodyElement>(
+        parts: [MultipartPart<some MultipartPartBodyElement>],
+        into: Body.Type = Body.self
+    ) -> Body where Body: RangeReplaceableCollection {
         var buffer = Body()
         self.serialize(parts: parts, into: &buffer)
         return buffer
-    }
-
-    /// Serializes some ``MultipartPartBodyElement`` to a `String`.
-    ///
-    /// ```swift
-    /// let serialized: String = MultipartSerializer(boundary: "123").serialize(parts: [part])
-    /// ```
-    ///
-    /// - Parameters:
-    ///   - parts: One or more ``MultipartPart``s to serialize into some ``MultipartPartBodyElement``.
-    /// - Returns: a `multipart`-encoded `String`.
-    public func serialize<Body: MultipartPartBodyElement>(parts: [MultipartPart<Body>]) -> String
-    where Body: RangeReplaceableCollection {
-        var buffer = Body()
-        self.serialize(parts: parts, into: &buffer)
-        return String(decoding: buffer, as: UTF8.self)
     }
 
     /// Serializes some ``MultipartPart``s to a buffer.
