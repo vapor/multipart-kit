@@ -46,7 +46,7 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
 
         var currentCollatedBody = BackingSequence.Element()
 
-        public mutating func next() async throws -> MultipartSection<BackingSequence.Element>? {
+        public mutating func next() async throws(MultipartParserError) -> MultipartSection<BackingSequence.Element>? {
             if let pendingBodyChunk {
                 defer { self.pendingBodyChunk = nil }
                 return .bodyChunk(pendingBodyChunk)
@@ -77,14 +77,20 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
                         }
                     }
                 case .needMoreData:
-                    if let next = try await iterator.next() {
+                    let next: BackingSequence.Element?
+                    do {
+                        next = try await iterator.next()
+                    } catch {
+                        throw MultipartParserError.backingSequenceError(underlyingReason: "\(error)")
+                    }
+                    if let next {
                         parser.append(buffer: next)
                     } else {
                         switch parser.state {
                         case .initial, .finished:
                             return nil
                         case .parsing:
-                            throw MultipartMessageError.unexpectedEndOfFile
+                            throw MultipartParserError.unexpectedEndOfFile
                         }
                     }
                 case .error(let error):
@@ -95,7 +101,7 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
             }
         }
 
-        public mutating func nextCollatedPart() async throws -> MultipartSection<BackingSequence.Element>? {
+        public mutating func nextCollatedPart() async throws(MultipartParserError) -> MultipartSection<BackingSequence.Element>? {
             var headerFields = HTTPFields()
 
             while let part = try await self.next() {
