@@ -306,7 +306,7 @@ struct FormDataDecodingTests {
     // https://github.com/vapor/multipart-kit/issues/123
     @Test("Decoding with key containing square bracket")
     func decodeWithKeyContainingBracket() async throws {
-        struct HasADict: Codable {
+        struct HasADict: Codable, Equatable {
             var hints: [String: String]
         }
 
@@ -325,7 +325,7 @@ struct FormDataDecodingTests {
         )
 
         let deserialized = try FormDataDecoder().decode(HasADict.self, from: serialized, boundary: "hello")
-        print("deserialized: \(deserialized)")
+        #expect(deserialized == foo)
     }
 
 }

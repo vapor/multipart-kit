@@ -62,8 +62,8 @@ private func makePath(from string: String) -> ArraySlice<String> {
         case "[":
             writeIndex += 1
             result.append("")
-            var j = string.index(i, offsetBy: 1)
-            while !(string[j] == "]" && (j == string.index(before: string.endIndex) || string[string.index(j, offsetBy: 1)] == "[")) {
+            var j = string.index(after: i)
+            while !(string[j] == "]" && (j == string.index(before: string.endIndex) || string[string.index(after: j)] == "[")) {
                 result[writeIndex].append(string[j])
                 j = string.index(after: j)
             }
