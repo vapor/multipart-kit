@@ -22,7 +22,7 @@ let benchmarks: @Sendable () -> Void = {
         )
     ) { benchmark in
         let serializer = MultipartSerializer(boundary: boundary)
-        let serialized = try serializer.serialize(parts: emptyParts)
+        let serialized = serializer.serialize(parts: emptyParts, into: ArraySlice<UInt8>.self)
         blackHole(serialized)
     }
 
@@ -34,7 +34,7 @@ let benchmarks: @Sendable () -> Void = {
         )
     ) { benchmark in
         let serializer = MultipartSerializer(boundary: boundary)
-        let serialized = try serializer.serialize(parts: repeatedParts)
+        let serialized = serializer.serialize(parts: repeatedParts, into: ArraySlice<UInt8>.self)
         blackHole(serialized)
     }
 
@@ -57,7 +57,7 @@ let benchmarks: @Sendable () -> Void = {
     ) { benchmark in
         for _ in 0..<100 {
             let serializer = MultipartSerializer(boundary: boundary)
-            let serialized = try serializer.serialize(parts: repeatedParts)
+            let serialized = serializer.serialize(parts: repeatedParts, into: ArraySlice<UInt8>.self)
             blackHole(serialized)
         }
     }
