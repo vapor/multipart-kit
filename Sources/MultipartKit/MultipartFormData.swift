@@ -10,12 +10,10 @@ enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
     case nestingDepthExceeded
 
     init(parts: [MultipartPart<Body>], nestingDepth: Int) {
-        self = parts.reduce(into: .empty) { result, part in
-            result.insert(
-                part,
-                at: part.name.map(makePath) ?? [],
-                remainingNestingDepth: nestingDepth
-            )
+        self = .empty
+        for part in parts {
+            let path = part.name.map(makePath) ?? []
+            insert(part, at: path, remainingNestingDepth: nestingDepth)
         }
     }
 
@@ -46,8 +44,37 @@ enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
     }
 }
 
-private func makePath(from string: String) -> ArraySlice<Substring> {
-    ArraySlice(string.replacingOccurrences(of: "]", with: "").split(omittingEmptySubsequences: false) { $0 == "[" })
+private func makePath(from string: String) -> ArraySlice<String> {
+    var result: ArraySlice<String> = [""]
+
+    // This is a bit of a hack to handle brackets in the path. For example
+    // `foo[a]a[b]` has to be decoded as `["foo", "a]a[b"]`,
+    // so everything inside of the brackets has to be added in the name.
+    // Unfortunately, while it may be possible according to the RFC,
+    // there's no way of differentiating between the combination of `][` which
+    // can both mean "close bracket and reopen",
+    // and just be part of the value as normal characters, so `foo[a][b]` will
+    // always be decoded as `["foo", "a", "b"]` and never as `["foo", "a][b"]`
+    var i = string.startIndex
+    var writeIndex = 0
+    while i != string.endIndex {
+        switch string[i] {
+        case "[":
+            writeIndex += 1
+            result.append("")
+            var j = string.index(i, offsetBy: 1)
+            while !(string[j] == "]" && (j == string.index(before: string.endIndex) || string[string.index(j, offsetBy: 1)] == "[")) {
+                result[writeIndex].append(string[j])
+                j = string.index(after: j)
+            }
+            i = string.index(after: j)
+        default:
+            result[writeIndex].append(string[i])
+            i = string.index(after: i)
+        }
+    }
+
+    return result
 }
 
 extension MultipartFormData {
@@ -75,11 +102,11 @@ extension MultipartFormData {
 }
 
 extension MultipartFormData {
-    fileprivate mutating func insert(_ part: MultipartPart<Body>, at path: ArraySlice<Substring>, remainingNestingDepth: Int) {
+    fileprivate mutating func insert(_ part: MultipartPart<Body>, at path: ArraySlice<String>, remainingNestingDepth: Int) {
         self = inserting(part, at: path, remainingNestingDepth: remainingNestingDepth)
     }
 
-    fileprivate func inserting(_ part: MultipartPart<Body>, at path: ArraySlice<Substring>, remainingNestingDepth: Int)
+    fileprivate func inserting(_ part: MultipartPart<Body>, at path: ArraySlice<String>, remainingNestingDepth: Int)
         -> MultipartFormData
     {
         guard let head = path.first else {
