@@ -24,7 +24,8 @@ public struct FormDataEncoder: Sendable {
     /// - returns: `multipart/form-data`-encoded `String`.
     public func encode<E: Encodable>(_ encodable: E, boundary: String) throws -> String {
         let parts: [MultipartPart<[UInt8]>] = try self.parts(from: encodable)
-        return MultipartSerializer(boundary: boundary).serialize(parts: parts)
+        let serialized = MultipartSerializer(boundary: boundary).serialize(parts: parts, into: [UInt8].self)
+        return String(decoding: serialized, as: Unicode.UTF8.self)
     }
 
     /// Encodes an `Encodable` item into some ``MultipartPartBodyElement`` using the supplied boundary.
