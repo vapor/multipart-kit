@@ -15,4 +15,5 @@ jobs:
       with_windows: true
       with_musl: true
       ios_scheme_name: multipart-kit
+      with_android: true
     secrets: inherit
