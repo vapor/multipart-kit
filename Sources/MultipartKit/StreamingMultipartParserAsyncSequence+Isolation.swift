@@ -2,7 +2,7 @@ import HTTPTypes
 
 extension StreamingMultipartParserAsyncSequence.AsyncIterator {
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-    public mutating func next(isolation actor: isolated (any Actor)?) async throws(MultipartParserError) -> Self.Element? {
+    public mutating func next(isolation actor: isolated (any Actor)? = #isolation) async throws(MultipartParserError) -> Self.Element? {
         if let pendingBodyChunk {
             defer { self.pendingBodyChunk = nil }
             return .bodyChunk(pendingBodyChunk)
@@ -58,7 +58,7 @@ extension StreamingMultipartParserAsyncSequence.AsyncIterator {
     }
 
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-    public mutating func nextCollatedPart(isolation actor: isolated (any Actor)?) async throws(MultipartParserError)
+    public mutating func nextCollatedPart(isolation actor: isolated (any Actor)? = #isolation) async throws(MultipartParserError)
         -> MultipartSection<BackingSequence.Element>?
     {
         var headerFields = HTTPFields()
