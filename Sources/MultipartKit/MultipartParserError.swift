@@ -1,7 +1,7 @@
 /// Technical parsing error, such as malformed data or invalid characters.
 /// This is mainly used by ``MultipartParser``.
 public struct MultipartParserError: Swift.Error, Equatable, Sendable {
-    public struct ErrorType: Equatable, CustomStringConvertible {
+    public struct ErrorType: Sendable, Equatable, CustomStringConvertible {
         enum Base: String, Equatable {
             case invalidBoundary
             case invalidHeader
@@ -46,18 +46,20 @@ public struct MultipartParserError: Swift.Error, Equatable, Sendable {
     public static func invalidHeader(reason: String) -> Self {
         .init(backing: .init(errorType: .invalidHeader, reason: reason))
     }
-    
+
     public static func invalidBody(reason: String) -> Self {
         .init(backing: .init(errorType: .invalidBody, reason: reason))
     }
 
     public var description: String {
-        if let reason = reason {
-            return "MultipartParserError(errorType: \(errorType), reason: \(reason))"
-        } else {
-            return "MultipartParserError(errorType: \(errorType))"
+        var result = "MultipartParserError(errorType: \(errorType)"
+
+        if let reason {
+            result.append(", reason: \(reason)")
         }
+
+        result.append(")")
+
+        return result
     }
 }
-
-
