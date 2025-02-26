@@ -24,17 +24,17 @@ enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
     }
 
     var array: [MultipartFormData]? {
-        guard case let .array(array) = self else { return nil }
+        guard case .array(let array) = self else { return nil }
         return array
     }
 
     var dictionary: Keyed? {
-        guard case let .keyed(dict) = self else { return nil }
+        guard case .keyed(let dict) = self else { return nil }
         return dict
     }
 
     var part: MultipartPart<Body>? {
-        guard case let .single(part) = self else { return nil }
+        guard case .single(let part) = self else { return nil }
         return part
     }
 

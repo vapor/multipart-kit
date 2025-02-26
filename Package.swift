@@ -25,13 +25,20 @@ let package = Package(
                 .product(name: "HTTPTypes", package: "swift-http-types"),
                 .product(name: "Collections", package: "swift-collections"),
             ],
-            exclude: ["Docs.docc"]
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "MultipartKitTests",
             dependencies: [
                 .target(name: "MultipartKit")
-            ]
+            ],
+            swiftSettings: swiftSettings
         ),
     ]
 )
+
+var swiftSettings: [SwiftSetting] {
+    [
+        .enableUpcomingFeature("ExistentialAny")
+    ]
+}

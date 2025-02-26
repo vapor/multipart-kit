@@ -1,3 +1,4 @@
+#if canImport(Testing)
 import HTTPTypes
 import MultipartKit
 import Testing
@@ -194,7 +195,7 @@ struct ParserTests {
         let sequence = StreamingMultipartParserAsyncSequence(boundary: "----WebKitFormBoundaryPVOZifB9OqEwP2fn", buffer: stream)
 
         for try await part in sequence {
-            if case let .headerFields(fields) = part,
+            if case .headerFields(let fields) = part,
                 let contentDispositionField = fields.first(where: { $0.name == .contentDisposition })
             {
                 #expect(contentDispositionField.value.contains(filename))
@@ -269,3 +270,4 @@ struct ParserTests {
         0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
     ]
 }
+#endif  // canImport(Testing)

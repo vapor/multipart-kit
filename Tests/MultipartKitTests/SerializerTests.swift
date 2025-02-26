@@ -1,3 +1,4 @@
+#if canImport(Testing)
 import HTTPTypes
 import MultipartKit
 import Testing
@@ -16,7 +17,7 @@ struct SerializerTests {
             )
         ]
 
-        let serialized: ArraySlice<UInt8> = try MultipartSerializer(boundary: "boundary123").serialize(parts: example)
+        let serialized: ArraySlice<UInt8> = MultipartSerializer(boundary: "boundary123").serialize(parts: example)
         let expected = ArraySlice(
             """
             --boundary123\r
@@ -29,3 +30,4 @@ struct SerializerTests {
         #expect(serialized == expected)
     }
 }
+#endif  // canImport(Testing)

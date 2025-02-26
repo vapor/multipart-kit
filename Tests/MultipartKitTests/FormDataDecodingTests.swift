@@ -1,10 +1,11 @@
+#if canImport(Testing)
 import MultipartKit
 import Testing
 
 @Suite("Form Data Decoding Tests")
 struct FormDataDecodingTests {
     @Test("W3 Form Data Decoding")
-    func testFormDataDecoderW3() throws {
+    func formDataDecoderW3() throws {
         /// Content-Type: multipart/form-data; boundary=12345
         let data = """
             --12345\r
@@ -38,7 +39,7 @@ struct FormDataDecodingTests {
     }
 
     @Test("Optional Decoding")
-    func testDecodeOptional() throws {
+    func decodeOptional() throws {
         struct Bar: Decodable {
             struct Foo: Decodable {
                 let int: Int?
@@ -59,7 +60,7 @@ struct FormDataDecodingTests {
     }
 
     @Test("Decode Multiple Items")
-    func testFormDataDecoderMultiple() throws {
+    func formDataDecoderMultiple() throws {
         /// Content-Type: multipart/form-data; boundary=12345
         let data = """
             --hello\r
@@ -110,7 +111,7 @@ struct FormDataDecodingTests {
     }
 
     @Test("Decode Multiple Items with Missing Data")
-    func testFormDataDecoderMultipleWithMissingData() throws {
+    func formDataDecoderMultipleWithMissingData() throws {
         /// Content-Type: multipart/form-data; boundary=hello
         let data = """
             --hello\r
@@ -135,7 +136,7 @@ struct FormDataDecodingTests {
                 Issue.record("Was expecting an error of type DecodingError")
                 return false
             }
-            guard case let DecodingError.typeMismatch(_, context) = error else {
+            guard case DecodingError.typeMismatch(_, let context) = error else {
                 Issue.record("Was expecting an error of type DecodingError.typeMismatch")
                 return false
             }
@@ -144,7 +145,7 @@ struct FormDataDecodingTests {
     }
 
     @Test("Nested Decode")
-    func testNestedDecode() throws {
+    func nestedDecode() throws {
         struct FormData: Decodable, Equatable {
             struct NestedFormData: Decodable, Equatable {
                 struct AnotherNestedFormData: Decodable, Equatable {
@@ -252,7 +253,7 @@ struct FormDataDecodingTests {
     }
 
     @Test("Decoding Single Value")
-    func testDecodingSingleValue() throws {
+    func decodingSingleValue() throws {
         let data = """
             ---\r
             Content-Disposition: form-data;\r
@@ -267,7 +268,7 @@ struct FormDataDecodingTests {
     }
 
     @Test("Nesting Depth")
-    func testNestingDepth() throws {
+    func nestingDepth() throws {
         let nested = """
             ---\r
             Content-Disposition: form-data; name=a[]\r
@@ -286,7 +287,7 @@ struct FormDataDecodingTests {
     }
 
     @Test("Decoding Incorrectly Nested Data")
-    func testIncorrectlyNestedData() throws {
+    func incorrectlyNestedData() throws {
         struct TestData: Codable {
             var x: String
         }
@@ -304,3 +305,4 @@ struct FormDataDecodingTests {
     }
 
 }
+#endif  // canImport(Testing)

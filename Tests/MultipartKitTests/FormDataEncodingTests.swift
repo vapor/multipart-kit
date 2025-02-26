@@ -1,10 +1,11 @@
+#if canImport(Testing)
 import MultipartKit
 import Testing
 
 #if canImport(FoundationEssentials)
-    import FoundationEssentials
+import FoundationEssentials
 #else
-    import Foundation
+import Foundation
 #endif
 
 @Suite("Form Data Encoding Tests")
@@ -284,3 +285,4 @@ struct FormDataEncodingTests {
         #expect(try FormDataDecoder().decode(AllTypes.self, from: multipart, boundary: "-") == value)
     }
 }
+#endif  // canImport(Testing)

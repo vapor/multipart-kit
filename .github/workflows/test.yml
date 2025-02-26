@@ -1,4 +1,7 @@
 name: test
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 on:
   pull_request: { branches: ['*'] }
   push: { branches: ['main'] }
@@ -6,4 +9,11 @@ on:
 jobs:
   unit-tests:
     uses: vapor/ci/.github/workflows/run-unit-tests.yml@main
+    with:
+      warnings_as_errors: true
+      with_linting: true
+      with_windows: true
+      with_musl: true
+      ios_scheme_name: multipart-kit
+      with_android: true
     secrets: inherit

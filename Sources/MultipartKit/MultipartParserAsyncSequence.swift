@@ -6,24 +6,26 @@ import HTTPTypes
 /// Different to the ``StreamingMultipartParserAsyncSequence``, this sequence will collate the body
 /// chunks into one section rather than yielding them individually.
 ///
-///     let boundary = "boundary123"
-///     var message = ArraySlice(...)
-///     let stream = AsyncStream { continuation in
-///     var offset = message.startIndex
-///         while offset < message.endIndex {
-///             let endIndex = min(message.endIndex, message.index(offset, offsetBy: 16))
-///             continuation.yield(message[offset..<endIndex])
-///             offset = endIndex
-///         }
-///         continuation.finish()
+/// ```swift
+/// let boundary = "boundary123"
+/// var message = ArraySlice(...)
+/// let stream = AsyncStream { continuation in
+/// var offset = message.startIndex
+///     while offset < message.endIndex {
+///         let endIndex = min(message.endIndex, message.index(offset, offsetBy: 16))
+///         continuation.yield(message[offset..<endIndex])
+///         offset = endIndex
 ///     }
-///     let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: stream)
-///     for try await part in sequence {
-///         switch part {
-///         case .bodyChunk(let chunk): ...
-///         case .headerFields(let field): ...
-///         case .boundary: break
-///     }
+///     continuation.finish()
+/// }
+/// let sequence = MultipartParserAsyncSequence(boundary: boundary, buffer: stream)
+/// for try await part in sequence {
+///     switch part {
+///     case .bodyChunk(let chunk): ...
+///     case .headerFields(let field): ...
+///     case .boundary: break
+/// }
+/// ```
 ///
 public struct MultipartParserAsyncSequence<BackingSequence: AsyncSequence>: AsyncSequence
 where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollection {

@@ -24,11 +24,13 @@ public struct FormDataDecoder: Sendable {
 
     /// Decodes a `Decodable` item from `String` using the supplied boundary.
     ///
-    ///     let foo = try FormDataDecoder().decode(Foo.self, from: "...", boundary: "123")
+    /// ```swift
+    /// let foo = try FormDataDecoder().decode(Foo.self, from: "...", boundary: "123")
+    /// ```
     ///
     /// - Parameters:
     ///   - decodable: Generic `Decodable` type.
-    ///   - data: `String` to decode.
+    ///   - string: `String` to decode.
     ///   - boundary: Multipart boundary to used in the decoding.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
@@ -38,11 +40,13 @@ public struct FormDataDecoder: Sendable {
 
     /// Decodes a `Decodable` item from  some``MultipartPartBodyElement`` using the supplied boundary.
     ///
-    ///     let foo = try FormDataDecoder().decode(Foo.self, from: data, boundary: "123")
+    /// ```swift
+    /// let foo = try FormDataDecoder().decode(Foo.self, from: data, boundary: "123")
+    /// ```
     ///
     /// - Parameters:
     ///   - decodable: Generic `Decodable` type.
-    ///   - data: some ``MultipartPartBodyElement`` to decode.
+    ///   - buffer: some ``MultipartPartBodyElement`` to decode.
     ///   - boundary: Multipart boundary to used in the decoding.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
