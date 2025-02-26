@@ -1,3 +1,4 @@
+#if canImport(Testing)
 import MultipartKit
 import Testing
 
@@ -329,3 +330,4 @@ struct FormDataDecodingTests {
     }
 
 }
+#endif  // canImport(Testing)

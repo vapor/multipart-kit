@@ -1,3 +1,4 @@
+#if canImport(Testing)
 import HTTPTypes
 import MultipartKit
 import Testing
@@ -29,3 +30,4 @@ struct SerializerTests {
         #expect(serialized == expected)
     }
 }
+#endif  // canImport(Testing)
