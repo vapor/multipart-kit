@@ -46,7 +46,7 @@ public struct MultipartParserError: Swift.Error, Equatable, Sendable {
     }
 
     public static let invalidBoundary = Self(errorType: .invalidBoundary)
-  
+
     public static let unexpectedEndOfFile = Self(errorType: .unexpectedEndOfFile)
 
     public static func invalidHeader(reason: String) -> Self {
@@ -56,7 +56,7 @@ public struct MultipartParserError: Swift.Error, Equatable, Sendable {
     public static func invalidBody(reason: String) -> Self {
         .init(backing: .init(errorType: .invalidBody, reason: reason))
     }
-  
+
     public static func backingSequenceError(reason: String) -> Self {
         .init(backing: .init(errorType: .backingSequenceError, reason: reason))
     }
