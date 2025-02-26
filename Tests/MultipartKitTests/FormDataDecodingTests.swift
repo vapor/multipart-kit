@@ -304,5 +304,45 @@ struct FormDataDecodingTests {
         }
     }
 
+    // https://github.com/vapor/multipart-kit/issues/123
+    @Test("Decoding with key containing square bracket")
+    func decodeWithKeyContainingBracket() async throws {
+        struct HasADict: Codable, Equatable {
+            var hints: [String: String]
+        }
+
+        // The parser interprets this as a nested form data key,
+        // but it should simply be a key with an open square bracket as character
+        let foo = HasADict(hints: ["f]o[o-": "bar"])
+        let serializedFoo = try FormDataEncoder().encode(foo, boundary: "hello")
+        #expect(
+            serializedFoo == """
+                --hello\r
+                Content-Disposition: form-data; name="hints[f]o[o-]"\r
+                \r
+                bar\r
+                --hello--\r\n
+                """
+        )
+
+        let deserializedFoo = try FormDataDecoder().decode(HasADict.self, from: serializedFoo, boundary: "hello")
+        #expect(deserializedFoo == foo)
+
+        let bar = HasADict(hints: ["foo[": "bar"])
+        let serializedBar = try FormDataEncoder().encode(bar, boundary: "hello")
+        #expect(
+            serializedBar == """
+                --hello\r
+                Content-Disposition: form-data; name="hints[foo[]"\r
+                \r
+                bar\r
+                --hello--\r\n
+                """
+        )
+
+        let deserializedBar = try FormDataDecoder().decode(HasADict.self, from: serializedBar, boundary: "hello")
+        #expect(deserializedBar == bar)
+    }
+
 }
 #endif  // canImport(Testing)
