@@ -45,8 +45,6 @@ enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
 }
 
 private func makePath(from string: String) -> ArraySlice<String> {
-    var result: ArraySlice<String> = [""]
-
     // This is a bit of a hack to handle brackets in the path. For example
     // `foo[a]a[b]` has to be decoded as `["foo", "a]a[b"]`,
     // so everything inside of the brackets has to be added in the name.
@@ -55,22 +53,31 @@ private func makePath(from string: String) -> ArraySlice<String> {
     // can both mean "close bracket and reopen",
     // and just be part of the value as normal characters, so `foo[a][b]` will
     // always be decoded as `["foo", "a", "b"]` and never as `["foo", "a][b"]`
-    var i = string.startIndex
+
+    if string.isEmpty { return [""] }
+
+    var result: ArraySlice = [""]
     var writeIndex = 0
-    while i != string.endIndex {
-        switch string[i] {
-        case "[":
+    var currentIndex = string.startIndex
+
+    while currentIndex < string.endIndex {
+        if string[currentIndex] == "[" {
             writeIndex += 1
             result.append("")
-            var j = string.index(after: i)
-            while !(string[j] == "]" && (j == string.index(before: string.endIndex) || string[string.index(after: j)] == "[")) {
-                result[writeIndex].append(string[j])
-                j = string.index(after: j)
+            currentIndex = string.index(after: currentIndex)
+
+            while currentIndex < string.endIndex
+                && !(string[currentIndex] == "]"
+                    && (currentIndex == string.index(before: string.endIndex) || string[string.index(after: currentIndex)] == "["))
+            {
+                result[writeIndex].append(string[currentIndex])
+                currentIndex = string.index(after: currentIndex)
             }
-            i = string.index(after: j)
-        default:
-            result[writeIndex].append(string[i])
-            i = string.index(after: i)
+
+            if currentIndex < string.endIndex { currentIndex = string.index(after: currentIndex) }
+        } else {
+            result[writeIndex].append(string[currentIndex])
+            currentIndex = string.index(after: currentIndex)
         }
     }
 
