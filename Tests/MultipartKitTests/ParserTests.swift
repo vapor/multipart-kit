@@ -141,7 +141,7 @@ struct ParserTests {
             """.utf8
         )
 
-        #expect(throws: MultipartMessageError.unexpectedEndOfFile) {
+        #expect(throws: MultipartParserError.unexpectedEndOfFile) {
             _ = try MultipartParser<[UInt8]>(boundary: boundary)
                 .parse([UInt8](message))
         }
@@ -149,7 +149,7 @@ struct ParserTests {
         let stream = makeParsingStream(for: message)
         var iterator = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
 
-        await #expect(throws: MultipartMessageError.unexpectedEndOfFile) {
+        await #expect(throws: MultipartParserError.unexpectedEndOfFile) {
             while (try await iterator.next()) != nil {}
         }
     }
@@ -216,7 +216,7 @@ struct ParserTests {
             """.utf8
         )
 
-        #expect(throws: MultipartMessageError.unexpectedEndOfFile) {
+        #expect(throws: MultipartParserError.unexpectedEndOfFile) {
             _ = try MultipartParser<[UInt8]>(boundary: boundary)
                 .parse([UInt8](message))
         }
@@ -224,7 +224,7 @@ struct ParserTests {
         let stream = makeParsingStream(for: message)
         var iterator = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
 
-        await #expect(throws: MultipartMessageError.unexpectedEndOfFile) {
+        await #expect(throws: MultipartParserError.unexpectedEndOfFile) {
             while (try await iterator.next()) != nil {}
         }
     }

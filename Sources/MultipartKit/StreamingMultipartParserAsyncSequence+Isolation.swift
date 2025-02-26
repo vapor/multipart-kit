@@ -37,7 +37,7 @@ extension StreamingMultipartParserAsyncSequence.AsyncIterator {
                 do {
                     next = try await iterator.next(isolation: actor)
                 } catch {
-                    throw MultipartParserError.backingSequenceError(underlyingReason: "\(error)")
+                    throw MultipartParserError.backingSequenceError(reason: "\(error)")
                 }
                 if let next {
                     parser.append(buffer: next)

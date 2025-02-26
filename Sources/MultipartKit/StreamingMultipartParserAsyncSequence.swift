@@ -81,7 +81,7 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
                     do {
                         next = try await iterator.next()
                     } catch {
-                        throw MultipartParserError.backingSequenceError(underlyingReason: "\(error)")
+                        throw MultipartParserError.backingSequenceError(reason: "\(error)")
                     }
                     if let next {
                         parser.append(buffer: next)
