@@ -1,5 +1,3 @@
-import HTTPTypes
-
 /// A sequence that parses a stream of multipart data into parts asynchronously.
 ///
 /// This sequence is designed to be used with `AsyncStream` to parse a stream of data asynchronously.
@@ -38,15 +36,8 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
     public struct AsyncIterator: AsyncIteratorProtocol {
         var streamingIterator: StreamingMultipartParserAsyncSequence<BackingSequence>.AsyncIterator
 
-        public mutating func next() async throws(MultipartParserError) -> MultipartSection<BackingSequence.Element>? {
+        public mutating func next() async throws -> MultipartSection<BackingSequence.Element>? {
             try await streamingIterator.nextCollatedPart()
-        }
-
-        @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-        public mutating func next(isolation actor: isolated (any Actor)? = #isolation) async throws(MultipartParserError)
-            -> MultipartSection<BackingSequence.Element>?
-        {
-            try await streamingIterator.nextCollatedPart(isolation: actor)
         }
     }
 

@@ -343,6 +343,5 @@ struct FormDataDecodingTests {
         let deserializedBar = try FormDataDecoder().decode(HasADict.self, from: serializedBar, boundary: "hello")
         #expect(deserializedBar == bar)
     }
-
 }
 #endif  // canImport(Testing)

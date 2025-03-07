@@ -1,12 +1,5 @@
 /// Serializes ``MultipartPart``s to some ``MultipartPartBodyElement``.
-public struct MultipartSerializer: Sendable {
-    let boundary: String
-
-    /// Creates a new ``MultipartSerializer``.
-    public init(boundary: String) {
-        self.boundary = boundary
-    }
-
+extension MultipartSerializer {
     /// Serializes some ``MultipartPart``s to some ``MultipartPartBodyElement``.
     ///
     /// ```swift
@@ -16,7 +9,7 @@ public struct MultipartSerializer: Sendable {
     /// - Parameters:
     ///   - parts: One or more ``MultipartPart``s to serialize into some ``MultipartPartBodyElement``.
     /// - Returns: some `multipart`-encoded ``MultipartPartBodyElement``.
-    public func serialize<Body: MultipartPartBodyElement>(
+    public func serialize(
         parts: [MultipartPart<some MultipartPartBodyElement>],
         into: Body.Type = Body.self
     ) -> Body where Body: RangeReplaceableCollection {
