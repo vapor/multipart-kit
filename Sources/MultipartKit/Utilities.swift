@@ -4,7 +4,7 @@ import HTTPTypes
 extension HTTPFields {
     func getParameter(_ name: HTTPField.Name, _ key: String) -> String? {
         headerParts(name: name)?
-            .filter { $0.contains("\(key)=") }
+            .filter { $0.starts(with: "\(key)=") }
             .first?
             .split(separator: "=")
             .last?
