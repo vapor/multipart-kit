@@ -1,7 +1,7 @@
 import HTTPTypes
 
 /// Parses any kind of multipart encoded data into ``MultipartSection``s.
-public struct MultipartParser<Body: MultipartPartBodyElement> where Body: RangeReplaceableCollection {
+public struct MultipartParser<Body: MultipartPartBodyElement> {
     enum State: Equatable {
         enum Part: Equatable {
             case boundary

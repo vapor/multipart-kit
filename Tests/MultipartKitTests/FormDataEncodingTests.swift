@@ -177,8 +177,7 @@ struct FormDataEncodingTests {
         #expect(try FormDataDecoder().decode(UUID.self, from: multipart, boundary: "-") == uuid)
     }
 
-    // https://github.com/vapor/multipart-kit/issues/65
-    @Test("Encoding and Decoding Non-Multipart Part Convertible Codable Types")
+    @Test("Encoding and Decoding Non-Multipart Part Convertible Codable Types", .bug("https://github.com/vapor/multipart-kit/issues/65"))
     func encodeAndDecodeNonMultipartPartConvertibleCodableTypes() async throws {
         enum License: String, Codable, CaseIterable, Equatable {
             case dme1

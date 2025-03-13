@@ -27,7 +27,7 @@ import HTTPTypes
 /// ```
 ///
 public struct StreamingMultipartParserAsyncSequence<BackingSequence: AsyncSequence>: AsyncSequence
-where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollection {
+where BackingSequence.Element: MultipartPartBodyElement {
     let parser: MultipartParser<BackingSequence.Element>
     let buffer: BackingSequence
 

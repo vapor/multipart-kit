@@ -45,13 +45,12 @@ public struct FormDataEncoder: Sendable {
         _ encodable: E,
         boundary: String,
         to: Body.Type = Body.self
-    ) throws -> Body where Body: RangeReplaceableCollection {
+    ) throws -> Body {
         let parts: [MultipartPart<Body>] = try self.parts(from: encodable)
         return MultipartSerializer(boundary: boundary).serialize(parts: parts)
     }
 
-    private func parts<E: Encodable, Body: MultipartPartBodyElement>(from encodable: E) throws -> [MultipartPart<Body>]
-    where Body: RangeReplaceableCollection {
+    private func parts<E: Encodable, Body: MultipartPartBodyElement>(from encodable: E) throws -> [MultipartPart<Body>] {
         let encoder = Encoder<Body>(codingPath: [], userInfo: userInfo)
         try encodable.encode(to: encoder)
         return encoder.storage.data?.namedParts() ?? []

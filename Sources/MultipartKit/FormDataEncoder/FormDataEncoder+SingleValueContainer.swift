@@ -46,6 +46,11 @@ extension FormDataEncoder.Encoder: SingleValueEncodingContainer {
 
     func encode<T: Encodable>(_ value: T) throws {
         switch value {
+        case let multipartConvertible as any MultipartPartConvertible<Body>:
+            guard let multipart = multipartConvertible.multipart else {
+                return try value.encode(to: self)
+            }
+            storage.dataContainer = SingleValueDataContainer(part: multipart)
         case let multipart as MultipartPart<Body>:
             storage.dataContainer = SingleValueDataContainer(part: multipart)
         case let data as Data:

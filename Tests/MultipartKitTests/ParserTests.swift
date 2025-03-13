@@ -150,7 +150,7 @@ struct ParserTests {
         var iterator = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
 
         await #expect(throws: MultipartParserError.unexpectedEndOfFile) {
-            while (try await iterator.next()) != nil {}
+            while try await iterator.next() != nil {}
         }
     }
 
@@ -175,7 +175,7 @@ struct ParserTests {
         var iterator = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
 
         await #expect(throws: MultipartParserError.invalidHeader(reason: "Invalid header name")) {
-            while (try await iterator.next()) != nil {}
+            while try await iterator.next() != nil {}
         }
     }
 
@@ -225,7 +225,7 @@ struct ParserTests {
         var iterator = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
 
         await #expect(throws: MultipartParserError.unexpectedEndOfFile) {
-            while (try await iterator.next()) != nil {}
+            while try await iterator.next() != nil {}
         }
     }
 

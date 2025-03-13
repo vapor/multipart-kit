@@ -2,7 +2,7 @@ import HTTPTypes
 
 extension MultipartParser {
     /// Synchronously parse the multipart data into an array of ``MultipartPart``.
-    public func parse(_ data: Body) throws -> [MultipartPart<Body>] where Body: RangeReplaceableCollection {
+    public func parse(_ data: Body) throws -> [MultipartPart<Body>] {
         var output: [MultipartPart<Body>] = []
         var parser = MultipartParser(boundary: self.boundary)
 
