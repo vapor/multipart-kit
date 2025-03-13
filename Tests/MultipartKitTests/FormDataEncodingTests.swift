@@ -177,8 +177,7 @@ struct FormDataEncodingTests {
         #expect(try FormDataDecoder().decode(UUID.self, from: multipart, boundary: "-") == uuid)
     }
 
-    // https://github.com/vapor/multipart-kit/issues/65
-    @Test("Encoding and Decoding Non-Multipart Part Convertible Codable Types")
+    @Test("Encoding and Decoding Non-Multipart Part Convertible Codable Types", .bug("https://github.com/vapor/multipart-kit/issues/65"))
     func encodeAndDecodeNonMultipartPartConvertibleCodableTypes() async throws {
         enum License: String, Codable, CaseIterable, Equatable {
             case dme1
@@ -283,6 +282,42 @@ struct FormDataEncodingTests {
 
         #expect(try FormDataEncoder().encode(value, boundary: "-") == multipart)
         #expect(try FormDataDecoder().decode(AllTypes.self, from: multipart, boundary: "-") == value)
+    }
+
+    @Test("Encode simil-Vapor File type")
+    func encodeSimilVaporFileType() async throws {
+        struct User: Codable {
+            var name: String
+            var age: Int
+            var image: File
+        }
+
+        let user = User(
+            name: "Vapor",
+            age: 4,
+            image: File(filename: "droplet.png", data: Array("<contents of image>".utf8)))
+
+        let encoder = FormDataEncoder()
+        let boundary = "helloBoundary"
+        let encoded = try encoder.encode(user, boundary: boundary)
+
+        let expected = """
+            --helloBoundary\r
+            Content-Disposition: form-data; name="name"\r
+            \r
+            Vapor\r
+            --helloBoundary\r
+            Content-Disposition: form-data; name="age"\r
+            \r
+            4\r
+            --helloBoundary\r
+            Content-Disposition: form-data; filename="droplet.png"; name="image"\r
+            \r
+            <contents of image>\r
+            --helloBoundary--\r\n
+            """
+
+        #expect(encoded == expected)
     }
 }
 #endif  // canImport(Testing)

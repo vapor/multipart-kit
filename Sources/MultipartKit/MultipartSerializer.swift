@@ -19,7 +19,7 @@ public struct MultipartSerializer: Sendable {
     public func serialize<Body: MultipartPartBodyElement>(
         parts: [MultipartPart<some MultipartPartBodyElement>],
         into: Body.Type = Body.self
-    ) -> Body where Body: RangeReplaceableCollection {
+    ) -> Body {
         var buffer = Body()
         self.serialize(parts: parts, into: &buffer)
         return buffer
@@ -40,7 +40,7 @@ public struct MultipartSerializer: Sendable {
     public func serialize<OutputBody: MultipartPartBodyElement>(
         parts: [MultipartPart<some MultipartPartBodyElement>],
         into buffer: inout OutputBody
-    ) where OutputBody: RangeReplaceableCollection {
+    ) {
         for part in parts {
             buffer.append(.hyphen)
             buffer.append(.hyphen)
