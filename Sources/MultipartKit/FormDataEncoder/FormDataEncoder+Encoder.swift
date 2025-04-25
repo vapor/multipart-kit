@@ -1,5 +1,5 @@
 extension FormDataEncoder {
-    struct Encoder<Body: MultipartPartBodyElement> where Body: RangeReplaceableCollection {
+    struct Encoder<Body: MultipartPartBodyElement> {
         let codingPath: [any CodingKey]
         let storage = Storage<Body>()
         let sendableUserInfo: [CodingUserInfoKey: any Sendable]

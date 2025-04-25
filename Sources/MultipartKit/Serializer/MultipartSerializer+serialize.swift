@@ -12,7 +12,7 @@ extension MultipartSerializer {
     public func serialize(
         parts: [MultipartPart<some MultipartPartBodyElement>],
         into: Body.Type = Body.self
-    ) -> Body where Body: RangeReplaceableCollection {
+    ) -> Body {
         var buffer = Body()
         self.serialize(parts: parts, into: &buffer)
         return buffer
@@ -33,7 +33,7 @@ extension MultipartSerializer {
     public func serialize<OutputBody: MultipartPartBodyElement>(
         parts: [MultipartPart<some MultipartPartBodyElement>],
         into buffer: inout OutputBody
-    ) where OutputBody: RangeReplaceableCollection {
+    ) {
         for part in parts {
             buffer.append(.hyphen)
             buffer.append(.hyphen)

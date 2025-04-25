@@ -1,9 +1,9 @@
 import HTTPTypes
 
-public typealias MultipartPartBodyElement = Collection<UInt8> & Sendable & Equatable
+public typealias MultipartPartBodyElement = Collection<UInt8> & Sendable & RangeReplaceableCollection & Equatable
 
 /// Represents a single part of a multipart-encoded message.
-public struct MultipartPart<Body: MultipartPartBodyElement>: Sendable {
+public struct MultipartPart<Body: MultipartPartBodyElement>: Sendable, Equatable {
     /// The header fields for this part.
     public var headerFields: HTTPFields
 
@@ -19,7 +19,7 @@ public struct MultipartPart<Body: MultipartPartBodyElement>: Sendable {
     /// - Parameters:
     ///  - headerFields: The header fields for this part.
     ///  - body: The body of this part.
-    public init(headerFields: HTTPFields, body: Body) {
+    public init(headerFields: HTTPFields = .init(), body: Body) {
         self.headerFields = headerFields
         self.body = body
     }

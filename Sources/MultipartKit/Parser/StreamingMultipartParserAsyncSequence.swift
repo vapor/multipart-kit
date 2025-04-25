@@ -27,7 +27,7 @@ import HTTPTypes
 /// ```
 ///
 public struct StreamingMultipartParserAsyncSequence<BackingSequence: AsyncSequence>: AsyncSequence
-where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollection {
+where BackingSequence.Element: MultipartPartBodyElement {
     let parser: MultipartParser<BackingSequence.Element>
     let buffer: BackingSequence
 
@@ -46,7 +46,7 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
 
         var currentCollatedBody = BackingSequence.Element()
 
-        public mutating func next() async throws -> MultipartSection<BackingSequence.Element>? {
+        public mutating func next() async throws(MultipartParserError) -> MultipartSection<BackingSequence.Element>? {
             if let pendingBodyChunk {
                 defer { self.pendingBodyChunk = nil }
                 return .bodyChunk(pendingBodyChunk)
@@ -77,7 +77,13 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
                         }
                     }
                 case .needMoreData:
-                    if let next = try await iterator.next() {
+                    let next: BackingSequence.Element?
+                    do {
+                        next = try await iterator.next()
+                    } catch {
+                        throw MultipartParserError.backingSequenceError(reason: "\(error)")
+                    }
+                    if let next {
                         parser.append(buffer: next)
                     } else {
                         switch parser.state {
@@ -95,7 +101,7 @@ where BackingSequence.Element: MultipartPartBodyElement & RangeReplaceableCollec
             }
         }
 
-        public mutating func nextCollatedPart() async throws -> MultipartSection<BackingSequence.Element>? {
+        public mutating func nextCollatedPart() async throws(MultipartParserError) -> MultipartSection<BackingSequence.Element>? {
             var headerFields = HTTPFields()
 
             while let part = try await self.next() {

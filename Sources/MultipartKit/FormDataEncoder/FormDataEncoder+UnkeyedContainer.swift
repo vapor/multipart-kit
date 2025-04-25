@@ -1,5 +1,5 @@
 extension FormDataEncoder {
-    struct UnkeyedContainer<Body: MultipartPartBodyElement> where Body: RangeReplaceableCollection {
+    struct UnkeyedContainer<Body: MultipartPartBodyElement> {
         let dataContainer = UnkeyedDataContainer<Body>()
         let encoder: FormDataEncoder.Encoder<Body>
     }

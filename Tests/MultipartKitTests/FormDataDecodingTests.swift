@@ -304,8 +304,7 @@ struct FormDataDecodingTests {
         }
     }
 
-    // https://github.com/vapor/multipart-kit/issues/123
-    @Test("Decoding with key containing square bracket")
+    @Test("Decoding with key containing square bracket", .bug("https://github.com/vapor/multipart-kit/issues/123"))
     func decodeWithKeyContainingBracket() async throws {
         struct HasADict: Codable, Equatable {
             var hints: [String: String]
@@ -342,6 +341,43 @@ struct FormDataDecodingTests {
 
         let deserializedBar = try FormDataDecoder().decode(HasADict.self, from: serializedBar, boundary: "hello")
         #expect(deserializedBar == bar)
+    }
+
+    @Test("Decode simil-Vapor File type")
+    func decodeSimilVaporFileType() async throws {
+        struct User: Codable {
+            var name: String
+            var age: Int
+            var image: File
+        }
+
+        let user = User(
+            name: "Vapor",
+            age: 4,
+            image: File(filename: "droplet.png", data: Array("<contents of image>".utf8)))
+
+        let message = ArraySlice(
+            """
+            --helloBoundary\r
+            Content-Disposition: form-data; name="name"\r
+            \r
+            Vapor\r
+            --helloBoundary\r
+            Content-Disposition: form-data; name="age"\r
+            \r
+            4\r
+            --helloBoundary\r
+            Content-Disposition: form-data; filename="droplet.png"; name="image"\r
+            \r
+            <contents of image>\r
+            --helloBoundary--\r\n
+            """.utf8)
+
+        let decoded = try FormDataDecoder().decode(User.self, from: message, boundary: "helloBoundary")
+
+        #expect(decoded.name == user.name)
+        #expect(decoded.age == user.age)
+        #expect(decoded.image == user.image)
     }
 }
 #endif  // canImport(Testing)
