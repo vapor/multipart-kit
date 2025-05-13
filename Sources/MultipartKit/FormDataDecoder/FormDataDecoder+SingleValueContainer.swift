@@ -94,7 +94,7 @@ extension FormDataDecoder.Decoder: SingleValueDecodingContainer {
         let decoded =
             switch T.self {
             case let multipartConvertible as any MultipartPartConvertible.Type:
-                multipartConvertible.init(multipart: part) as? T
+                try multipartConvertible.init(multipart: part) as? T
             case is MultipartPart<Body>.Type:
                 part as? T
             case is Data.Type:
