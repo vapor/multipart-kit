@@ -4,6 +4,10 @@ struct File: Codable, Equatable, MultipartPartConvertible {
     let filename: String
     let data: [UInt8]
 
+    enum MultipartError: Error {
+        case invalidFileName
+    }
+
     enum CodingKeys: String, CodingKey {
         case data, filename
     }
@@ -26,14 +30,15 @@ struct File: Codable, Equatable, MultipartPartConvertible {
         try container.encode(self.filename, forKey: .filename)
     }
 
-    var multipart: MultipartPart<[UInt8]>? {
+    var multipart: MultipartPart<[UInt8]> {
         let part = MultipartPart(
             headerFields: [.contentDisposition: "form-data; name=\"image\"; filename=\"\(filename)\""],
-            body: self.data)
+            body: self.data
+        )
         return part
     }
 
-    init?(multipart: MultipartPart<some MultipartPartBodyElement>) {
+    init(multipart: MultipartPart<some MultipartPartBodyElement>) throws {
         let contentDisposition = multipart.headerFields[.contentDisposition] ?? ""
         let filenamePattern = "filename=\"([^\"]+)\""
         let filename: String
@@ -44,7 +49,7 @@ struct File: Codable, Equatable, MultipartPartConvertible {
             let endIndex = match.index(before: match.endIndex)  // Skip closing quote
             filename = String(contentDisposition[startIndex..<endIndex])
         } else {
-            return nil
+            throw MultipartError.invalidFileName
         }
 
         self.init(filename: filename, data: Array(multipart.body))
