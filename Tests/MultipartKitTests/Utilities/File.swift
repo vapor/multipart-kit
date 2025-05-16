@@ -1,6 +1,8 @@
 import MultipartKit
 
 struct File: Codable, Equatable, MultipartPartConvertible {
+    typealias Body = [UInt8]
+
     let filename: String
     let data: [UInt8]
 

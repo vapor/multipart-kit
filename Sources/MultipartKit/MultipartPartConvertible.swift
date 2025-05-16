@@ -1,5 +1,5 @@
 /// A type that can be converted to a `MultipartPart`.
-public protocol MultipartPartEncodable {
+public protocol MultipartPartEncodable<Body> {
     associatedtype Body: MultipartPartBodyElement
 
     var multipart: MultipartPart<Body> { get throws }
@@ -9,7 +9,7 @@ public protocol MultipartPartEncodable {
 public protocol MultipartPartDecodable {
     associatedtype Body: MultipartPartBodyElement
 
-    init(multipart: MultipartPart<Body>) throws
+    init(multipart: MultipartPart<some MultipartPartBodyElement>) throws
 }
 
 /// A type that can be converted to and from a `MultipartPart`.
