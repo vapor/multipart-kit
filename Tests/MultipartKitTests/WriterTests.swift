@@ -86,8 +86,8 @@ struct WriterTests {
         )
 
         var serialized = ArraySlice<UInt8>()
-        for try await part in sequence {
-            serialized.append(contentsOf: part)
+        for try await section in sequence {
+            serialized.append(contentsOf: section)
         }
 
         let expected = ArraySlice(

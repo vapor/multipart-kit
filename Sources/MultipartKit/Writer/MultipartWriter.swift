@@ -1,9 +1,18 @@
 import HTTPTypes
 
-public protocol MultipartWriter<OutboundBody> {
+/// A protocol that defines the interface for writing multipart data.
+public protocol MultipartWriter<OutboundBody>: Sendable {
+    /// The type of the body element that the writer will produce.
     associatedtype OutboundBody: MultipartPartBodyElement
+
+    /// Boundary string used to separate parts in the multipart data.
     var boundary: String { get }
+
+    /// Writes the given bytes to the multipart data.
     mutating func write(bytes: some MultipartPartBodyElement) async throws
+
+    /// Writes the final boundary to the multipart data.
+    mutating func finish() async throws
 }
 
 extension MultipartWriter {
@@ -64,24 +73,8 @@ extension MultipartWriter {
         serializedPart.append(contentsOf: ArraySlice.crlf)
         try await write(bytes: serializedPart)
     }
-}
 
-public struct BufferedMultipartWriter<OutboundBody: MultipartPartBodyElement>: MultipartWriter {
-    public let boundary: String
-    private var buffer: OutboundBody
-
-    public init(boundary: String) {
-        self.boundary = boundary
-        self.buffer = OutboundBody()
-    }
-
-    public mutating func write(bytes: some MultipartPartBodyElement) async throws {
-        buffer.append(contentsOf: bytes)
-    }
-
-    public mutating func getResult() -> OutboundBody {
-        let result = buffer
-        buffer = OutboundBody()
-        return result
+    public mutating func finish() async throws {
+        try await writeBoundary(end: true)
     }
 }

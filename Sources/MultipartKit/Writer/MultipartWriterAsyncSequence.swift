@@ -48,13 +48,10 @@ where
 
         public mutating func next() async throws -> OutboundBody? {
             while true {
-                guard let next = try await backingIterator.next() else {
-                    return nil
-                }
-                switch next {
+                switch try await backingIterator.next() {
                 case .boundary(let end):
                     if state == .wrote(.bodyChunk) {
-                        try await writer.write(bytes: ArraySlice.crlf)
+                        writer.write(bytes: ArraySlice.crlf)
                     }
                     try await writer.writeBoundary(end: end)
                     state = .wrote(.boundary)
@@ -62,8 +59,10 @@ where
                     try await writer.writeHeaders(fields)
                     state = .wrote(.headerFields)
                 case .bodyChunk(let chunk):
-                    try await writer.writeBodyChunk(chunk)
+                    writer.writeBodyChunk(chunk)
                     state = .wrote(.bodyChunk)
+                case nil:
+                    return nil
                 }
 
                 return writer.getResult()
