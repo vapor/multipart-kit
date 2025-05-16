@@ -1,16 +1,18 @@
 /// A protocol to provide custom behaviors for parsing and serializing types from and to multipart data.
 
-public protocol MultipartPartEncodable<Body> {
+public protocol MultipartPartEncodable {
     associatedtype Body: MultipartPartBodyElement
 
     var multipart: MultipartPart<Body> { get throws }
 }
 
 public protocol MultipartPartDecodable {
-    init(multipart: MultipartPart<some MultipartPartBodyElement>) throws
+    associatedtype Body: MultipartPartBodyElement
+
+    init(multipart: MultipartPart<Body>) throws
 }
 
-public protocol MultipartPartConvertible<Body>: MultipartPartEncodable, MultipartPartDecodable where Body == Self.Body {}
+public typealias MultipartPartConvertible = MultipartPartEncodable & MultipartPartDecodable
 
 extension MultipartPart: MultipartPartConvertible {
     public var multipart: MultipartPart<Body> {
