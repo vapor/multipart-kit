@@ -1,5 +1,3 @@
-import HTTPTypes
-
 /// A sequence that parses a stream of multipart data into parts asynchronously.
 ///
 /// This sequence is designed to be used with `AsyncStream` to parse a stream of data asynchronously.

@@ -379,6 +379,5 @@ struct FormDataDecodingTests {
         #expect(decoded.age == user.age)
         #expect(decoded.image == user.image)
     }
-
 }
 #endif  // canImport(Testing)
