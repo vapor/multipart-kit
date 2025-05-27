@@ -25,52 +25,55 @@ public struct BufferedMultipartWriter<OutboundBody: MultipartPartBodyElement>: M
     }
 
     public mutating func writeBoundary(end: Bool = false) {
-        var boundaryBytes = OutboundBody()
-        boundaryBytes.append(.hyphen)
-        boundaryBytes.append(.hyphen)
-        boundaryBytes.append(contentsOf: boundary.utf8)
+        buffer.reserveCapacity(boundary.utf8.count + 10)
+        buffer.append(.hyphen)
+        buffer.append(.hyphen)
+        buffer.append(contentsOf: boundary.utf8)
         if end {
-            boundaryBytes.append(.hyphen)
-            boundaryBytes.append(.hyphen)
+            buffer.append(.hyphen)
+            buffer.append(.hyphen)
         }
-        boundaryBytes.append(contentsOf: ArraySlice<UInt8>.crlf)
-        write(bytes: boundaryBytes)
+        buffer.append(contentsOf: ArraySlice.crlf)
     }
 
     public mutating func writeHeaders(_ httpFields: HTTPFields) {
-        var bytes = OutboundBody()
         for field in httpFields {
-            bytes.append(contentsOf: field.description.utf8)
-            bytes.append(contentsOf: ArraySlice.crlf)
+            buffer.append(contentsOf: field.name.rawName.utf8)
+            buffer.append(.colon)
+            buffer.append(.space)
+            buffer.append(contentsOf: field.value.utf8)
+            buffer.append(contentsOf: ArraySlice.crlf)
         }
-        bytes.append(contentsOf: ArraySlice.crlf)
-        write(bytes: bytes)
+        buffer.append(contentsOf: ArraySlice.crlf)
     }
 
     public mutating func writeBodyChunk(_ chunk: some MultipartPartBodyElement) {
-        write(bytes: chunk)
+        buffer.append(contentsOf: chunk)
     }
 
     public mutating func writeBodyChunks(_ chunks: some Sequence<some MultipartPartBodyElement>) {
+        buffer.reserveCapacity(chunks.underestimatedCount * 64 + ArraySlice.crlf.count)
         for chunk in chunks {
-            write(bytes: chunk)
+            buffer.append(contentsOf: chunk)
         }
-        write(bytes: ArraySlice.crlf)
+        buffer.append(contentsOf: ArraySlice.crlf)
     }
 
-    mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) {
-        var serializedPart = OutboundBody()
-        serializedPart.append(.hyphen)
-        serializedPart.append(.hyphen)
-        serializedPart.append(contentsOf: boundary.utf8)
-        serializedPart.append(contentsOf: ArraySlice<UInt8>.crlf)
+    public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) {
+        buffer.reserveCapacity(part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
+        buffer.append(.hyphen)
+        buffer.append(.hyphen)
+        buffer.append(contentsOf: boundary.utf8)
+        buffer.append(contentsOf: ArraySlice<UInt8>.crlf)
         for field in part.headerFields {
-            serializedPart.append(contentsOf: field.description.utf8)
-            serializedPart.append(contentsOf: ArraySlice.crlf)
+            buffer.append(contentsOf: field.name.rawName.utf8)
+            buffer.append(.colon)
+            buffer.append(.space)
+            buffer.append(contentsOf: field.value.utf8)
+            buffer.append(contentsOf: ArraySlice.crlf)
         }
-        serializedPart.append(contentsOf: ArraySlice.crlf)
-        serializedPart.append(contentsOf: part.body)
-        serializedPart.append(contentsOf: ArraySlice.crlf)
-        write(bytes: serializedPart)
+        buffer.append(contentsOf: ArraySlice.crlf)
+        buffer.append(contentsOf: part.body)
+        buffer.append(contentsOf: ArraySlice.crlf)
     }
 }

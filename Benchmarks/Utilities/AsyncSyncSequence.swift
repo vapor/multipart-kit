@@ -1,5 +1,5 @@
 extension Sequence {
-    var async: AsyncSyncSequence<Self> {
+    public var async: AsyncSyncSequence<Self> {
         AsyncSyncSequence(self)
     }
 }
@@ -9,17 +9,17 @@ extension Sequence {
 ///
 /// > Warning: Not safe. Only for testing purposes.
 /// Use `swift-algorithms`'s `AsyncSyncSequence` instead if you're looking for something like this.
-final class AsyncSyncSequence<Base: Sequence>: AsyncSequence {
-    typealias Element = Base.Element
+public final class AsyncSyncSequence<Base: Sequence>: AsyncSequence {
+    public typealias Element = Base.Element
 
-    struct Iterator: AsyncIteratorProtocol {
+    public struct Iterator: AsyncIteratorProtocol {
         var iterator: Base.Iterator?
 
         init(_ iterator: Base.Iterator) {
             self.iterator = iterator
         }
 
-        mutating func next() async -> Base.Element? {
+        public mutating func next() async -> Base.Element? {
             iterator?.next()
         }
     }
@@ -30,7 +30,7 @@ final class AsyncSyncSequence<Base: Sequence>: AsyncSequence {
         self.base = base
     }
 
-    func makeAsyncIterator() -> Iterator {
+    public func makeAsyncIterator() -> Iterator {
         defer { self.base = nil }  // release the reference so no CoW is triggered
         return Iterator(base.unsafelyUnwrapped.makeIterator())
     }

@@ -29,7 +29,7 @@ struct WriterTests {
         var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
 
         for part in example {
-            try await writer.writePart(part)
+            writer.writePart(part)
         }
 
         try await writer.writeBoundary(end: true)
