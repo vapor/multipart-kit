@@ -29,10 +29,10 @@ struct WriterTests {
         var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
 
         for part in example {
-            writer.writePart(part)
+            try await writer.writePart(part)
         }
 
-        try await writer.writeBoundary(end: true)
+        try await writer.finish()
 
         let expected = ArraySlice(
             """

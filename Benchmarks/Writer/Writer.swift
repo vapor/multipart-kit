@@ -15,15 +15,21 @@ let benchmarks: @Sendable () -> Void = {
     let partCount = 1 << 10
     let repeatedParts: [MultipartPart] = .init(repeating: examplePart, count: partCount)
 
-    let chunkSize = 1 << 10
-    let fileSizeInMiB = 256
-    let chunkedMessage: [MultipartSection<ArraySlice<UInt8>>] = [
-        .headerFields([
-            .contentDisposition: "form-data; name=\"file\"; filename=\"hello.txt\"",
-            .contentType: "text/plain",
-        ]),
-        .bodyChunk(ArraySlice(repeating: 0, count: chunkSize * fileSizeInMiB)),
-    ]
+    let chunkSize = 64 << 10
+    let fileSizeInMiB = 10
+    let chunkedMessage: [MultipartSection<ArraySlice<UInt8>>] =
+        [
+            .headerFields([
+                .contentDisposition: "form-data; name=\"file\"; filename=\"hello.txt\"",
+                .contentType: "text/plain",
+            ])
+        ]
+        + [MultipartSection<ArraySlice<UInt8>>](
+            repeating: MultipartSection<ArraySlice<UInt8>>.bodyChunk(
+                ArraySlice(repeatedParts[0].body.prefix(chunkSize))
+            ),
+            count: (fileSizeInMiB << 20) / chunkSize
+        )
 
     let emptySections = [MultipartSection<ArraySlice<UInt8>>]()
 
@@ -36,7 +42,7 @@ let benchmarks: @Sendable () -> Void = {
     ) { benchmark in
         var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
         for part in emptyParts {
-            writer.writePart(part)
+            try await writer.writePart(part)
         }
         blackHole(writer.getResult())
     }
@@ -50,7 +56,7 @@ let benchmarks: @Sendable () -> Void = {
     ) { benchmark in
         var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
         for part in repeatedParts {
-            writer.writePart(part)
+            try await writer.writePart(part)
         }
         blackHole(writer.getResult())
     }
@@ -75,7 +81,7 @@ let benchmarks: @Sendable () -> Void = {
         for _ in 0..<100 {
             var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
             for part in repeatedParts {
-                writer.writePart(part)
+                try await writer.writePart(part)
             }
             blackHole(writer.getResult())
         }
@@ -106,8 +112,11 @@ let benchmarks: @Sendable () -> Void = {
             maxIterations: 1
         )
     ) { benchmark in
+        let backingSequence = chunkedMessage.async
+
+        benchmark.startMeasurement()
         let sequence = StreamingMultipartWriterAsyncSequence(
-            backingSequence: chunkedMessage.async,
+            backingSequence: backingSequence,
             boundary: boundary,
             outboundBody: ArraySlice<UInt8>.self
         )

@@ -8,7 +8,7 @@ where
     BackingBody: MultipartPartBodyElement
 {
     private let backingSequence: BackingSequence
-    private let writer: BufferedMultipartWriter<OutboundBody>
+    private let boundary: String
 
     public init(
         backingSequence: BackingSequence,
@@ -16,65 +16,68 @@ where
         outboundBody: OutboundBody.Type = OutboundBody.self
     ) {
         self.backingSequence = backingSequence
-        self.writer = .init(boundary: boundary)
-    }
-
-    public struct AsyncIterator: AsyncIteratorProtocol {
-        private var backingIterator: BackingSequence.AsyncIterator
-        private var writer: BufferedMultipartWriter<OutboundBody>
-
-        enum State: Equatable {
-            enum Part {
-                case boundary
-                case headerFields
-                case bodyChunk
-            }
-
-            case initial
-            case wrote(Part)
-            case finished
-        }
-
-        private var state: State
-
-        init(
-            backingIterator: BackingSequence.AsyncIterator,
-            writer: BufferedMultipartWriter<OutboundBody>
-        ) {
-            self.backingIterator = backingIterator
-            self.writer = writer
-            self.state = .initial
-        }
-
-        public mutating func next() async throws -> OutboundBody? {
-            while true {
-                switch try await backingIterator.next() {
-                case .boundary(let end):
-                    if state == .wrote(.bodyChunk) {
-                        writer.write(bytes: ArraySlice.crlf)
-                    }
-                    try await writer.writeBoundary(end: end)
-                    state = .wrote(.boundary)
-                case .headerFields(let fields):
-                    try await writer.writeHeaders(fields)
-                    state = .wrote(.headerFields)
-                case .bodyChunk(let chunk):
-                    writer.writeBodyChunk(chunk)
-                    state = .wrote(.bodyChunk)
-                case nil:
-                    return nil
-                }
-
-                return writer.getResult()
-            }
-        }
+        self.boundary = boundary
     }
 
     public func makeAsyncIterator() -> AsyncIterator {
         AsyncIterator(
             backingIterator: backingSequence.makeAsyncIterator(),
-            writer: writer
+            boundary: boundary
         )
     }
 
+    public struct AsyncIterator: AsyncIteratorProtocol {
+        struct EmbeddedWriter: MultipartWriter {
+            var boundary: String
+            var buffer: OutboundBody
+
+            init(boundary: String) {
+                self.boundary = boundary
+                self.buffer = .init()
+            }
+
+            mutating func write(bytes: some Collection<UInt8> & Sendable) async throws {
+                buffer.append(contentsOf: bytes)
+            }
+        }
+
+        private var needsCRLFAfterBody: Bool
+        private var backingIterator: BackingSequence.AsyncIterator
+        private var writer: EmbeddedWriter
+
+        init(
+            backingIterator: BackingSequence.AsyncIterator,
+            boundary: String
+        ) {
+            self.backingIterator = backingIterator
+            self.writer = .init(boundary: boundary)
+            self.needsCRLFAfterBody = false
+        }
+
+        public mutating func next() async throws -> OutboundBody? {
+            while true {
+                guard let section = try await backingIterator.next() else {
+                    return nil
+                }
+
+                writer.buffer.removeAll(keepingCapacity: true)
+
+                switch section {
+                case .boundary(let end):
+                    if needsCRLFAfterBody {
+                        needsCRLFAfterBody = false
+                        try await writer.write(bytes: ArraySlice.crlf)
+                    }
+                    try await writer.writeBoundary(end: end)
+                case .headerFields(let fields):
+                    try await writer.writeHeaders(fields)
+                case .bodyChunk(let chunk):
+                    try await writer.writeBodyChunk(chunk)
+                    self.needsCRLFAfterBody = true
+                }
+
+                return writer.buffer
+            }
+        }
+    }
 }
