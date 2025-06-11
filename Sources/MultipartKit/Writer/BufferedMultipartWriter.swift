@@ -1,10 +1,27 @@
 import HTTPTypes
 
 /// A synchronous ``MultipartWriter`` that buffers the output in memory.
+///
+/// This writer accumulates all multipart data in an internal buffer, making it suitable
+/// for scenarios where you need to generate the complete multipart message before sending.
+/// The buffer can be retrieved using ``getResult()`` after writing all parts.
+///
+/// ```swift
+/// var writer = BufferedMultipartWriter<[UInt8]>(boundary: "boundary123")
+/// try await writer.writePart(MultipartPart(
+///     headerFields: [.contentType: "text/plain"],
+///     body: Array("Hello, world!".utf8)
+/// ))
+/// try await writer.finish()
+/// let result = writer.getResult()
+/// ```
 public struct BufferedMultipartWriter<OutboundBody: MultipartPartBodyElement>: MultipartWriter {
     public let boundary: String
     private var buffer: OutboundBody
 
+    /// Creates a new buffered multipart writer with the specified boundary.
+    ///
+    /// - Parameter boundary: The boundary string to use for separating multipart parts.
     public init(boundary: String) {
         self.boundary = boundary
         self.buffer = OutboundBody()
@@ -14,6 +31,9 @@ public struct BufferedMultipartWriter<OutboundBody: MultipartPartBodyElement>: M
         buffer.append(contentsOf: bytes)
     }
 
+    /// Retrieves the buffered result and clears the internal buffer.
+    ///
+    /// - Returns: The complete multipart message as the specified body type.
     public mutating func getResult() -> OutboundBody {
         defer { buffer.removeAll() }
         return buffer
