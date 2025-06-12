@@ -52,16 +52,34 @@ public protocol MultipartWriter<OutboundBody>: Sendable {
     /// Writes the given bytes to the multipart data.
     ///
     /// - Parameter bytes: The bytes to write to the output.
-    /// - Throws: Any error that occurs during writing.
     mutating func write(bytes: some Collection<UInt8> & Sendable) async throws
 
     /// Writes the final boundary to the multipart data.
     ///
     /// This method should be called when all parts have been written to properly
     /// terminate the multipart message.
-    ///
-    /// - Throws: Any error that occurs during writing.
     mutating func finish() async throws
+
+    /// Writes a multipart boundary with optional termination.
+    ///
+    /// - Parameter end: Whether this is the final boundary that terminates the multipart message.
+    /// - Note: Override this method only for performance reasons. Most implementations should rely on the default
+    ///   implementation unless specific performance optimizations are needed.
+    mutating func writeBoundary(end: Bool) async throws
+
+    /// Writes HTTP header fields for a multipart part.
+    ///
+    /// - Parameter httpFields: The header fields to write.
+    /// - Note: Override this method only for performance reasons. Most implementations should rely on the default
+    ///   implementation unless specific performance optimizations are needed.
+    mutating func writeHeaders(_ httpFields: HTTPFields) async throws
+
+    /// Writes a complete multipart part including boundary, headers, and body.
+    ///
+    /// - Parameter part: The multipart part to write.
+    /// - Note: Override this method only for performance reasons. Most implementations should rely on the default
+    ///   implementation unless specific performance optimizations are needed.
+    mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) async throws
 }
 
 extension MultipartWriter {
