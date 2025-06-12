@@ -62,7 +62,7 @@ where
     public struct AsyncIterator: AsyncIteratorProtocol {
         /// An embedded writer implementation used internally for serialization.
         struct EmbeddedWriter: MultipartWriter {
-            var boundary: String
+            let boundary: String
             var buffer: OutboundBody
 
             /// Creates a new embedded writer with the specified boundary.
