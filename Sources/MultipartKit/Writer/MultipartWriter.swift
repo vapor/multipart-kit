@@ -65,62 +65,40 @@ public protocol MultipartWriter<OutboundBody>: Sendable {
 }
 
 extension MultipartWriter {
-    private var boundaryPrefix: OutboundBody {
-        var prefix = OutboundBody()
-        prefix.append(contentsOf: ArraySlice.twoHyphens)
-        prefix.append(contentsOf: boundary.utf8)
-        return prefix
-    }
-
-    private var boundarySuffix: OutboundBody {
-        var suffix = OutboundBody()
-        suffix.append(contentsOf: ArraySlice.twoHyphens)
-        return suffix
-    }
-
     /// Writes a multipart boundary with optional termination.
     ///
     /// - Parameter end: Whether this is the final boundary that terminates the multipart message.
     /// - Throws: Any error that occurs during writing.
+    @inlinable
     public mutating func writeBoundary(end: Bool = false) async throws {
-        var boundaryBytes = Self.OutboundBody()
-        boundaryBytes.append(.hyphen)
-        boundaryBytes.append(.hyphen)
-        boundaryBytes.append(contentsOf: boundary.utf8)
+        try await write(bytes: ArraySlice.twoHyphens)
+        try await write(bytes: boundary.utf8)
         if end {
-            boundaryBytes.append(contentsOf: ArraySlice.twoHyphens)
+            try await write(bytes: ArraySlice.twoHyphens)
         }
-        boundaryBytes.append(contentsOf: ArraySlice<UInt8>.crlf)
-        try await write(bytes: boundaryBytes)
+        try await write(bytes: ArraySlice.crlf)
     }
 
     /// Writes HTTP header fields for a multipart part.
     ///
     /// - Parameter httpFields: The header fields to write.
     /// - Throws: Any error that occurs during writing.
+    @inlinable
     public mutating func writeHeaders(_ httpFields: HTTPFields) async throws {
-        guard !httpFields.isEmpty else {
-            try await write(bytes: ArraySlice.crlf)
-            return
-        }
-
-        var bytes = OutboundBody()
-        bytes.reserveCapacity(httpFields.count * 64)
         for field in httpFields {
-            bytes.append(contentsOf: field.name.rawName.utf8)
-            bytes.append(.colon)
-            bytes.append(.space)
-            bytes.append(contentsOf: field.value.utf8)
-            bytes.append(contentsOf: ArraySlice.crlf)
+            try await write(bytes: field.name.rawName.utf8)
+            try await write(bytes: ArraySlice.colonSpace)
+            try await write(bytes: field.value.utf8)
+            try await write(bytes: ArraySlice.crlf)
         }
-        bytes.append(contentsOf: ArraySlice.crlf)
-        try await write(bytes: bytes)
+        try await write(bytes: ArraySlice.crlf)
     }
 
     /// Writes a single body chunk.
     ///
     /// - Parameter chunk: The body chunk to write.
     /// - Throws: Any error that occurs during writing.
+    @inlinable
     public mutating func writeBodyChunk(_ chunk: some MultipartPartBodyElement) async throws {
         try await write(bytes: chunk)
     }
@@ -129,6 +107,7 @@ extension MultipartWriter {
     ///
     /// - Parameter chunks: A sequence of body chunks to write.
     /// - Throws: Any error that occurs during writing.
+    @inlinable
     public mutating func writeBodyChunks(_ chunks: some Sequence<some MultipartPartBodyElement>) async throws {
         for chunk in chunks {
             try await write(bytes: chunk)
@@ -140,6 +119,7 @@ extension MultipartWriter {
     ///
     /// - Parameter chunks: An async sequence of body chunks to write.
     /// - Throws: Any error that occurs during writing.
+    @inlinable
     public mutating func writeBodyChunks<Chunks: AsyncSequence>(_ chunks: Chunks) async throws
     where Chunks.Element: MultipartPartBodyElement {
         for try await chunk in chunks {
@@ -152,21 +132,14 @@ extension MultipartWriter {
     ///
     /// - Parameter part: The multipart part to write.
     /// - Throws: Any error that occurs during writing.
+    @inlinable
     public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) async throws {
-        var serializedPart = OutboundBody()
-        serializedPart.reserveCapacity(part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
-        serializedPart.append(.hyphen)
-        serializedPart.append(.hyphen)
-        serializedPart.append(contentsOf: boundary.utf8)
-        serializedPart.append(contentsOf: ArraySlice<UInt8>.crlf)
-        for field in part.headerFields {
-            serializedPart.append(contentsOf: field.description.utf8)
-            serializedPart.append(contentsOf: ArraySlice.crlf)
-        }
-        serializedPart.append(contentsOf: ArraySlice.crlf)
-        serializedPart.append(contentsOf: part.body)
-        serializedPart.append(contentsOf: ArraySlice.crlf)
-        try await write(bytes: serializedPart)
+        try await writeBoundary()
+        try await write(bytes: ArraySlice.crlf)
+        try await writeHeaders(part.headerFields)
+        try await write(bytes: ArraySlice.crlf)
+        try await writeBodyChunk(part.body)
+        try await write(bytes: ArraySlice.crlf)
     }
 
     /// Writes the final boundary to the multipart data.
@@ -175,6 +148,7 @@ extension MultipartWriter {
     /// terminate the multipart message.
     ///
     /// - Throws: Any error that occurs during writing.
+    @inlinable
     public mutating func finish() async throws {
         try await writeBoundary(end: true)
     }

@@ -17,16 +17,20 @@ import HTTPTypes
 /// ```
 public struct BufferedMultipartWriter<OutboundBody: MultipartPartBodyElement>: MultipartWriter {
     public let boundary: String
-    private var buffer: OutboundBody
+
+    @usableFromInline
+    var buffer: OutboundBody
 
     /// Creates a new buffered multipart writer with the specified boundary.
     ///
     /// - Parameter boundary: The boundary string to use for separating multipart parts.
+    @inlinable
     public init(boundary: String) {
         self.boundary = boundary
         self.buffer = OutboundBody()
     }
 
+    @inlinable
     public mutating func write(bytes: some Collection<UInt8> & Sendable) async throws {
         buffer.append(contentsOf: bytes)
     }
@@ -34,81 +38,34 @@ public struct BufferedMultipartWriter<OutboundBody: MultipartPartBodyElement>: M
     /// Retrieves the buffered result and clears the internal buffer.
     ///
     /// - Returns: The complete multipart message as the specified body type.
+    @inlinable
     public mutating func getResult() -> OutboundBody {
         defer { buffer.removeAll() }
         return buffer
     }
 
+    @inlinable
     public mutating func finish() async throws {
-        try await writeBoundary(end: true)
+        self._finish()
     }
 
-    public mutating func writeBoundary(end: Bool = false) async throws {
-        buffer.reserveCapacity(boundary.utf8.count + 10)
-        buffer.append(.hyphen)
-        buffer.append(.hyphen)
-        buffer.append(contentsOf: boundary.utf8)
-        if end {
-            buffer.append(.hyphen)
-            buffer.append(.hyphen)
-        }
-        buffer.append(contentsOf: ArraySlice.crlf)
-    }
-
-    public mutating func writeHeaders(_ httpFields: HTTPFields) async throws {
-        buffer.reserveCapacity(httpFields.count * 64)
-        for field in httpFields {
-            buffer.append(contentsOf: field.name.rawName.utf8)
-            buffer.append(.colon)
-            buffer.append(.space)
-            buffer.append(contentsOf: field.value.utf8)
-            buffer.append(contentsOf: ArraySlice.crlf)
-        }
-        buffer.append(contentsOf: ArraySlice.crlf)
-    }
-
-    public mutating func writeBodyChunk(_ chunk: some MultipartPartBodyElement) async throws {
-        buffer.append(contentsOf: chunk)
-    }
-
-    public mutating func writeBodyChunks(_ chunks: some Sequence<some MultipartPartBodyElement>) async throws {
-        buffer.reserveCapacity(chunks.underestimatedCount * 64 + ArraySlice.crlf.count)
-        for chunk in chunks {
-            buffer.append(contentsOf: chunk)
-        }
-        buffer.append(contentsOf: ArraySlice.crlf)
-    }
-
+    @inlinable
     public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) async throws {
-        buffer.reserveCapacity(part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
-        buffer.append(.hyphen)
-        buffer.append(.hyphen)
-        buffer.append(contentsOf: boundary.utf8)
-        buffer.append(contentsOf: ArraySlice.crlf)
-        for field in part.headerFields {
-            buffer.append(contentsOf: field.name.rawName.utf8)
-            buffer.append(.colon)
-            buffer.append(.space)
-            buffer.append(contentsOf: field.value.utf8)
-            buffer.append(contentsOf: ArraySlice.crlf)
-        }
-        buffer.append(contentsOf: ArraySlice.crlf)
-        buffer.append(contentsOf: part.body)
-        buffer.append(contentsOf: ArraySlice.crlf)
+        // Since we have the internal, somewhat more efficient methods, might as well use those.
+        self._writePart(part)
     }
 
     // Internal sync version of some of the methods, used in ``FormDataEncoder``.
 
-    mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) {
+    @inlinable
+    mutating func _writePart(_ part: MultipartPart<some MultipartPartBodyElement>) {
         buffer.reserveCapacity(part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
-        buffer.append(.hyphen)
-        buffer.append(.hyphen)
+        buffer.append(contentsOf: ArraySlice.twoHyphens)
         buffer.append(contentsOf: boundary.utf8)
-        buffer.append(contentsOf: ArraySlice<UInt8>.crlf)
+        buffer.append(contentsOf: ArraySlice.crlf)
         for field in part.headerFields {
             buffer.append(contentsOf: field.name.rawName.utf8)
-            buffer.append(.colon)
-            buffer.append(.space)
+            buffer.append(contentsOf: ArraySlice.colonSpace)
             buffer.append(contentsOf: field.value.utf8)
             buffer.append(contentsOf: ArraySlice.crlf)
         }
@@ -117,13 +74,12 @@ public struct BufferedMultipartWriter<OutboundBody: MultipartPartBodyElement>: M
         buffer.append(contentsOf: ArraySlice.crlf)
     }
 
-    mutating func finish() {
+    @inlinable
+    mutating func _finish() {
         buffer.reserveCapacity(boundary.utf8.count + 10)
-        buffer.append(.hyphen)
-        buffer.append(.hyphen)
+        buffer.append(contentsOf: ArraySlice.twoHyphens)
         buffer.append(contentsOf: boundary.utf8)
-        buffer.append(.hyphen)
-        buffer.append(.hyphen)
+        buffer.append(contentsOf: ArraySlice.twoHyphens)
         buffer.append(contentsOf: ArraySlice.crlf)
     }
 }

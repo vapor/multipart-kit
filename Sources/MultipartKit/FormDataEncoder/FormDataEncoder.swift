@@ -26,9 +26,9 @@ public struct FormDataEncoder: Sendable {
         let parts: [MultipartPart<[UInt8]>] = try self.parts(from: encodable)
         var writer = BufferedMultipartWriter<[UInt8]>(boundary: boundary)
         for part in parts {
-            writer.writePart(part)
+            writer._writePart(part)
         }
-        writer.finish()
+        writer._finish()
         let serialized = writer.getResult()
         return String(decoding: serialized, as: Unicode.UTF8.self)
     }
@@ -54,9 +54,9 @@ public struct FormDataEncoder: Sendable {
         let parts: [MultipartPart<Body>] = try self.parts(from: encodable)
         var writer = BufferedMultipartWriter<Body>(boundary: boundary)
         for part in parts {
-            writer.writePart(part)
+            writer._writePart(part)
         }
-        writer.finish()
+        writer._finish()
         return writer.getResult()
     }
 

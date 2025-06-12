@@ -1,15 +1,15 @@
-public struct NoOpAsyncSequence: AsyncSequence {
-    public typealias Element = ArraySlice<UInt8>
+package struct NoOpAsyncSequence: AsyncSequence {
+    package typealias Element = ArraySlice<UInt8>
 
-    public init() {}
+    package init() {}
 
-    public struct Iterator: AsyncIteratorProtocol {
-        public mutating func next() async -> Element? {
+    package struct Iterator: AsyncIteratorProtocol {
+        package mutating func next() async -> Element? {
             nil
         }
     }
 
-    public func makeAsyncIterator() -> Iterator {
+    package func makeAsyncIterator() -> Iterator {
         return Iterator()
     }
 }
