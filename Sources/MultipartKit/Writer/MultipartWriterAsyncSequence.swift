@@ -78,9 +78,9 @@ where
             }
         }
 
-        private var needsCRLFAfterBody: Bool
-        private var backingIterator: BackingSequence.AsyncIterator
-        private var writer: EmbeddedWriter
+        var needsCRLFAfterBody: Bool
+        var backingIterator: BackingSequence.AsyncIterator
+        var writer: EmbeddedWriter
 
         /// Creates a new async iterator.
         ///

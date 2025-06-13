@@ -109,6 +109,110 @@ struct WriterTests {
         #expect(serialized == expected)
     }
 
+    @Test("Writing boundary")
+    func writeBoundary() async throws {
+        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
+
+        try await writer.writeBoundary()
+        let result1 = writer.getResult()
+        #expect(result1 == ArraySlice("--test\r\n".utf8))
+
+        try await writer.writeBoundary(end: true)
+        let result2 = writer.getResult()
+        #expect(result2 == ArraySlice("--test--\r\n".utf8))
+    }
+
+    @Test("Writing header fields")
+    func testWriteHeaders() async throws {
+        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
+
+        let headers: HTTPFields = [
+            .contentType: "text/plain",
+            .contentDisposition: "form-data; name=\"test\"",
+        ]
+
+        try await writer.writeHeaders(headers)
+        let result = writer.getResult()
+
+        let resultString = String(decoding: result, as: UTF8.self)
+        #expect(resultString.contains("Content-Type: text/plain\r\n"))
+        #expect(resultString.contains("Content-Disposition: form-data; name=\"test\"\r\n"))
+        #expect(resultString.hasSuffix("\r\n\r\n"))
+    }
+
+    @Test("Writing body chunks")
+    func writeBodyChunks() async throws {
+        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
+
+        try await writer.writeBodyChunk(ArraySlice("chunk1".utf8))
+        let result1 = writer.getResult()
+        #expect(result1 == ArraySlice("chunk1".utf8))
+
+        let chunks = [
+            ArraySlice("chunk1".utf8),
+            ArraySlice("chunk2".utf8),
+            ArraySlice("chunk3".utf8),
+        ]
+        try await writer.writeBodyChunks(chunks)
+        let result2 = writer.getResult()
+        #expect(result2 == ArraySlice("chunk1chunk2chunk3\r\n".utf8))
+
+    }
+
+    @Test("Empty boundary handling")
+    func testEmptyBoundary() async throws {
+        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: "")
+        try await writer.writeBoundary()
+        let result = writer.getResult()
+        #expect(result == ArraySlice("--\r\n".utf8))
+    }
+
+    @Test("Large parts handling")
+    func testLargeParts() async throws {
+        let boundary = "test"
+        let largeBody = ArraySlice(Array(repeating: UInt8(65), count: 1 << 20))  // 1MB of 'A'
+
+        let part = MultipartPart(
+            headerFields: [.contentType: "application/octet-stream"],
+            body: largeBody
+        )
+
+        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
+        try await writer.writePart(part)
+        try await writer.finish()
+
+        let result = writer.getResult()
+        #expect(result.count > largeBody.count)
+    }
+
+    @Test("Getting result clears buffer")
+    func getResultClearsBuffer() async throws {
+        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
+
+        try await writer.writeBoundary()
+        let result1 = writer.getResult()
+        #expect(!result1.isEmpty)
+
+        let result2 = writer.getResult()
+        #expect(result2.isEmpty)
+    }
+
+    @Test("Unicode in headers")
+    func testUnicodeHeaders() async throws {
+        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
+
+        let headers: HTTPFields = [
+            .contentDisposition: "form-data; name=\"tëst\"; filename=\"filé.txt\""
+        ]
+
+        try await writer.writeHeaders(headers)
+        let result = writer.getResult()
+
+        let resultString = String(decoding: result, as: UTF8.self)
+        #expect(resultString.contains("tëst"))
+        #expect(resultString.contains("filé.txt"))
+    }
+
     @Test("Create Boundary")
     func createBoundary() {
         let boundary = "boundary123"
