@@ -109,6 +109,23 @@ struct WriterTests {
         #expect(serialized == expected)
     }
 
+    @Test("Create Boundary")
+    func createBoundary() {
+        let boundary = "boundary123"
+
+        let formattedBoundary = makeBoundaryBytes(boundary, as: [UInt8].self)
+        let expectedBoundary: [UInt8] = [
+            45, 45, 98, 111, 117, 110, 100, 97, 114, 121, 49, 50, 51, 13, 10,
+        ]
+        #expect(formattedBoundary == expectedBoundary)
+
+        let formattedEndBoundary = makeBoundaryBytes(boundary, end: true, as: [UInt8].self)
+        let expectedEndBoundary: [UInt8] = [
+            45, 45, 98, 111, 117, 110, 100, 97, 114, 121, 49, 50, 51, 45, 45, 13, 10,
+        ]
+        #expect(formattedEndBoundary == expectedEndBoundary)
+    }
+
     private func makeSerializationStream<Body: MultipartPartBodyElement>(
         for message: [MultipartSection<Body>]
     ) -> AsyncStream<MultipartSection<Body>> {

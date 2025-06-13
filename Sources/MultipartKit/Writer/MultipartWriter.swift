@@ -171,3 +171,24 @@ extension MultipartWriter {
         try await writeBoundary(end: true)
     }
 }
+
+/// Creates a properly formatted boundary to be used in a custom ``MultipartSerializer.writeBoundary`` method.
+///
+/// - Parameters:
+///   - boundary: The boundary to be formatted.
+///   - end: Whether this is the end boundary of the message.
+/// - Returns: A formatted boundary.
+public func makeBoundaryBytes<OutboundBody: MultipartPartBodyElement>(
+    _ boundary: String,
+    end: Bool = false,
+    as: OutboundBody.Type = OutboundBody.self
+) -> OutboundBody {
+    var bytes = OutboundBody()
+    bytes.append(contentsOf: ArraySlice.twoHyphens)
+    bytes.append(contentsOf: boundary.utf8)
+    if end {
+        bytes.append(contentsOf: ArraySlice.twoHyphens)
+    }
+    bytes.append(contentsOf: ArraySlice.crlf)
+    return bytes
+}
