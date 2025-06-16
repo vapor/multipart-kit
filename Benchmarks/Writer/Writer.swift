@@ -40,7 +40,7 @@ let benchmarks: @Sendable () -> Void = {
             maxIterations: 1
         )
     ) { benchmark in
-        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
+        var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
         for part in emptyParts {
             try await writer.writePart(part)
         }
@@ -54,7 +54,7 @@ let benchmarks: @Sendable () -> Void = {
             maxIterations: 1
         )
     ) { benchmark in
-        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
+        var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
         for part in repeatedParts {
             try await writer.writePart(part)
         }
@@ -79,7 +79,7 @@ let benchmarks: @Sendable () -> Void = {
         )
     ) { benchmark in
         for _ in 0..<100 {
-            var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
+            var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
             for part in repeatedParts {
                 try await writer.writePart(part)
             }

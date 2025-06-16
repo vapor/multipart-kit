@@ -1,85 +1,85 @@
 import HTTPTypes
 
-/// A synchronous ``MultipartWriter`` that buffers the output in memory.
+/// A ``MultipartWriter`` that buffers data up to a specified capacity before forwarding to an underlying writer.
 ///
-/// This writer accumulates all multipart data in an internal buffer, making it suitable
-/// for scenarios where you need to generate the complete multipart message before sending.
-/// The buffer can be retrieved using ``getResult()`` after writing all parts.
+/// This writer acts as a buffer between your application and another writer implementation,
+/// helping to optimize memory usage and improve performance when dealing with large multipart messages.
+/// It accumulates data until a threshold is reached, then forwards the buffered content to the underlying
+/// writer and clears its internal buffer.
 ///
 /// ```swift
-/// var writer = BufferedMultipartWriter<[UInt8]>(boundary: "boundary123")
-/// try await writer.writePart(MultipartPart(
-///     headerFields: [.contentType: "text/plain"],
-///     body: Array("Hello, world!".utf8)
-/// ))
+/// // Example: Create a buffered writer with 8KB capacity that writes to a socket
+/// var writer = BufferedMultipartWriter(
+///     boundary: "boundary123",
+///     bufferCapacity: 8192,
+///     underlyingWriter: SocketMultipartWriter(socket: mySocket)
+/// )
+///
+/// // Use the writer as normal - buffering happens automatically
+/// try await writer.writePart(myPart)
 /// try await writer.finish()
-/// let result = writer.getResult()
 /// ```
 public struct BufferedMultipartWriter<OutboundBody: MultipartPartBodyElement>: MultipartWriter {
+    /// The boundary string used to separate multipart parts.
     public let boundary: String
 
+    /// The underlying writer that will receive the buffered data.
+    @usableFromInline
+    var underlyingWriter: any MultipartWriter<OutboundBody>
+
+    /// Internal buffer that accumulates data before forwarding to the underlying writer.
     @usableFromInline
     var buffer: OutboundBody
 
-    /// Creates a new buffered multipart writer with the specified boundary.
+    /// Current count of bytes in the buffer.
+    @usableFromInline
+    var currentBufferCount: Int
+
+    /// Maximum capacity of the buffer before flushing to the underlying writer.
+    @usableFromInline
+    let bufferCapacity: Int
+
+    /// Creates a new buffered multipart writer.
     ///
-    /// - Parameter boundary: The boundary string to use for separating multipart parts.
+    /// - Parameters:
+    ///   - boundary: The boundary string to use for separating multipart parts.
+    ///   - bufferCapacity: Maximum number of bytes to buffer before writing to the underlying writer.
+    ///   - underlyingWriter: The writer that will receive the buffered data when capacity is reached.
     @inlinable
-    public init(boundary: String) {
+    public init(boundary: String, bufferCapacity: Int, underlyingWriter: some MultipartWriter<OutboundBody>) {
         self.boundary = boundary
         self.buffer = OutboundBody()
+        self.bufferCapacity = bufferCapacity
+        self.buffer.reserveCapacity(bufferCapacity)
+        self.currentBufferCount = 0
+        self.underlyingWriter = underlyingWriter
     }
 
+    /// Writes bytes to the buffer, flushing to the underlying writer if capacity is reached.
+    ///
+    /// This method accumulates the provided bytes in the internal buffer. If the buffer's
+    /// capacity is reached, the entire buffer is forwarded to the underlying writer and then cleared.
+    ///
+    /// - Parameter bytes: The bytes to write to the buffer.
     @inlinable
     public mutating func write(bytes: some Collection<UInt8> & Sendable) async throws {
-        buffer.append(contentsOf: bytes)
-    }
-
-    /// Retrieves the buffered result and clears the internal buffer.
-    ///
-    /// - Returns: The complete multipart message as the specified body type.
-    @inlinable
-    public mutating func getResult() -> OutboundBody {
-        defer { buffer.removeAll() }
-        return buffer
-    }
-
-    @inlinable
-    public mutating func finish() async throws {
-        self._finish()
-    }
-
-    @inlinable
-    public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) async throws {
-        // Since we have the internal, somewhat more efficient methods, might as well use those.
-        self._writePart(part)
-    }
-
-    // Internal sync version of some of the methods, used in ``FormDataEncoder``.
-
-    @inlinable
-    mutating func _writePart(_ part: MultipartPart<some MultipartPartBodyElement>) {
-        buffer.reserveCapacity(part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
-        buffer.append(contentsOf: ArraySlice.twoHyphens)
-        buffer.append(contentsOf: boundary.utf8)
-        buffer.append(contentsOf: ArraySlice.crlf)
-        for field in part.headerFields {
-            buffer.append(contentsOf: field.name.rawName.utf8)
-            buffer.append(contentsOf: ArraySlice.colonSpace)
-            buffer.append(contentsOf: field.value.utf8)
-            buffer.append(contentsOf: ArraySlice.crlf)
+        if currentBufferCount + bytes.count >= bufferCapacity {
+            try await underlyingWriter.write(bytes: self.buffer)
+            buffer.removeAll(keepingCapacity: true)
+            currentBufferCount = 0
+        } else {
+            buffer.append(contentsOf: bytes)
+            currentBufferCount += bytes.count
         }
-        buffer.append(contentsOf: ArraySlice.crlf)
-        buffer.append(contentsOf: part.body)
-        buffer.append(contentsOf: ArraySlice.crlf)
     }
 
-    @inlinable
-    mutating func _finish() {
-        buffer.reserveCapacity(boundary.utf8.count + 10)
-        buffer.append(contentsOf: ArraySlice.twoHyphens)
-        buffer.append(contentsOf: boundary.utf8)
-        buffer.append(contentsOf: ArraySlice.twoHyphens)
-        buffer.append(contentsOf: ArraySlice.crlf)
+    /// If the buffer has not been emptied by the last write,
+    /// flushes the final part of the message to the underlying writer.
+    public mutating func finish() async throws {
+        if currentBufferCount != 0 {
+            try await underlyingWriter.write(bytes: self.buffer)
+            buffer.removeAll(keepingCapacity: true)
+            currentBufferCount = 0
+        }
     }
 }

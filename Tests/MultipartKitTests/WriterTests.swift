@@ -26,7 +26,7 @@ struct WriterTests {
             ),
         ]
 
-        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
+        var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
 
         for part in example {
             try await writer.writePart(part)
@@ -111,7 +111,7 @@ struct WriterTests {
 
     @Test("Writing boundary")
     func writeBoundary() async throws {
-        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
+        var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
 
         try await writer.writeBoundary()
         let result1 = writer.getResult()
@@ -124,7 +124,7 @@ struct WriterTests {
 
     @Test("Writing header fields")
     func testWriteHeaders() async throws {
-        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
+        var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
 
         let headers: HTTPFields = [
             .contentType: "text/plain",
@@ -142,7 +142,7 @@ struct WriterTests {
 
     @Test("Writing body chunks")
     func writeBodyChunks() async throws {
-        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
+        var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
 
         try await writer.writeBodyChunk(ArraySlice("chunk1".utf8))
         let result1 = writer.getResult()
@@ -161,7 +161,7 @@ struct WriterTests {
 
     @Test("Empty boundary handling")
     func testEmptyBoundary() async throws {
-        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: "")
+        var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: "")
         try await writer.writeBoundary()
         let result = writer.getResult()
         #expect(result == ArraySlice("--\r\n".utf8))
@@ -177,7 +177,7 @@ struct WriterTests {
             body: largeBody
         )
 
-        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
+        var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
         try await writer.writePart(part)
         try await writer.finish()
 
@@ -187,7 +187,7 @@ struct WriterTests {
 
     @Test("Getting result clears buffer")
     func getResultClearsBuffer() async throws {
-        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
+        var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
 
         try await writer.writeBoundary()
         let result1 = writer.getResult()
@@ -199,7 +199,7 @@ struct WriterTests {
 
     @Test("Unicode in headers")
     func testUnicodeHeaders() async throws {
-        var writer = BufferedMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
+        var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
 
         let headers: HTTPFields = [
             .contentDisposition: "form-data; name=\"tëst\"; filename=\"filé.txt\""
@@ -228,6 +228,119 @@ struct WriterTests {
             45, 45, 98, 111, 117, 110, 100, 97, 114, 121, 49, 50, 51, 45, 45, 13, 10,
         ]
         #expect(formattedEndBoundary == expectedEndBoundary)
+    }
+
+    @Test("BufferedMultipartWriter buffers until capacity")
+    func testBufferedWriterBuffering() async throws {
+        let mockWriter = MockMultipartWriter<ArraySlice<UInt8>>(boundary: "test-boundary")
+
+        var writer = BufferedMultipartWriter(
+            boundary: "test-boundary",
+            bufferCapacity: 100,
+            underlyingWriter: mockWriter
+        )
+
+        try await writer.write(bytes: ArraySlice("This is a small write".utf8))
+        #expect(mockWriter.writeCallCount == 0)
+
+        let largeData = ArraySlice(Array(repeating: UInt8(65), count: 150))
+        try await writer.write(bytes: largeData)
+
+        #expect(mockWriter.writeCallCount == 1)
+        #expect(mockWriter.lastWrittenData != nil)
+
+        try await writer.finish()
+
+        #expect(mockWriter.writeCallCount == 1)
+    }
+
+    @Test("BufferedMultipartWriter forwards operations to underlying writer")
+    func testBufferedWriterOperations() async throws {
+        let mockWriter = MockMultipartWriter<ArraySlice<UInt8>>(boundary: "test-boundary")
+
+        var writer = BufferedMultipartWriter(
+            boundary: "test-boundary",
+            bufferCapacity: 1024,
+            underlyingWriter: mockWriter
+        )
+
+        let part = MultipartPart(
+            headerFields: [
+                .contentDisposition: "form-data; name=\"test\"",
+                .contentType: "text/plain",
+            ],
+            body: ArraySlice("Test content".utf8)
+        )
+
+        try await writer.writePart(part)
+        try await writer.finish()
+
+        #expect(mockWriter.boundary == "test-boundary")
+    }
+
+    @Test("BufferedMultipartWriter correctly flushes data")
+    func testBufferedWriterFlush() async throws {
+        let mockWriter = MockMultipartWriter<ArraySlice<UInt8>>(boundary: "test-boundary")
+
+        var writer = BufferedMultipartWriter(
+            boundary: "test-boundary",
+            bufferCapacity: 20,
+            underlyingWriter: mockWriter
+        )
+
+        try await writer.write(bytes: ArraySlice("First chunk of data".utf8))
+        try await writer.write(bytes: ArraySlice("Second chunk of data".utf8))
+        try await writer.write(bytes: ArraySlice("Third chunk of data".utf8))
+        try await writer.finish()
+
+        #expect(mockWriter.writeCallCount > 1)
+    }
+
+    @Test("BufferedMultipartWriter with large multipart message")
+    func testBufferedWriterLargeMessage() async throws {
+        let mockWriter = MockMultipartWriter<ArraySlice<UInt8>>(boundary: "test-boundary")
+
+        var writer = BufferedMultipartWriter(
+            boundary: "test-boundary",
+            bufferCapacity: 256,
+            underlyingWriter: mockWriter
+        )
+
+        let largeBody = ArraySlice(Array(repeating: UInt8(65), count: 500))
+
+        let part = MultipartPart(
+            headerFields: [.contentType: "application/octet-stream"],
+            body: largeBody
+        )
+
+        try await writer.writePart(part)
+        try await writer.finish()
+
+        #expect(mockWriter.writeCallCount > 1)
+
+    }
+
+    private final class MockMultipartWriter<OutboundBody: MultipartPartBodyElement>: MultipartWriter, @unchecked Sendable {
+        let boundary: String
+        private(set) var writeCallCount = 0
+        private(set) var lastWrittenData: OutboundBody?
+
+        init(boundary: String) {
+            self.boundary = boundary
+        }
+
+        func write(bytes: some Collection<UInt8> & Sendable) async throws {
+            writeCallCount += 1
+            if let typedBytes = bytes as? OutboundBody {
+                lastWrittenData = typedBytes
+            } else {
+                var buffer = OutboundBody()
+                buffer.append(contentsOf: bytes)
+                lastWrittenData = buffer
+            }
+        }
+
+        func finish() async throws {}
     }
 
     private func makeSerializationStream<Body: MultipartPartBodyElement>(
