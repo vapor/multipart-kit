@@ -34,7 +34,7 @@ let benchmarks: @Sendable () -> Void = {
     let emptySections = [MultipartSection<ArraySlice<UInt8>>]()
 
     Benchmark(
-        "BufferedWriterAllocations_Empty",
+        "MemoryWriter_Empty_Allocations",
         configuration: .init(
             metrics: [.mallocCountTotal],
             maxIterations: 1
@@ -48,7 +48,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "BufferedWriterAllocations_\(partCount)Parts",
+        "MemoryWriter_\(partCount)Parts_Allocations",
         configuration: .init(
             metrics: [.mallocCountTotal],
             maxIterations: 1
@@ -62,7 +62,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "100xBufferedWriterCPUTime_\(partCount)Parts",
+        "MemoryWriter_100x\(partCount)Parts_CPUTime",
         configuration: .init(
             metrics: [.cpuUser],
             maxDuration: .seconds(10),
@@ -88,7 +88,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "StreamingWriterAllocations_Empty",
+        "StreamingWriter_Empty_Allocations",
         configuration: .init(
             metrics: [.mallocCountTotal],
             maxIterations: 1
@@ -106,7 +106,7 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "StreamingWriterAllocations_\(fileSizeInMiB)MiB",
+        "StreamingWriter_\(fileSizeInMiB)MiB_Allocations",
         configuration: .init(
             metrics: [.mallocCountTotal],
             maxIterations: 1
@@ -126,4 +126,53 @@ let benchmarks: @Sendable () -> Void = {
         }
     }
 
+    Benchmark(
+        "BufferedWriter_16KB_\(partCount)Parts_Allocations",
+        configuration: .init(
+            metrics: [.mallocCountTotal],
+            maxIterations: 1
+        )
+    ) { benchmark in
+        let memoryWriter = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
+        var writer = BufferedMultipartWriter(
+            boundary: boundary,
+            bufferCapacity: 16 << 10,
+            underlyingWriter: memoryWriter
+        )
+
+        for part in repeatedParts {
+            try await writer.writePart(part)
+        }
+
+        try await writer.finish()
+    }
+
+    Benchmark(
+        "BufferedWriter_Allocations\(fileSizeInMiB)MiB",
+        configuration: .init(
+            metrics: [.mallocCountTotal],
+            maxIterations: 1
+        )
+    ) { benchmark in
+        let memoryWriter = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
+        var writer = BufferedMultipartWriter(
+            boundary: boundary,
+            bufferCapacity: 256 << 10,  // 256KB buffer
+            underlyingWriter: memoryWriter
+        )
+
+        let largeData = ArraySlice(Array(repeating: UInt8(65), count: fileSizeInMiB << 20))
+        let largePart = MultipartPart(
+            headerFields: [
+                .contentDisposition: "form-data; name=\"file\"; filename=\"large.bin\"",
+                .contentType: "application/octet-stream",
+            ],
+            body: largeData
+        )
+
+        benchmark.startMeasurement()
+        try await writer.writePart(largePart)
+        try await writer.finish()
+        benchmark.stopMeasurement()
+    }
 }
