@@ -15,7 +15,7 @@ extension HTTPFields {
         _ name: HTTPField.Name,
         _ key: String,
         to value: String?,
-        defaultValue: String
+        defaultValue: String = "form-data"
     ) {
         var current: [String]
 
