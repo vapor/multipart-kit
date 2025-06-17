@@ -24,7 +24,7 @@ enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
     init(parts: [MultipartPart<Body>], nestingDepth: Int) {
         self = .empty
         for part in parts {
-            let name = try? part.contentDisposition.name
+            let name = try? part.contentDisposition?.name
             let path = name.map(makePath) ?? []
             insert(part, at: path, remainingNestingDepth: nestingDepth)
         }

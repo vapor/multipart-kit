@@ -11,7 +11,7 @@ struct ContentDispositionTests {
             body: []
         )
 
-        let disposition1 = try part1.contentDisposition
+        let disposition1 = try #require(try part1.contentDisposition)
         #expect(disposition1.name == "fieldName")
         #expect(disposition1.filename == nil)
         #expect(disposition1.additionalParameters.isEmpty == true)
@@ -21,7 +21,7 @@ struct ContentDispositionTests {
             body: []
         )
 
-        let disposition2 = try part2.contentDisposition
+        let disposition2 = try #require(try part2.contentDisposition)
         #expect(disposition2.name == "file")
         #expect(disposition2.filename == "example.txt")
         #expect(disposition2.additionalParameters.isEmpty == true)
@@ -31,7 +31,7 @@ struct ContentDispositionTests {
             body: []
         )
 
-        let disposition3 = try part3.contentDisposition
+        let disposition3 = try #require(try part3.contentDisposition)
         #expect(disposition3.name == "user")
         #expect(disposition3.filename == nil)
         #expect(disposition3.additionalParameters["size"] == "1024")
@@ -66,15 +66,6 @@ struct ContentDispositionTests {
         #expect(throws: ContentDisposition.Error.duplicateField("name")) {
             try part3.contentDisposition
         }
-
-        let part4 = MultipartPart<[UInt8]>(
-            headerFields: [:],
-            body: []
-        )
-
-        #expect(throws: ContentDisposition.Error.missingContentDisposition) {
-            try part4.contentDisposition
-        }
     }
 
     @Test("Parse Quoted Content-Disposition Field")
@@ -84,7 +75,7 @@ struct ContentDispositionTests {
             body: []
         )
 
-        let disposition = try part.contentDisposition
+        let disposition = try #require(try part.contentDisposition)
         #expect(disposition.name == "user data")
         #expect(disposition.filename == "file with spaces.txt")
     }

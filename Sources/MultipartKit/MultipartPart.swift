@@ -26,17 +26,12 @@ public struct MultipartPart<Body: MultipartPartBodyElement>: Sendable {
 
     /// Parses and returns the Content-Disposition information from the part's headers.
     ///
-    /// This property parses the Content-Disposition header field according to RFC 7578.
-    /// It extracts the disposition type (which must be "form-data" for multipart form data),
-    /// the required "name" parameter, the optional "filename" parameter, and any additional parameters.
-    ///
-    /// - Throws: `ContentDisposition.Error` if the header is missing, has an invalid format,
-    ///           or is missing required fields.
+    /// - Throws: `ContentDisposition.Error` if the header has an invalid format, or is missing required fields.
     /// - Returns: A parsed `ContentDisposition` instance.
-    public var contentDisposition: ContentDisposition {
+    public var contentDisposition: ContentDisposition? {
         get throws(ContentDisposition.Error) {
             guard let field = self.headerFields[.contentDisposition] else {
-                throw ContentDisposition.Error.missingContentDisposition
+                return nil
             }
             return try .init(from: field)
         }
