@@ -121,21 +121,21 @@ extension MultipartFormData {
 
     private static func namedParts(from data: MultipartFormData, path: String? = nil) -> [MultipartPart<Body>] {
         switch data {
-        case .array(let array):
-            // For arrays, index each element and process recursively
-            return array.enumerated().flatMap { offset, element in
-                namedParts(from: element, path: path.map { "\($0)[\(offset)]" })
-            }
         case .single(let part):
             // Create a new part with the updated name parameter
-            return [createPartWithName(part, name: path)]
+            [createPartWithName(part, name: path)]
+        case .array(let array):
+            // For arrays, index each element and process recursively
+            array.enumerated().flatMap { offset, element in
+                namedParts(from: element, path: path.map { "\($0)[\(offset)]" })
+            }
         case .keyed(let dictionary):
             // For objects, process each key-value pair recursively
-            return dictionary.flatMap { key, value in
+            dictionary.flatMap { key, value in
                 namedParts(from: value, path: path.map { "\($0)[\(key)]" } ?? key)
             }
         case .nestingDepthExceeded:
-            return []
+            []
         }
     }
 
