@@ -153,9 +153,7 @@ extension MultipartWriter {
     @inlinable
     public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) async throws {
         try await writeBoundary()
-        try await write(bytes: ArraySlice.crlf)
         try await writeHeaders(part.headerFields)
-        try await write(bytes: ArraySlice.crlf)
         try await writeBodyChunk(part.body)
         try await write(bytes: ArraySlice.crlf)
     }

@@ -19,13 +19,15 @@ import HTTPTypes
 /// try await writer.writePart(myPart)
 /// try await writer.finish()
 /// ```
-public struct BufferedMultipartWriter<OutboundBody: MultipartPartBodyElement>: MultipartWriter {
+public struct BufferedMultipartWriter<UnderlyingWriter: MultipartWriter>: MultipartWriter {
+    public typealias OutboundBody = UnderlyingWriter.OutboundBody
+
     /// The boundary string used to separate multipart parts.
     public let boundary: String
 
     /// The underlying writer that will receive the buffered data.
     @usableFromInline
-    var underlyingWriter: any MultipartWriter<OutboundBody>
+    var underlyingWriter: UnderlyingWriter
 
     /// Internal buffer that accumulates data before forwarding to the underlying writer.
     @usableFromInline
@@ -46,12 +48,28 @@ public struct BufferedMultipartWriter<OutboundBody: MultipartPartBodyElement>: M
     ///   - bufferCapacity: Maximum number of bytes to buffer before writing to the underlying writer.
     ///   - underlyingWriter: The writer that will receive the buffered data when capacity is reached.
     @inlinable
-    public init(boundary: String, bufferCapacity: Int, underlyingWriter: some MultipartWriter<OutboundBody>) {
+    public init(boundary: String, bufferCapacity: Int, underlyingWriter: UnderlyingWriter) {
         self.boundary = boundary
         self.buffer = OutboundBody()
         self.bufferCapacity = bufferCapacity
         self.buffer.reserveCapacity(bufferCapacity)
         self.currentBufferCount = 0
+        self.underlyingWriter = underlyingWriter
+    }
+
+    /// Creates a new buffered multipart writer with a user-supplied buffer.
+    ///
+    /// - Parameters:
+    ///   - boundary: The boundary string to use for separating multipart parts.
+    ///   - buffer: The buffer to write to before flushing to the underlying writer.
+    ///   - bufferCapacity: Maximum number of bytes to buffer before writing to the underlying writer.
+    ///   - underlyingWriter: The writer that will receive the buffered data when capacity is reached.
+    @inlinable
+    public init(boundary: String, buffer: OutboundBody, bufferCapacity: Int, underlyingWriter: UnderlyingWriter) {
+        self.boundary = boundary
+        self.buffer = buffer
+        self.bufferCapacity = bufferCapacity
+        self.currentBufferCount = buffer.count
         self.underlyingWriter = underlyingWriter
     }
 
@@ -65,6 +83,7 @@ public struct BufferedMultipartWriter<OutboundBody: MultipartPartBodyElement>: M
     public mutating func write(bytes: some Collection<UInt8> & Sendable) async throws {
         if currentBufferCount + bytes.count >= bufferCapacity {
             try await underlyingWriter.write(bytes: self.buffer)
+            try await underlyingWriter.write(bytes: bytes)
             buffer.removeAll(keepingCapacity: true)
             currentBufferCount = 0
         } else {
@@ -75,7 +94,12 @@ public struct BufferedMultipartWriter<OutboundBody: MultipartPartBodyElement>: M
 
     /// If the buffer has not been emptied by the last write,
     /// flushes the final part of the message to the underlying writer.
-    public mutating func finish() async throws {
+    ///
+    /// By default, writes the end boundary as required by the multipart protocol.
+    public mutating func finish(writingEndBoundary: Bool = true) async throws {
+        if writingEndBoundary {
+            try await writeBoundary(end: true)
+        }
         if currentBufferCount != 0 {
             try await underlyingWriter.write(bytes: self.buffer)
             buffer.removeAll(keepingCapacity: true)
