@@ -250,7 +250,7 @@ struct WriterTests {
         #expect(mockWriter.writeCallCount > 0)
         #expect(mockWriter.lastWrittenData != nil)
 
-        try await writer.finish()
+        try await writer.finish(writingEndBoundary: false)
 
         #expect(mockWriter.writeCallCount == countAfterFirstWrite)
     }
@@ -353,7 +353,7 @@ struct WriterTests {
         try await writer.write(bytes: ArraySlice("abc".utf8))
         #expect(countingWriter.writes.count == writesAfterFlush)
 
-        try await writer.finish()
+        try await writer.finish(writingEndBoundary: false)
         #expect(countingWriter.writes.count > writesAfterFlush)
 
         // Check that all data is present in order
