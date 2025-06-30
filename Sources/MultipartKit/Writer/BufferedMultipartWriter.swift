@@ -81,11 +81,19 @@ public struct BufferedMultipartWriter<UnderlyingWriter: MultipartWriter>: Multip
     /// - Parameter bytes: The bytes to write to the buffer.
     @inlinable
     public mutating func write(bytes: some Collection<UInt8> & Sendable) async throws {
+        // If buffer would overflow, flush it
         if currentBufferCount + bytes.count >= bufferCapacity {
             try await underlyingWriter.write(bytes: self.buffer)
-            try await underlyingWriter.write(bytes: bytes)
             buffer.removeAll(keepingCapacity: true)
             currentBufferCount = 0
+            // If the new data is itself too large, write it directly
+            if bytes.count >= bufferCapacity {
+                try await underlyingWriter.write(bytes: bytes)
+            } else {
+                // Otherwise, buffer the new data
+                buffer.append(contentsOf: bytes)
+                currentBufferCount += bytes.count
+            }
         } else {
             buffer.append(contentsOf: bytes)
             currentBufferCount += bytes.count
