@@ -104,6 +104,7 @@ public struct BufferedMultipartWriter<UnderlyingWriter: MultipartWriter>: Multip
     /// flushes the final part of the message to the underlying writer.
     ///
     /// By default, writes the end boundary as required by the multipart protocol.
+    @inlinable
     public mutating func finish(writingEndBoundary: Bool = true) async throws {
         if writingEndBoundary {
             try await writeBoundary(end: true)
