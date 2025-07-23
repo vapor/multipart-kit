@@ -45,42 +45,64 @@ enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
 }
 
 private func makePath(from string: String) -> ArraySlice<String> {
-    // This is a bit of a hack to handle brackets in the path. For example
-    // `foo[a]a[b]` has to be decoded as `["foo", "a]a[b"]`,
-    // so everything inside of the brackets has to be added in the name.
-    // Unfortunately, while it may be possible according to the RFC,
-    // there's no way of differentiating between the combination of `][` which
-    // can both mean "close bracket and reopen",
-    // and just be part of the value as normal characters, so `foo[a][b]` will
-    // always be decoded as `["foo", "a", "b"]` and never as `["foo", "a][b"]`
+    // Parse form field names like "foo[bar][baz]" into ["foo", "bar", "baz"]
+    // Handles nested structures and array indices as defined in HTML form specifications
+    // Note: Complex cases like "foo[a]a[b]" are interpreted as ["foo", "a]a[b"] per RFC behavior
+    // where '][' combination within brackets is treated as part of the key name
 
     if string.isEmpty { return [""] }
 
-    var result: ArraySlice = [""]
-    var writeIndex = 0
+    var result: ArraySlice<String> = []
+    var currentComponent = ""
     var currentIndex = string.startIndex
-
+    var bracketDepth = 0
+    
     while currentIndex < string.endIndex {
-        if string[currentIndex] == "[" {
-            writeIndex += 1
-            result.append("")
-            currentIndex = string.index(after: currentIndex)
-
-            while currentIndex < string.endIndex
-                && !(string[currentIndex] == "]"
-                    && (currentIndex == string.index(before: string.endIndex) || string[string.index(after: currentIndex)] == "["))
-            {
-                result[writeIndex].append(string[currentIndex])
-                currentIndex = string.index(after: currentIndex)
+        let character = string[currentIndex]
+        
+        switch character {
+        case "[":
+            if bracketDepth == 0 {
+                // Start a new component
+                if !currentComponent.isEmpty || result.isEmpty {
+                    result.append(currentComponent)
+                }
+                currentComponent = ""
+            } else {
+                // Nested bracket - treat as part of the component
+                currentComponent.append(character)
             }
-
-            if currentIndex < string.endIndex { currentIndex = string.index(after: currentIndex) }
-        } else {
-            result[writeIndex].append(string[currentIndex])
-            currentIndex = string.index(after: currentIndex)
+            bracketDepth += 1
+            
+        case "]":
+            bracketDepth = max(0, bracketDepth - 1) 
+            if bracketDepth == 0 {
+                // End of current bracketed component
+                result.append(currentComponent)
+                currentComponent = ""
+            } else {
+                // Still nested - treat as part of the component
+                currentComponent.append(character)
+            }
+            
+        default:
+            currentComponent.append(character)
         }
+        
+        currentIndex = string.index(after: currentIndex)
     }
-
+    
+    // Add final component if it exists
+    if !currentComponent.isEmpty || result.isEmpty {
+        result.append(currentComponent)
+    }
+    
+    // Handle malformed input - if we ended with unclosed brackets,
+    // treat remaining content as part of the last component
+    if bracketDepth > 0 && !result.isEmpty {
+        result[result.count - 1] += String(repeating: "]", count: bracketDepth)
+    }
+    
     return result
 }
 

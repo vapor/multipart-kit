@@ -45,6 +45,17 @@ where BackingSequence.Element: MultipartPartBodyElement {
         var pendingBodyChunk: BackingSequence.Element?
 
         var currentCollatedBody = BackingSequence.Element()
+        
+        /// Maximum size for collated body to prevent unbounded memory growth
+        /// Default is 64MB which should be sufficient for most use cases
+        private let maxCollatedBodySize: Int
+        private var currentCollatedBodySize: Int = 0
+        
+        init(parser: MultipartParser<BackingSequence.Element>, iterator: BackingSequence.AsyncIterator, maxCollatedBodySize: Int = 64 * 1024 * 1024) {
+            self.parser = parser
+            self.iterator = iterator
+            self.maxCollatedBodySize = maxCollatedBodySize
+        }
 
         public mutating func next() async throws(MultipartParserError) -> MultipartSection<BackingSequence.Element>? {
             if let pendingBodyChunk {
@@ -109,14 +120,27 @@ where BackingSequence.Element: MultipartPartBodyElement {
                 case .headerFields(let fields):
                     headerFields.append(contentsOf: fields)
                 case .bodyChunk(let chunk):
+                    // Check size limits before appending to prevent unbounded memory growth
+                    let chunkSize = chunk.count
+                    if currentCollatedBodySize + chunkSize > maxCollatedBodySize {
+                        throw MultipartParserError.invalidBody(
+                            reason: "Collated body size (\(currentCollatedBodySize + chunkSize) bytes) exceeds maximum allowed size (\(maxCollatedBodySize) bytes)"
+                        )
+                    }
+                    
                     self.currentCollatedBody.append(contentsOf: chunk)
+                    self.currentCollatedBodySize += chunkSize
+                    
                     if !headerFields.isEmpty {
                         defer { headerFields = .init() }
                         return .headerFields(headerFields)
                     }
                 case .boundary:
                     if !currentCollatedBody.isEmpty {
-                        defer { currentCollatedBody = .init() }
+                        defer { 
+                            currentCollatedBody = .init()
+                            currentCollatedBodySize = 0
+                        }
                         return .bodyChunk(currentCollatedBody)
                     }
                 }

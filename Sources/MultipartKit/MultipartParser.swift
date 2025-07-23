@@ -225,9 +225,74 @@ extension ArraySlice where Element == UInt8 {
     ///    - slice: The slice to match against the buffer.
     /// - Returns: The range of the matching slice if it matches, ``FirstIndexOfSliceResult/notFound`` if the slice was not
     ///     or ``FirstIndexOfSliceResult/prematureEnd``
+    /// 
+    /// This implementation uses an optimized Boyer-Moore-like approach for better performance
+    /// on larger inputs, reducing complexity from O(n*m) to closer to O(n+m) in most cases.
     func getFirstRange(of slice: ArraySlice<UInt8>) -> FirstIndexOfSliceResult {
         guard !slice.isEmpty else { return .notFound }
-
+        guard !self.isEmpty else { return .notFound }
+        
+        let pattern = Array(slice)
+        let patternLength = pattern.count
+        let textLength = self.count
+        
+        // For small patterns, use the simple algorithm to avoid overhead
+        if patternLength <= 4 {
+            return getFirstRangeSimple(of: slice)
+        }
+        
+        // Build bad character table for Boyer-Moore-like optimization
+        var badCharTable: [UInt8: Int] = [:]
+        for (index, char) in pattern.enumerated() {
+            badCharTable[char] = patternLength - index - 1
+        }
+        
+        var textIndex = 0
+        let selfArray = Array(self)
+        
+        while textIndex <= textLength - patternLength {
+            var patternIndex = patternLength - 1
+            
+            // Check pattern from right to left
+            while patternIndex >= 0 && pattern[patternIndex] == selfArray[textIndex + patternIndex] {
+                patternIndex -= 1
+            }
+            
+            if patternIndex < 0 {
+                // Pattern found
+                let startIndex = self.index(self.startIndex, offsetBy: textIndex)
+                let endIndex = self.index(startIndex, offsetBy: patternLength)
+                return .success(startIndex..<endIndex)
+            } else {
+                // Move based on bad character heuristic
+                let badChar = selfArray[textIndex + patternIndex]
+                let skip = max(1, badCharTable[badChar, default: patternLength])
+                textIndex += skip
+            }
+        }
+        
+        // Check for premature end (partial match at the end)
+        if textIndex < textLength {
+            let remainingText = selfArray[textIndex...]
+            let remainingLength = remainingText.count
+            
+            // Check if remaining text could be a prefix of the pattern
+            for prefixLength in 1...<min(remainingLength + 1, patternLength) {
+                let prefix = Array(pattern.prefix(prefixLength))
+                if Array(remainingText.prefix(prefixLength)) == prefix {
+                    // Check if this could potentially be completed
+                    if prefixLength == remainingLength {
+                        return .prematureEnd
+                    }
+                }
+            }
+        }
+        
+        return .notFound
+    }
+    
+    /// Simple O(n*m) algorithm for small patterns to avoid optimization overhead
+    private func getFirstRangeSimple(of slice: ArraySlice<UInt8>) -> FirstIndexOfSliceResult {
         var sliceIndex = slice.startIndex
         var matchStartIndex: Index? = nil
 
