@@ -1,5 +1,6 @@
 import Benchmark
 import MultipartKit
+import Utilities
 
 let benchmarks: @Sendable () -> Void = {
     let boundary = "boundary123"

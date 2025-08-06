@@ -1,5 +1,4 @@
 // swift-tools-version:6.0
-
 import PackageDescription
 
 let package = Package(
@@ -13,12 +12,13 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "Serializer",
+            name: "Writer",
             dependencies: [
                 .product(name: "MultipartKit", package: "multipart-kit"),
                 .product(name: "Benchmark", package: "package-benchmark"),
+                .target(name: "Utilities"),
             ],
-            path: "Serializer",
+            path: "Writer",
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
             ]
@@ -28,11 +28,16 @@ let package = Package(
             dependencies: [
                 .product(name: "MultipartKit", package: "multipart-kit"),
                 .product(name: "Benchmark", package: "package-benchmark"),
+                .target(name: "Utilities"),
             ],
             path: "Parser",
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
             ]
+        ),
+        .target(
+            name: "Utilities",
+            path: "Utilities"
         ),
     ]
 )

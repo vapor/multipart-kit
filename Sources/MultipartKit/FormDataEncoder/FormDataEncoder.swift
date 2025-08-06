@@ -24,7 +24,12 @@ public struct FormDataEncoder: Sendable {
     /// - returns: `multipart/form-data`-encoded `String`.
     public func encode<E: Encodable>(_ encodable: E, boundary: String) throws -> String {
         let parts: [MultipartPart<[UInt8]>] = try self.parts(from: encodable)
-        let serialized = MultipartSerializer(boundary: boundary).serialize(parts: parts, into: [UInt8].self)
+        var writer = MemoryMultipartWriter<[UInt8]>(boundary: boundary)
+        for part in parts {
+            writer._writePart(part)
+        }
+        writer._finish()
+        let serialized = writer.getResult()
         return String(decoding: serialized, as: Unicode.UTF8.self)
     }
 
@@ -47,7 +52,12 @@ public struct FormDataEncoder: Sendable {
         to: Body.Type = Body.self
     ) throws -> Body {
         let parts: [MultipartPart<Body>] = try self.parts(from: encodable)
-        return MultipartSerializer(boundary: boundary).serialize(parts: parts)
+        var writer = MemoryMultipartWriter<Body>(boundary: boundary)
+        for part in parts {
+            writer._writePart(part)
+        }
+        writer._finish()
+        return writer.getResult()
     }
 
     private func parts<E: Encodable, Body: MultipartPartBodyElement>(from encodable: E) throws -> [MultipartPart<Body>] {
