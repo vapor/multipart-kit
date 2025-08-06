@@ -17,11 +17,13 @@ struct FormDataDecodingTests {
             Content-Type: multipart/mixed; boundary=abcde\r
             \r
             --abcde\r
-            Content-Disposition: file; file="picture.jpg"\r
+            Content-Disposition: attachment; filename="picture.jpg"\r
+            Content-Type: image/jpeg\r
             \r
             content of jpg...\r
             --abcde\r
-            Content-Disposition: file; file="test.py"\r
+            Content-Disposition: attachment; filename="test.py"\r
+            Content-Type: text/x-python\r
             \r
             content of test.py file ....\r
             --abcde--\r
