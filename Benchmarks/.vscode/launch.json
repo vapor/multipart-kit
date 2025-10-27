@@ -1,36 +1,36 @@
 {
     "configurations": [
         {
-            "type": "swift-lldb",
+            "type": "swift",
             "request": "launch",
-            "args": [],
+            "args": [ ],
             "cwd": "${workspaceFolder:Benchmarks}",
-            "name": "Debug Serializer",
-            "program": "${workspaceFolder:Benchmarks}/.build/debug/Serializer",
-            "preLaunchTask": "swift: Build Debug Serializer"
+            "name": "Debug Writer",
+            "program": "${workspaceFolder:Benchmarks}/.build/debug/Writer",
+            "preLaunchTask": "swift: Build Debug Writer"
         },
         {
-            "type": "swift-lldb",
+            "type": "swift",
             "request": "launch",
-            "args": [],
+            "args": [ ],
             "cwd": "${workspaceFolder:Benchmarks}",
-            "name": "Release Serializer",
-            "program": "${workspaceFolder:Benchmarks}/.build/release/Serializer",
-            "preLaunchTask": "swift: Build Release Serializer"
+            "name": "Release Writer",
+            "program": "${workspaceFolder:Benchmarks}/.build/release/Writer",
+            "preLaunchTask": "swift: Build Release Writer"
         },
         {
-            "type": "swift-lldb",
+            "type": "swift",
             "request": "launch",
-            "args": [],
+            "args": [ ],
             "cwd": "${workspaceFolder:Benchmarks}",
             "name": "Debug Parser",
             "program": "${workspaceFolder:Benchmarks}/.build/debug/Parser",
             "preLaunchTask": "swift: Build Debug Parser"
         },
         {
-            "type": "swift-lldb",
+            "type": "swift",
             "request": "launch",
-            "args": [],
+            "args": [ ],
             "cwd": "${workspaceFolder:Benchmarks}",
             "name": "Release Parser",
             "program": "${workspaceFolder:Benchmarks}/.build/release/Parser",

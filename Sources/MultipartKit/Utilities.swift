@@ -50,14 +50,15 @@ extension CharacterSet {
 }
 
 extension UInt8 {
-    static let colon: UInt8 = 58
-    static let lf: UInt8 = 10
-    static let cr: UInt8 = 13
-    static let hyphen: UInt8 = 45
-    static let space: UInt8 = 32
+    @usableFromInline static let colon: UInt8 = 58
+    @usableFromInline static let lf: UInt8 = 10
+    @usableFromInline static let cr: UInt8 = 13
+    @usableFromInline static let hyphen: UInt8 = 45
+    @usableFromInline static let space: UInt8 = 32
 }
 
 extension ArraySlice where Element == UInt8 {
-    static let crlf: Self = [.cr, .lf]
-    static let twoHyphens: Self = [.hyphen, .hyphen]
+    @usableFromInline static let crlf: Self = [.cr, .lf]
+    @usableFromInline static let twoHyphens: Self = [.hyphen, .hyphen]
+    @usableFromInline static let colonSpace: Self = [.colon, .space]
 }

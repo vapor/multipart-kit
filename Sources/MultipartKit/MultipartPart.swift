@@ -1,6 +1,6 @@
 public import HTTPTypes
 
-public typealias MultipartPartBodyElement = Collection<UInt8> & Sendable & RangeReplaceableCollection
+public typealias MultipartPartBodyElement = RangeReplaceableCollection<UInt8> & Sendable
 
 /// Represents a single part of a multipart-encoded message.
 public struct MultipartPart<Body: MultipartPartBodyElement>: Sendable {
