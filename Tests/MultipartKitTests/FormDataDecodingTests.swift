@@ -358,7 +358,7 @@ struct FormDataDecodingTests {
             age: 4,
             image: File(filename: "droplet.png", data: Array("<contents of image>".utf8)))
 
-        let message = ArraySlice(
+        let message = Array(
             """
             --helloBoundary\r
             Content-Disposition: form-data; name="name"\r
