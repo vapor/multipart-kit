@@ -1,18 +1,32 @@
 import Collections
 import Foundation
+import Algorithms
 
+/// Internal representation of parsed multipart form data with support for hierarchical structures.
+///
+/// This type is used by the `FormDataDecoder` to represent the hierarchical structure
+/// of multipart form data, with support for nested objects and arrays through
+/// field name notation like `user[address][street]`.
 enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
     typealias Keyed = OrderedDictionary<String, MultipartFormData>
 
+    /// A single multipart part containing field data.
     case single(MultipartPart<Body>)
+
+    /// An array of form data items (represents indexed fields like `items[]`).
     case array([MultipartFormData])
+
+    /// A keyed dictionary of form data items (represents nested objects like `user[name]`).
     case keyed(Keyed)
+
+    /// Special case when the nesting depth limit has been exceeded.
     case nestingDepthExceeded
 
-    init(parts: [MultipartPart<Body>], nestingDepth: Int) {
+    init(parts: [MultipartPart<Body>], nestingDepth: Int) throws {
         self = .empty
         for part in parts {
-            let path = part.name.map(makePath) ?? []
+            let name = try part.contentDisposition?.name
+            let path = name.map(makePath) ?? []
             insert(part, at: path, remainingNestingDepth: nestingDepth)
         }
     }
@@ -36,6 +50,10 @@ enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
         return part
     }
 
+    /// Whether this form data has exceeded the configured nesting depth.
+    ///
+    /// Used during decoding to detect and handle excessive nesting that could
+    /// lead to stack overflow or other resource issues.
     var hasExceededNestingDepth: Bool {
         guard case .nestingDepthExceeded = self else {
             return false
@@ -44,6 +62,14 @@ enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
     }
 }
 
+/// Parses a string with bracket notation into a path of components.
+///
+/// For example:
+/// - `"user[address][street]"` becomes `["user", "address", "street"]`
+/// - `"items[0][name]"` becomes `["items", "0", "name"]`
+///
+/// This function handles complex cases like brackets within values and
+/// properly manages the path segments.
 private func makePath(from string: String) -> ArraySlice<String> {
     // This is a bit of a hack to handle brackets in the path. For example
     // `foo[a]a[b]` has to be decoded as `["foo", "a]a[b"]`,
@@ -85,26 +111,44 @@ private func makePath(from string: String) -> ArraySlice<String> {
 }
 
 extension MultipartFormData {
+    /// Converts the hierarchical form data structure back to flat multipart parts.
+    ///
+    /// This method is used by `FormDataEncoder` to convert the structured form data
+    /// back to a flat list of parts with appropriate `name` attributes in their
+    /// Content-Disposition headers.
     func namedParts() -> [MultipartPart<Body>] {
         Self.namedParts(from: self)
     }
 
     private static func namedParts(from data: MultipartFormData, path: String? = nil) -> [MultipartPart<Body>] {
         switch data {
+        case .single(let part):
+            // Create a new part with the updated name parameter
+            [createPartWithName(part, name: path)]
         case .array(let array):
-            return array.enumerated().flatMap { offset, element in
+            // For arrays, index each element and process recursively
+            array.indexed().flatMap { offset, element in
                 namedParts(from: element, path: path.map { "\($0)[\(offset)]" })
             }
-        case .single(var part):
-            part.name = path
-            return [part]
         case .keyed(let dictionary):
-            return dictionary.flatMap { key, value in
+            // For objects, process each key-value pair recursively
+            dictionary.flatMap { key, value in
                 namedParts(from: value, path: path.map { "\($0)[\(key)]" } ?? key)
             }
         case .nestingDepthExceeded:
-            return []
+            []
         }
+    }
+
+    /// Creates a new part with the given name parameter in its Content-Disposition header.
+    private static func createPartWithName(_ part: MultipartPart<Body>, name: String?) -> MultipartPart<Body> {
+        var headerFields = part.headerFields
+        headerFields.setParameter(.contentDisposition, "name", to: name)
+
+        return MultipartPart(
+            headerFields: headerFields,
+            body: part.body
+        )
     }
 }
 

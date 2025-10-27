@@ -15,30 +15,30 @@ extension HTTPFields {
         _ name: HTTPField.Name,
         _ key: String,
         to value: String?,
-        defaultValue: String
+        defaultValue: String = "form-data"
     ) {
-        var current: [String]
+        var current: [Substring]
 
         if let existing = self.headerParts(name: name) {
             current = existing.filter { !$0.hasPrefix("\(key)=") }
         } else {
-            current = [defaultValue]
+            current = [defaultValue[...]]
         }
 
         if let value = value {
             current.append("\(key)=\"\(value)\"")
         }
 
-        let new = current.joined(separator: "; ").trimmingCharacters(in: .whitespaces)
+        let new = current.joined(separator: "; ").trimming(while: \.isWhitespace)
 
-        self[name] = new
+        self[name] = String(new)
     }
 
-    func headerParts(name: HTTPField.Name) -> [String]? {
+    func headerParts(name: HTTPField.Name) -> [Substring]? {
         self[name]
             .flatMap {
                 $0.split(separator: ";")
-                    .map { $0.trimmingCharacters(in: .whitespaces) }
+                    .map { $0.trimming(while: \.isWhitespace) }
             }
     }
 }
