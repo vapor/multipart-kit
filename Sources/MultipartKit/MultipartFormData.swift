@@ -1,5 +1,6 @@
 import Collections
 import Foundation
+import Algorithms
 
 /// Internal representation of parsed multipart form data with support for hierarchical structures.
 ///
@@ -21,10 +22,10 @@ enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
     /// Special case when the nesting depth limit has been exceeded.
     case nestingDepthExceeded
 
-    init(parts: [MultipartPart<Body>], nestingDepth: Int) {
+    init(parts: [MultipartPart<Body>], nestingDepth: Int) throws {
         self = .empty
         for part in parts {
-            let name = try? part.contentDisposition?.name
+            let name = try part.contentDisposition?.name
             let path = name.map(makePath) ?? []
             insert(part, at: path, remainingNestingDepth: nestingDepth)
         }
@@ -126,7 +127,7 @@ extension MultipartFormData {
             [createPartWithName(part, name: path)]
         case .array(let array):
             // For arrays, index each element and process recursively
-            array.enumerated().flatMap { offset, element in
+            array.indexed().flatMap { offset, element in
                 namedParts(from: element, path: path.map { "\($0)[\(offset)]" })
             }
         case .keyed(let dictionary):

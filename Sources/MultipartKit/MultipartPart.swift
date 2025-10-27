@@ -1,4 +1,5 @@
 public import HTTPTypes
+import Algorithms
 
 public typealias MultipartPartBodyElement = RangeReplaceableCollection<UInt8> & Sendable
 
@@ -27,7 +28,7 @@ public struct MultipartPart<Body: MultipartPartBodyElement>: Sendable {
     /// Parses and returns the Content-Disposition information from the part's headers.
     ///
     /// - Throws: `ContentDisposition.Error` if the header has an invalid format, or is missing required fields.
-    /// - Returns: A parsed `ContentDisposition` instance.
+    /// - Returns: A parsed `ContentDisposition` instance, or `nil` if it can't be parsed.
     public var contentDisposition: ContentDisposition? {
         get throws(ContentDisposition.Error) {
             guard let field = self.headerFields[.contentDisposition] else {
@@ -84,7 +85,7 @@ public struct ContentDisposition: Sendable {
         var parameters =
             field
             .split(separator: ";")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .map { String($0.trimming(while: \.isWhitespace)) }
 
         let dispositionType = parameters.removeFirst()
         guard let type = DispositionType(rawValue: dispositionType) else {
@@ -99,18 +100,20 @@ public struct ContentDisposition: Sendable {
 
         for parameter in parameters {
             if parameter.starts(with: "name=") {
-                if name != nil { throw Error.duplicateField("name") }
-                name = parameter.dropFirst(5)
-                    .trimmingCharacters(in: .quotes)
+                guard name == nil else { throw Error.duplicateField("name") }
+                name = String(parameter.dropFirst(5).trimming(while: { $0 == "\"" || $0 == "'" }))
             } else if parameter.starts(with: "filename=") {
-                if filename != nil { throw Error.duplicateField("filename") }
-                filename = parameter.dropFirst(9)
-                    .trimmingCharacters(in: .quotes)
+                guard name == nil else { throw Error.duplicateField("filename") }
+                filename = String(parameter.dropFirst(9).trimming(while: { $0 == "\"" || $0 == "'" }))
             } else {
-                var split = parameter.split(separator: "=")
+                var split = parameter.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+
+                guard split.count >= 2 else {
+                   throw Error.invalidParameterFormat(parameter)
+                }
 
                 let name = String(split.removeFirst())
-                let value = String(split.removeFirst().trimmingCharacters(in: .quotes))
+                let value = String(split.removeFirst().trimming(while: { $0 == "\"" || $0 == "'" }))
 
                 additionalParameters[name] = value
             }
@@ -159,6 +162,9 @@ public struct ContentDisposition: Sendable {
 
             /// The Content-Disposition header is not present.
             case missingContentDisposition
+
+            /// The format of the parameter is invalid.o
+            case invalidParameterFormat(String)
         }
 
         /// The backing error value.
@@ -186,6 +192,10 @@ public struct ContentDisposition: Sendable {
         /// - Returns: An error instance.
         public static func missingField(_ field: String) -> Self {
             self.init(backing: .missingField(field))
+        }
+
+        public static func invalidParameterFormat(_ parameter: String) -> Self {
+            self.init(backing: .invalidParameterFormat(parameter))
         }
 
         /// An error indicating the Content-Disposition header is missing.
