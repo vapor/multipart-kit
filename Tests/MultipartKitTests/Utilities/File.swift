@@ -4,7 +4,7 @@ struct File: Codable, Equatable, MultipartPartConvertible {
     typealias Body = [UInt8]
 
     let filename: String
-    let data: [UInt8]
+    let data: Body
 
     enum MultipartError: Error {
         case invalidFileName
@@ -21,7 +21,7 @@ struct File: Codable, Equatable, MultipartPartConvertible {
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let data = try container.decode([UInt8].self, forKey: .data)
+        let data = try container.decode(Body.self, forKey: .data)
         let filename = try container.decode(String.self, forKey: .filename)
         self.init(filename: filename, data: data)
     }
@@ -32,7 +32,7 @@ struct File: Codable, Equatable, MultipartPartConvertible {
         try container.encode(self.filename, forKey: .filename)
     }
 
-    var multipart: MultipartPart<[UInt8]> {
+    var multipart: MultipartPart<Body> {
         let part = MultipartPart(
             headerFields: [.contentDisposition: "form-data; name=\"image\"; filename=\"\(filename)\""],
             body: self.data
@@ -40,7 +40,7 @@ struct File: Codable, Equatable, MultipartPartConvertible {
         return part
     }
 
-    init(multipart: MultipartPart<some MultipartPartBodyElement>) throws {
+    init(multipart: MultipartPart<Body>) throws {
         let contentDisposition = multipart.headerFields[.contentDisposition] ?? ""
         let filenamePattern = "filename=\"([^\"]+)\""
         let filename: String
@@ -54,6 +54,6 @@ struct File: Codable, Equatable, MultipartPartConvertible {
             throw MultipartError.invalidFileName
         }
 
-        self.init(filename: filename, data: Array(multipart.body))
+        self.init(filename: filename, data: multipart.body)
     }
 }
