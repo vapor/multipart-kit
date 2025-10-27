@@ -79,4 +79,43 @@ struct ContentDispositionTests {
         #expect(disposition.name == "user data")
         #expect(disposition.filename == "file with spaces.txt")
     }
+
+    @Test("Edge case Content-Disposition headers")
+    func testContentDispositionEdgeCases() {
+        let empty = MultipartPart<[UInt8]>(
+            headerFields: [.contentDisposition: ""],
+            body: []
+        )
+
+        #expect(throws: ContentDisposition.Error.missingContentDisposition) {
+            try empty.contentDisposition
+        }
+
+        let semis = MultipartPart<[UInt8]>(
+            headerFields: [.contentDisposition: ";;;"],
+            body: []
+        )
+
+        #expect(throws: ContentDisposition.Error.missingContentDisposition) {
+            try semis.contentDisposition
+        }
+
+        let formOnly = MultipartPart<[UInt8]>(
+            headerFields: [.contentDisposition: "form-data"],
+            body: []
+        )
+
+        #expect(throws: ContentDisposition.Error.missingField("name")) {
+            try formOnly.contentDisposition
+        }
+
+        let paramOnly = MultipartPart<[UInt8]>(
+            headerFields: [.contentDisposition: "form-data; name"],
+            body: []
+        )
+
+        #expect(throws: ContentDisposition.Error.invalidParameterFormat("name")) {
+            try paramOnly.contentDisposition
+        }
+    }
 }

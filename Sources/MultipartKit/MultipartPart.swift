@@ -87,9 +87,12 @@ public struct ContentDisposition: Sendable {
             .split(separator: ";")
             .map { String($0.trimming(while: \.isWhitespace)) }
 
+        guard !parameters.isEmpty else {
+            throw Error.missingContentDisposition
+        }
         let dispositionType = parameters.removeFirst()
         guard let type = DispositionType(rawValue: dispositionType) else {
-            throw Error.invalidDispositionType(String(dispositionType))
+            throw Error.invalidDispositionType(dispositionType)
         }
 
         self.dispositionType = type
@@ -103,7 +106,7 @@ public struct ContentDisposition: Sendable {
                 guard name == nil else { throw Error.duplicateField("name") }
                 name = String(parameter.dropFirst(5).trimming(while: { $0 == "\"" || $0 == "'" }))
             } else if parameter.starts(with: "filename=") {
-                guard name == nil else { throw Error.duplicateField("filename") }
+                guard filename == nil else { throw Error.duplicateField("filename") }
                 filename = String(parameter.dropFirst(9).trimming(while: { $0 == "\"" || $0 == "'" }))
             } else {
                 var split = parameter.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
