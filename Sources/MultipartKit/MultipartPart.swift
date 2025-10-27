@@ -1,4 +1,4 @@
-import HTTPTypes
+public import HTTPTypes
 
 public typealias MultipartPartBodyElement = Collection<UInt8> & Sendable & RangeReplaceableCollection
 
@@ -78,7 +78,7 @@ public struct ContentDisposition: Sendable {
     /// - Parameter field: The raw Content-Disposition header field value.
     /// - Throws: `ContentDisposition.Error` if the header has an invalid format, contains an
     ///           unrecognized disposition type, or is missing required fields.
-    init(from field: HTTPFields.Value) throws(ContentDisposition.Error) {
+    public init(from field: HTTPFields.Value) throws(ContentDisposition.Error) {
         self.underlyingField = field
 
         var parameters =
