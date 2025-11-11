@@ -30,7 +30,7 @@ struct FormDataDecodingTests {
             --12345--\r\n
             """
 
-        struct Foo: Decodable {
+        struct Foo: FormDataNamedDecodable {
             let sometext: String
             let files: String
         }
@@ -42,7 +42,7 @@ struct FormDataDecodingTests {
 
     @Test("Optional Decoding")
     func decodeOptional() throws {
-        struct Bar: Decodable {
+        struct Bar: FormDataNamedDecodable {
             struct Foo: Decodable {
                 let int: Int?
             }
@@ -96,7 +96,7 @@ struct FormDataDecodingTests {
             --hello--\r\n
             """
 
-        struct Foo: Decodable {
+        struct Foo: FormDataNamedDecodable {
             var string: String
             var int: Int
             var double: Double
@@ -123,7 +123,7 @@ struct FormDataDecodingTests {
             --hello--\r\n
             """
 
-        struct Foo: Decodable {
+        struct Foo: FormDataNamedDecodable {
             struct Bar: Decodable {
                 var relative: String
                 var base: String?
@@ -148,7 +148,7 @@ struct FormDataDecodingTests {
 
     @Test("Nested Decode")
     func nestedDecode() throws {
-        struct FormData: Decodable, Equatable {
+        struct FormData: FormDataNamedDecodable, Equatable {
             struct NestedFormData: Decodable, Equatable {
                 struct AnotherNestedFormData: Decodable, Equatable {
                     let int: Int
@@ -258,14 +258,14 @@ struct FormDataDecodingTests {
     func decodingSingleValue() throws {
         let data = """
             ---\r
-            Content-Disposition: form-data;\r
+            Content-Disposition: form-data; name="value"\r
             \r
             1\r
             -----\r\n
             """
 
         let decoder = FormDataDecoder()
-        let foo = try decoder.decode(Int.self, from: data, boundary: "-")
+        let foo = try decoder.decode(Int.self, from: data, boundary: "-", name: "value")
         #expect(foo == 1)
     }
 
@@ -290,7 +290,7 @@ struct FormDataDecodingTests {
 
     @Test("Decoding Incorrectly Nested Data")
     func incorrectlyNestedData() throws {
-        struct TestData: Codable {
+        struct TestData: FormDataNamedCodable {
             var x: String
         }
 
@@ -308,7 +308,7 @@ struct FormDataDecodingTests {
 
     @Test("Decoding with key containing square bracket", .bug("https://github.com/vapor/multipart-kit/issues/123"))
     func decodeWithKeyContainingBracket() async throws {
-        struct HasADict: Codable, Equatable {
+        struct HasADict: FormDataNamedCodable, Decodable, Equatable {
             var hints: [String: String]
         }
 
@@ -347,7 +347,7 @@ struct FormDataDecodingTests {
 
     @Test("Decode simil-Vapor File type")
     func decodeSimilVaporFileType() async throws {
-        struct User: Codable {
+        struct User: FormDataNamedCodable {
             var name: String
             var age: Int
             var image: File

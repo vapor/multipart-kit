@@ -22,17 +22,21 @@ enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
     /// Special case when the nesting depth limit has been exceeded.
     case nestingDepthExceeded
 
-    init(parts: [MultipartPart<Body>], nestingDepth: Int) throws {
+    init(parts: [MultipartPart<Body>], nestingDepth: Int, isSingle: Bool = false) throws {
         self = .empty
-        for part in parts {
-            let name = try part.contentDisposition?.name
-            let path = name.map(makePath) ?? []
-            insert(part, at: path, remainingNestingDepth: nestingDepth)
+        if isSingle, let part = parts.first {
+            insert(part, at: [], remainingNestingDepth: nestingDepth)
+        } else {
+            for part in parts {
+                let name = try part.contentDisposition?.name
+                let path = name.map(makePath) ?? []
+                insert(part, at: path, remainingNestingDepth: nestingDepth)
+            }
         }
     }
 
-    static var empty: Self {
-        MultipartFormData.keyed([:])
+    static var empty: MultipartFormData {
+        .keyed([:])
     }
 
     var array: [MultipartFormData]? {
@@ -116,24 +120,20 @@ extension MultipartFormData {
     /// This method is used by `FormDataEncoder` to convert the structured form data
     /// back to a flat list of parts with appropriate `name` attributes in their
     /// Content-Disposition headers.
-    func namedParts() -> [MultipartPart<Body>] {
-        Self.namedParts(from: self)
-    }
-
-    private static func namedParts(from data: MultipartFormData, path: String? = nil) -> [MultipartPart<Body>] {
-        switch data {
+    func namedParts(path: String? = nil) -> [MultipartPart<Body>] {
+        switch self {
         case .single(let part):
             // Create a new part with the updated name parameter
             [createPartWithName(part, name: path)]
         case .array(let array):
             // For arrays, index each element and process recursively
             array.indexed().flatMap { offset, element in
-                namedParts(from: element, path: path.map { "\($0)[\(offset)]" })
+                element.namedParts(path: path.map { "\($0)[\(offset)]" })
             }
         case .keyed(let dictionary):
             // For objects, process each key-value pair recursively
             dictionary.flatMap { key, value in
-                namedParts(from: value, path: path.map { "\($0)[\(key)]" } ?? key)
+                value.namedParts(path: path.map { "\($0)[\(key)]" } ?? key)
             }
         case .nestingDepthExceeded:
             []
@@ -141,7 +141,7 @@ extension MultipartFormData {
     }
 
     /// Creates a new part with the given name parameter in its Content-Disposition header.
-    private static func createPartWithName(_ part: MultipartPart<Body>, name: String?) -> MultipartPart<Body> {
+    private func createPartWithName(_ part: MultipartPart<Body>, name: String?) -> MultipartPart<Body> {
         var headerFields = part.headerFields
         headerFields.setParameter(.contentDisposition, "name", to: name)
 
@@ -157,9 +157,9 @@ extension MultipartFormData {
         self = inserting(part, at: path, remainingNestingDepth: remainingNestingDepth)
     }
 
-    fileprivate func inserting(_ part: MultipartPart<Body>, at path: ArraySlice<String>, remainingNestingDepth: Int)
-        -> MultipartFormData
-    {
+    fileprivate func inserting(
+        _ part: MultipartPart<Body>, at path: ArraySlice<String>, remainingNestingDepth: Int
+    ) -> MultipartFormData {
         guard let head = path.first else {
             return .single(part)
         }

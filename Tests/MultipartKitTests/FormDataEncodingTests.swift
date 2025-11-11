@@ -12,7 +12,7 @@ import Foundation
 struct FormDataEncodingTests {
     @Test("Encoding")
     func encode() throws {
-        struct Foo: Encodable {
+        struct Foo: FormDataNamedEncodable {
             var string: String
             var int: Int
             var double: Double
@@ -61,7 +61,7 @@ struct FormDataEncodingTests {
 
     @Test("Nested Encoding")
     func nestedEncode() throws {
-        struct FormData: Encodable, Equatable {
+        struct FormData: FormDataNamedEncodable, Equatable {
             struct NestedFormdata: Encodable, Equatable {
                 struct AnotherNestedFormdata: Encodable, Equatable {
                     let int: Int
@@ -167,14 +167,14 @@ struct FormDataEncodingTests {
         let uuid = try #require(UUID(uuidString: "c0bdd551-0684-4f34-a72e-ed553b4c9732"))
         let multipart = """
             ---\r
-            Content-Disposition: form-data\r
+            Content-Disposition: form-data; name="id"\r
             \r
             \(uuid.uuidString)\r
             -----\r\n
             """
 
-        #expect(try FormDataEncoder().encode(uuid, boundary: "-") == multipart)
-        #expect(try FormDataDecoder().decode(UUID.self, from: multipart, boundary: "-") == uuid)
+        #expect(try FormDataEncoder().encode(uuid, boundary: "-", name: "id") == multipart)
+        #expect(try FormDataDecoder().decode(UUID.self, from: multipart, boundary: "-", name: "id") == uuid)
     }
 
     @Test("Encoding and Decoding Non-Multipart Part Convertible Codable Types", .bug("https://github.com/vapor/multipart-kit/issues/65"))
@@ -185,18 +185,18 @@ struct FormDataEncodingTests {
         let license = License.dme1
         let multipart = """
             ---\r
-            Content-Disposition: form-data\r
+            Content-Disposition: form-data; name="license"\r
             \r
             \(license.rawValue)\r
             -----\r\n
             """
-        #expect(try FormDataEncoder().encode(license, boundary: "-") == multipart)
-        #expect(try FormDataDecoder().decode(License.self, from: multipart, boundary: "-") == license)
+        #expect(try FormDataEncoder().encode(license, boundary: "-", name: "license") == multipart)
+        #expect(try FormDataDecoder().decode(License.self, from: multipart, boundary: "-", name: "license") == license)
     }
 
     @Test("Encoding and Decoding Data Types")
     func codeDataTypes() async throws {
-        struct AllTypes: Codable, Equatable {
+        struct AllTypes: FormDataNamedCodable, Decodable, Equatable {
             let string: String
             let int: Int, int8: Int8, int16: Int16, int32: Int32, int64: Int64
             let uint: UInt, uint8: UInt8, uint16: UInt16, uint32: UInt32, uint64: UInt64
@@ -286,7 +286,7 @@ struct FormDataEncodingTests {
 
     @Test("Encode simil-Vapor File type")
     func encodeSimilVaporFileType() async throws {
-        struct User: Codable {
+        struct User: FormDataNamedEncodable {
             var name: String
             var age: Int
             var image: File
