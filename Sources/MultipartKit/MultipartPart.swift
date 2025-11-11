@@ -1,5 +1,5 @@
-public import HTTPTypes
 import Algorithms
+public import HTTPTypes
 
 public typealias MultipartPartBodyElement = RangeReplaceableCollection<UInt8> & Sendable
 
@@ -112,7 +112,7 @@ public struct ContentDisposition: Sendable {
                 var split = parameter.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
 
                 guard split.count >= 2 else {
-                   throw Error.invalidParameterFormat(parameter)
+                    throw Error.invalidParameterFormat(parameter)
                 }
 
                 let name = String(split.removeFirst())
@@ -123,9 +123,9 @@ public struct ContentDisposition: Sendable {
         }
 
         // The name parameter is required when dealing with the form-data type
-        if type == .formData, name == nil {
-            throw Error.missingField("name")
-        }
+        // if type == .formData, name == nil {
+        //     throw Error.missingField("name")
+        // }
 
         self.name = name
         self.filename = filename

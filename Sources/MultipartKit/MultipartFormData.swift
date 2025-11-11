@@ -1,6 +1,6 @@
+import Algorithms
 import Collections
 import Foundation
-import Algorithms
 
 /// Internal representation of parsed multipart form data with support for hierarchical structures.
 ///
