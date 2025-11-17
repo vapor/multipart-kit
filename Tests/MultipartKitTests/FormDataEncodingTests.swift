@@ -319,5 +319,31 @@ struct FormDataEncodingTests {
 
         #expect(encoded == expected)
     }
+
+    @Test("Encode array")
+    func encodeArray() async throws {
+        let array = ["aaa", "aaaaa"]
+
+        let encoder = FormDataEncoder()
+        let boundary = "helloBoundary"
+        let encoded = try encoder.encode(array, boundary: boundary, name: "test")
+
+        let expected = """
+            --helloBoundary\r
+            Content-Disposition: form-data; name="test[0]"\r
+            \r
+            aaa\r
+            --helloBoundary\r
+            Content-Disposition: form-data; name="test[1]"\r
+            \r
+            aaaaa\r
+            --helloBoundary--\r\n
+            """
+        #expect(encoded == expected)
+
+        let decoder = FormDataDecoder()
+        let decoded = try decoder.decode([String].self, from: expected, boundary: boundary, name: "test")
+        #expect(array == decoded)
+    }
 }
 #endif  // canImport(Testing)
