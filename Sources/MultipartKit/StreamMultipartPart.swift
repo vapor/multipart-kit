@@ -1,4 +1,4 @@
-import HTTPTypes
+public import HTTPTypes
 
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 public struct StreamMultipartPart<BackingSequence: AsyncSequence, BodyChunk: MultipartPartBodyElement>: Sendable
@@ -39,9 +39,9 @@ where BackingSequence.Element == MultipartSection<BodyChunk> {
 /// streamable body.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 public struct StreamMultipartPartAsyncSequence<
-    BackingSequence: AsyncSequence,
+    BackingSequence: AsyncSequence & Sendable,
     BodyChunk: MultipartPartBodyElement
->: AsyncSequence, Sendable where BackingSequence.Element == MultipartSection<BodyChunk> {
+>: AsyncSequence where BackingSequence.Element == MultipartSection<BodyChunk> {
     let makeBackingIterator: @Sendable () -> BackingSequence.AsyncIterator
 
     public init(backingSequence: BackingSequence) {
@@ -64,8 +64,7 @@ public struct StreamMultipartPartAsyncSequence<
     }
 
     public func makeAsyncIterator() -> AsyncIterator {
-        let sharedIterator = SharedIterator<BackingSequence, BodyChunk>(makeBackingIterator: makeBackingIterator)
-        return AsyncIterator(sharedIterator: sharedIterator)
+        AsyncIterator(sharedIterator: .init(makeBackingIterator: makeBackingIterator))
     }
 }
 
@@ -80,7 +79,6 @@ actor SharedIterator<
     var pendingHeaderFields: HTTPFields?
 
     private var backingIterator: BackingIterator
-    // private let makeIterator: @Sendable () -> BackingIterator
 
     init(
         makeBackingIterator: @Sendable () -> BackingIterator,
@@ -98,13 +96,19 @@ actor SharedIterator<
             self.pendingHeaderFields = nil
         }
 
-        while let next = try await backingIterator.next(isolation: self) {
+        while true {
+            var iterator = backingIterator
+            guard let next = try await iterator.next(isolation: self) else {
+                backingIterator = iterator
+                break
+            }
+            backingIterator = iterator
             switch next {
             case .headerFields(let fields):
                 headerFields.append(contentsOf: fields)
             case .bodyChunk(let chunk):
                 self.pendingBodyChunk = chunk
-                let bodySequence = MultipartBodyAsyncSequence<BackingSequence, BodyChunk>(sharedIterator: self)
+                let bodySequence = MultipartBodyAsyncSequence(sharedIterator: self)
                 return StreamMultipartPart(headerFields: headerFields, body: bodySequence)
             case .boundary: return nil
             }
@@ -119,7 +123,14 @@ actor SharedIterator<
             return pendingBodyChunk
         }
 
-        while let next = try await backingIterator.next(isolation: self) {
+        while true {
+            var iterator = backingIterator
+            guard let next = try await iterator.next(isolation: self) else {
+                backingIterator = iterator
+                break
+            }
+            backingIterator = iterator
+
             switch next {
             case .headerFields(let fields):
                 pendingHeaderFields = fields
