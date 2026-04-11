@@ -8,6 +8,8 @@ on:
 
 jobs:
   unit-tests:
+    permissions:
+      contents: read
     uses: vapor/ci/.github/workflows/run-unit-tests.yml@main
     with:
       warnings_as_errors: true
@@ -16,4 +18,11 @@ jobs:
       with_musl: true
       ios_scheme_name: multipart-kit
       with_android: true
+    secrets: inherit
+
+  submit-dependencies:
+    permissions:
+      contents: write
+    if: ${{ github.event_name == 'push' }}
+    uses: vapor/ci/.github/workflows/submit-deps.yml@main
     secrets: inherit
