@@ -34,8 +34,12 @@ public struct FormDataDecoder: Sendable {
     ///   - boundary: Multipart boundary to used in the decoding.
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
-    public func decode<D: Decodable>(_ decodable: D.Type, from string: String, boundary: String) throws -> D {
+    public func decode<D: FormDataNamedDecodable>(_ decodable: D.Type, from string: String, boundary: String) throws -> D {
         try decode(D.self, from: Array(string.utf8), boundary: boundary)
+    }
+
+    public func decode<D: Decodable>(_ decodable: D.Type, from string: String, boundary: String, name: String) throws -> D {
+        try decode(D.self, from: Array(string.utf8), name: name, boundary: boundary)
     }
 
     /// Decodes a `Decodable` item from  some``MultipartPartBodyElement`` using the supplied boundary.
@@ -51,6 +55,18 @@ public struct FormDataDecoder: Sendable {
     /// - Throws: Any errors decoding the model with `Codable` or parsing the data.
     /// - Returns: An instance of the decoded type `D`.
     public func decode<D: Decodable, Body: MultipartPartBodyElement>(
+        _ decodable: D.Type,
+        from buffer: Body,
+        name: String,
+        boundary: String
+    ) throws -> D where Body.SubSequence: Equatable & Sendable {
+        let parts = try MultipartParser(boundary: boundary).parse(buffer)
+        let data = try MultipartFormData(parts: parts, nestingDepth: nestingDepth, isSingle: true)
+        let decoder = FormDataDecoder.Decoder(codingPath: [], data: data, userInfo: userInfo)
+        return try decoder.decode(D.self)
+    }
+
+    public func decode<D: FormDataNamedDecodable, Body: MultipartPartBodyElement>(
         _ decodable: D.Type,
         from buffer: Body,
         boundary: String

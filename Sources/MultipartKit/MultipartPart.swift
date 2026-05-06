@@ -28,7 +28,7 @@ public struct MultipartPart<Body: MultipartPartBodyElement>: Sendable {
     /// Parses and returns the Content-Disposition information from the part's headers.
     ///
     /// - Throws: `ContentDisposition.Error` if the header has an invalid format, or is missing required fields.
-    /// - Returns: A parsed `ContentDisposition` instance, or `nil` if it can't be parsed.
+    /// - Returns: A parsed `ContentDisposition` instance, or `nil` if there is none.
     public var contentDisposition: ContentDisposition? {
         get throws(ContentDisposition.Error) {
             guard let field = self.headerFields[.contentDisposition] else {
@@ -59,8 +59,13 @@ public struct ContentDisposition: Sendable {
 
     /// The name parameter of the Content-Disposition header.
     ///
-    /// This is a required parameter for multipart/form-data and represents
-    /// the name of the form field associated with this part.
+    /// Note: The library models Content-Disposition in general (e.g. `form-data`,
+    /// `attachment`, `inline`). The `name` parameter identifies the form field
+    /// and is required for the `form-data` disposition. However, for other
+    /// disposition types (such as `attachment` or `inline`) the `name` parameter
+    /// may be omitted. Therefore this property is optional. The initializer
+    /// enforces that a `name` must be present for `form-data` and will throw if
+    /// it's missing when parsing such a header.
     public var name: String?
 
     /// The optional filename parameter of the Content-Disposition header.
@@ -77,8 +82,11 @@ public struct ContentDisposition: Sendable {
     /// Initializes a ContentDisposition by parsing a raw header field value.
     ///
     /// - Parameter field: The raw Content-Disposition header field value.
-    /// - Throws: `ContentDisposition.Error` if the header has an invalid format, contains an
-    ///           unrecognized disposition type, or is missing required fields.
+    /// - Throws: `ContentDisposition.Error` if the header has an invalid format,
+    ///           contains an unrecognized disposition type, or is missing
+    ///           required fields. In particular, for the `form-data` disposition
+    ///           the `name` parameter is required and will result in
+    ///           `Error.missingField("name")` if absent.
     public init(from field: HTTPFields.Value) throws(ContentDisposition.Error) {
         self.underlyingField = field
 
@@ -123,9 +131,9 @@ public struct ContentDisposition: Sendable {
         }
 
         // The name parameter is required when dealing with the form-data type
-        // if type == .formData, name == nil {
-        //     throw Error.missingField("name")
-        // }
+        if type == .formData, name == nil {
+            throw Error.missingField("name")
+        }
 
         self.name = name
         self.filename = filename

@@ -49,14 +49,14 @@ struct ContentDispositionTests {
             try part1.contentDisposition
         }
 
-        // let part2 = MultipartPart<[UInt8]>(
-        //     headerFields: [.contentDisposition: "form-data; filename=\"example.txt\""],
-        //     body: []
-        // )
+        let part2 = MultipartPart<[UInt8]>(
+            headerFields: [.contentDisposition: "form-data; filename=\"example.txt\""],
+            body: []
+        )
 
-        // #expect(throws: ContentDisposition.Error.missingField("name")) {
-        //     try part2.contentDisposition
-        // }
+        #expect(throws: ContentDisposition.Error.missingField("name")) {
+            try part2.contentDisposition
+        }
 
         let part3 = MultipartPart<[UInt8]>(
             headerFields: [.contentDisposition: "form-data; name=\"file\"; name=\"duplicate\""],
@@ -100,14 +100,14 @@ struct ContentDispositionTests {
             try semis.contentDisposition
         }
 
-        // let formOnly = MultipartPart<[UInt8]>(
-        //     headerFields: [.contentDisposition: "form-data"],
-        //     body: []
-        // )
+        let formOnly = MultipartPart<[UInt8]>(
+            headerFields: [.contentDisposition: "form-data"],
+            body: []
+        )
 
-        // #expect(throws: ContentDisposition.Error.missingField("name")) {
-        //     try formOnly.contentDisposition
-        // }
+        #expect(throws: ContentDisposition.Error.missingField("name")) {
+            try formOnly.contentDisposition
+        }
 
         let paramOnly = MultipartPart<[UInt8]>(
             headerFields: [.contentDisposition: "form-data; name"],
