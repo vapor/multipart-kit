@@ -6,12 +6,12 @@
 </picture> 
 <br>
 <br>
-<a href="https://docs.vapor.codes/4.0/"><img src="https://design.vapor.codes/images/readthedocs.svg" alt="Documentation"></a>
+<a href="https://docs.vapor.codes/"><img src="https://design.vapor.codes/images/readthedocs.svg" alt="Documentation"></a>
 <a href="https://discord.gg/vapor"><img src="https://design.vapor.codes/images/discordchat.svg" alt="Team Chat"></a>
 <a href="LICENSE"><img src="https://design.vapor.codes/images/mitlicense.svg" alt="MIT License"></a>
 <a href="https://github.com/vapor/multipart-kit/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/vapor/multipart-kit/test.yml?event=push&style=plastic&logo=github&label=tests&logoColor=%23ccc" alt="Continuous Integration"></a>
 <a href="https://codecov.io/github/vapor/multipart-kit"><img src="https://img.shields.io/codecov/c/github/vapor/multipart-kit?style=plastic&logo=codecov&label=Codecov&token=yDzzHja8lt"></a>
-<a href="https://swift.org"><img src="https://design.vapor.codes/images/swift57up.svg" alt="Swift 5.7+"></a>
+<a href="https://swift.org"><img src="https://design.vapor.codes/images/swift60up.svg" alt="Swift 6"></a>
 </p>
 
 🏞 Multipart parser and serializer with `Codable` support for Multipart Form Data.
@@ -44,7 +44,7 @@ targets: [
 
 MultipartKit supports the following platforms:
 
-- All Linux distributions supported by Swift 5.7+
+- All Linux distributions supported by Swift 6
 - macOS 10.15+
 
 ## Overview
@@ -67,7 +67,7 @@ let boundary = "abc123"
 We can encode this instance of a our type using a `FormDataEncoder`.
 
 ```swift
-let encoded = try FormDataEncoder().encode(foo, boundary: boundary)
+let encoded = try FormDataEncoder().encode(user, boundary: boundary)
 ```
 
 The output looks then looks like this.
