@@ -103,12 +103,12 @@ where
         public mutating func next() async throws -> OutboundBody? {
             while true {
                 let section: MultipartSection<BackingBody>?
-                if #available(macOS 15, *) {
+                if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
                     section = try await backingIterator.next(isolation: #isolation)
                 } else {
                     nonisolated(unsafe) var iterator = backingIterator
+                    defer { backingIterator = iterator }
                     section = try await iterator.next()
-                    backingIterator = iterator
                 }
 
                 guard let section else { return nil }
