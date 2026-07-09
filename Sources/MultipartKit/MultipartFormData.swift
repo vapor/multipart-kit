@@ -2,12 +2,6 @@ import Algorithms
 import Collections
 import HTTPTypes
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-
 /// Internal representation of parsed multipart form data with support for hierarchical structures.
 ///
 /// This type is used by the `FormDataDecoder` to represent the hierarchical structure

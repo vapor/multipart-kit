@@ -1,12 +1,6 @@
 import HTTPTypes
 import MultipartKit
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-
 struct File: Codable, Equatable, MultipartPartConvertible {
     typealias Body = [UInt8]
 
@@ -49,18 +43,11 @@ struct File: Codable, Equatable, MultipartPartConvertible {
 
     init(multipart: MultipartPart<Body>) throws {
         let contentDisposition = multipart.headerFields[.contentDisposition] ?? ""
-        let filenamePattern = "filename=\"([^\"]+)\""
-        let filename: String
 
-        if let range = contentDisposition.range(of: filenamePattern, options: .regularExpression) {
-            let match = contentDisposition[range]
-            let startIndex = match.index(match.startIndex, offsetBy: 10)  // Skip 'filename="'
-            let endIndex = match.index(before: match.endIndex)  // Skip closing quote
-            filename = String(contentDisposition[startIndex..<endIndex])
-        } else {
+        guard let match = contentDisposition.firstMatch(of: /filename="([^"]+)"/) else {
             throw MultipartError.invalidFileName
         }
 
-        self.init(filename: filename, data: multipart.body)
+        self.init(filename: String(match.1), data: multipart.body)
     }
 }
