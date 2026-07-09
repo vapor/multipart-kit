@@ -1,4 +1,4 @@
-import Foundation
+import Algorithms
 import HTTPTypes
 
 extension HTTPFields {
@@ -8,7 +8,7 @@ extension HTTPFields {
             .first?
             .split(separator: "=")
             .last?
-            .trimmingCharacters(in: .quotes)
+            .trimmingCharacters(in: Set<Character>(["\"", "'"]))
     }
 
     mutating func setParameter(
@@ -43,9 +43,9 @@ extension HTTPFields {
     }
 }
 
-extension CharacterSet {
-    static var quotes: CharacterSet {
-        return .init(charactersIn: #""'"#)
+extension StringProtocol {
+    func trimmingCharacters(in characters: Set<Character>) -> String {
+        String(trimming(while: characters.contains))
     }
 }
 

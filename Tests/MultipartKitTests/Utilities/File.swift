@@ -1,4 +1,11 @@
+import HTTPTypes
 import MultipartKit
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 
 struct File: Codable, Equatable, MultipartPartConvertible {
     typealias Body = [UInt8]
