@@ -1,6 +1,6 @@
 import Algorithms
-import Collections
 import HTTPTypes
+import OrderedCollections
 
 /// Internal representation of parsed multipart form data with support for hierarchical structures.
 ///
