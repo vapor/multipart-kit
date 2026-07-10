@@ -35,7 +35,7 @@ extension StreamingMultipartParserAsyncSequence.AsyncIterator {
             case .needMoreData:
                 let next: BackingSequence.Element?
                 do {
-                    next = try await iterator.next(isolation: actor)
+                    next = try await backingIterator.next(isolation: actor)
                 } catch {
                     throw MultipartParserError.backingSequenceError(reason: "\(error)")
                 }

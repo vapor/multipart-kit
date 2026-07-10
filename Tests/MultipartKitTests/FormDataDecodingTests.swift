@@ -2,6 +2,12 @@
 import MultipartKit
 import Testing
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
 @Suite("Form Data Decoding Tests")
 struct FormDataDecodingTests {
     @Test("W3 Form Data Decoding")

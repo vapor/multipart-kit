@@ -1,4 +1,4 @@
-import HTTPTypes
+public import HTTPTypes
 
 /// Represents a section of a multipart message during parsing or serialization.
 ///
