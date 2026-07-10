@@ -284,6 +284,25 @@ struct FormDataEncodingTests {
         #expect(try FormDataDecoder().decode(AllTypes.self, from: multipart, boundary: "-") == value)
     }
 
+    @Test("Encode into existing buffer")
+    func encodeIntoBuffer() throws {
+        struct Foo: Encodable {
+            var string: String
+            var int: Int
+        }
+
+        let expected = try FormDataEncoder().encode(Foo(string: "a", int: 42), boundary: "hello", to: [UInt8].self)
+
+        var buffer = [UInt8]()
+        try FormDataEncoder().encode(Foo(string: "a", int: 42), boundary: "hello", into: &buffer)
+        #expect(buffer == expected)
+
+        let prefix = Array("existing".utf8)
+        var prefixedBuffer = prefix
+        try FormDataEncoder().encode(Foo(string: "a", int: 42), boundary: "hello", into: &prefixedBuffer)
+        #expect(prefixedBuffer == prefix + expected)
+    }
+
     @Test("Encode simil-Vapor File type")
     func encodeSimilVaporFileType() async throws {
         struct User: Codable {
