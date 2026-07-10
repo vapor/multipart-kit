@@ -30,6 +30,18 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
         self.buffer = OutboundBody()
     }
 
+    /// Creates a new buffered multipart writer that writes into an existing buffer.
+    ///
+    /// - Parameters:
+    ///   - boundary: The boundary string to use for separating multipart parts.
+    ///   - buffer: An existing buffer to append into. The buffer is moved into the writer; the original is left empty.
+    @inlinable
+    public init(boundary: String, buffer: inout OutboundBody) {
+        self.boundary = boundary
+        self.buffer = OutboundBody()
+        swap(&self.buffer, &buffer)
+    }
+
     @inlinable
     public mutating func write(bytes: some Collection<UInt8> & Sendable) async throws {
         buffer.append(contentsOf: bytes)
