@@ -14,17 +14,20 @@ public struct MultipartParser<Body: MultipartPartBodyElement> {
         case finished
     }
 
+    let crlfWithBoundary: ArraySlice<UInt8>
     let boundary: ArraySlice<UInt8>
     private(set) var state: State
 
     init(boundary: some Collection<UInt8>) {
         self.boundary = .init(boundary)
         self.state = .initial
+        self.crlfWithBoundary = .crlf + boundary
     }
 
     public init(boundary: String) {
         self.boundary = .twoHyphens + ArraySlice(boundary.utf8)
         self.state = .initial
+        self.crlfWithBoundary = .crlf + self.boundary
     }
 
     enum ReadResult {
@@ -87,7 +90,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> {
 
     private mutating func parseBody(from buffer: ArraySlice<UInt8>) -> ReadResult {
         // read until CRLF
-        switch buffer.getFirstRange(of: .crlf + boundary) {
+        switch buffer.getFirstRange(of: crlfWithBoundary) {
         case .prematureEnd:  // found part of body end, request more data
             self.state = .parsing(.body, buffer)
             return .needMoreData
