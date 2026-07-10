@@ -2,6 +2,14 @@ import HTTPTypes
 
 extension MultipartParser {
     /// Synchronously parse the multipart data into an array of ``MultipartPart``.
+    ///
+    /// The whole message must be present in `data`. Every part is held in memory at once, so
+    /// prefer ``StreamingMultipartParserAsyncSequence`` for large messages such as file uploads.
+    ///
+    /// - Parameter data: The complete multipart message.
+    /// - Throws: ``MultipartParserError`` if the message is malformed, or
+    ///   ``MultipartParserError/unexpectedEndOfFile`` if it is incomplete.
+    /// - Returns: The parts of the message, in the order they appeared.
     public func parse(_ data: Body) throws -> [MultipartPart<Body>] {
         var output: [MultipartPart<Body>] = []
         var parser = MultipartParser(boundary: self.boundary)

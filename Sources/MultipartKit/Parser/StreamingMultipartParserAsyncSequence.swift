@@ -5,38 +5,44 @@ import HTTPTypes
 /// This sequence is designed to be used with `AsyncStream` to parse a stream of data asynchronously.
 /// The sequence will yield ``MultipartSection`` values as they are parsed from the stream.
 ///
+/// Each body chunk is yielded as soon as it is parsed, so the body of a part is never held in
+/// memory in its entirety. This makes the sequence suited to large messages such as file uploads.
+/// When parts are small enough to collect whole, ``MultipartParserAsyncSequence`` is easier to use:
+/// it yields each part's body as a single section.
+///
 /// ```swift
-/// let boundary = "boundary123"
-/// var message = ArraySlice(...)
-/// let stream = AsyncStream { continuation in
-/// var offset = message.startIndex
-///     while offset < message.endIndex {
-///         let endIndex = min(message.endIndex, message.index(offset, offsetBy: 16))
-///         continuation.yield(message[offset..<endIndex])
-///         offset = endIndex
+/// let sequence = StreamingMultipartParserAsyncSequence(boundary: "boundary123", buffer: stream)
+///
+/// for try await section in sequence {
+///     switch section {
+///     case .headerFields(let fields): print(fields)
+///     case .bodyChunk(let chunk): try await file.write(contentsOf: chunk)
+///     case .boundary(let end): print(end ? "message finished" : "part finished")
 ///     }
-///     continuation.finish()
-/// }
-/// let sequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: stream)
-/// for try await part in sequence {
-///     switch part {
-///     case .bodyChunk(let chunk): ...
-///     case .headerFields(let field): ...
-///     case .boundary: break
 /// }
 /// ```
 ///
+/// - Note: The sequence is single-pass. Iterating it more than once is not supported.
 public struct StreamingMultipartParserAsyncSequence<BackingSequence: AsyncSequence>: AsyncSequence
 where BackingSequence.Element: MultipartPartBodyElement {
     let parser: MultipartParser<BackingSequence.Element>
     let buffer: BackingSequence
 
+    /// Creates a sequence that parses the multipart message carried by `buffer`.
+    ///
+    /// - Parameters:
+    ///   - boundary: The boundary separating the parts of the message, without its leading
+    ///     hyphens. For a message delimited by `--abc123`, pass `abc123`.
+    ///   - buffer: An asynchronous sequence of chunks making up the multipart message. Chunks
+    ///     may be split at any point; they need not line up with the message's structure.
     public init(boundary: String, buffer: BackingSequence) {
         self.parser = .init(boundary: boundary)
         self.buffer = buffer
     }
 
+    /// An iterator over the sections of a streamed multipart message.
     public struct AsyncIterator: AsyncIteratorProtocol {
+        /// The sections produced by this iterator.
         public typealias Element = MultipartSection<BackingSequence.Element>
 
         var parser: MultipartParser<BackingSequence.Element>
@@ -46,6 +52,11 @@ where BackingSequence.Element: MultipartPartBodyElement {
 
         var currentCollatedBody = BackingSequence.Element()
 
+        /// Advances to the next section of the message.
+        ///
+        /// - Throws: ``MultipartParserError`` if the message is malformed, if it ends part-way
+        ///   through a part, or if the backing sequence itself throws.
+        /// - Returns: The next section, or `nil` once the message is complete.
         public mutating func next() async throws(MultipartParserError) -> MultipartSection<BackingSequence.Element>? {
             if let pendingBodyChunk {
                 defer { self.pendingBodyChunk = nil }
@@ -108,6 +119,16 @@ where BackingSequence.Element: MultipartPartBodyElement {
             }
         }
 
+        /// Advances to the next section, gathering each part's body chunks into a single section.
+        ///
+        /// Unlike ``next()``, which yields body chunks as they arrive, this method accumulates a
+        /// part's body until the part ends and yields it whole. This is what backs
+        /// ``MultipartParserAsyncSequence``, and it means the largest part of the message must fit
+        /// in memory.
+        ///
+        /// - Throws: ``MultipartParserError`` if the message is malformed, if it ends part-way
+        ///   through a part, or if the backing sequence itself throws.
+        /// - Returns: The next section, or `nil` once the message is complete.
         public mutating func nextCollatedPart() async throws(MultipartParserError) -> MultipartSection<BackingSequence.Element>? {
             var headerFields = HTTPFields()
 
@@ -132,6 +153,7 @@ where BackingSequence.Element: MultipartPartBodyElement {
         }
     }
 
+    /// Creates an iterator over the sections of the message.
     public func makeAsyncIterator() -> AsyncIterator {
         .init(parser: parser, backingIterator: buffer.makeAsyncIterator())
     }

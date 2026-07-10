@@ -1,6 +1,10 @@
 import HTTPTypes
 
 /// Parses any kind of multipart encoded data into ``MultipartSection``s.
+///
+/// Use ``parse(_:)`` when the whole message is already in memory. To parse a message as it
+/// arrives, wrap the incoming chunks in a ``StreamingMultipartParserAsyncSequence`` or a
+/// ``MultipartParserAsyncSequence`` instead.
 public struct MultipartParser<Body: MultipartPartBodyElement> {
     enum State: Equatable {
         enum Part: Equatable {
@@ -22,6 +26,10 @@ public struct MultipartParser<Body: MultipartPartBodyElement> {
         self.state = .initial
     }
 
+    /// Creates a new parser for messages separated by the given boundary.
+    ///
+    /// - Parameter boundary: The boundary separating the parts of the message, without its
+    ///   leading hyphens. For a message delimited by `--abc123`, pass `abc123`.
     public init(boundary: String) {
         self.boundary = .twoHyphens + ArraySlice(boundary.utf8)
         self.state = .initial
