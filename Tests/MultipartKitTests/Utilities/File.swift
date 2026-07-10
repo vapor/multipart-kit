@@ -44,10 +44,15 @@ struct File: Codable, Equatable, MultipartPartConvertible {
     init(multipart: MultipartPart<Body>) throws {
         let contentDisposition = multipart.headerFields[.contentDisposition] ?? ""
 
-        guard let match = contentDisposition.firstMatch(of: /filename="([^"]+)"/) else {
-            throw MultipartError.invalidFileName
-        }
+        let parameter = contentDisposition.split(separator: ";")
+            .map { $0.drop(while: { $0 == " " || $0 == "\t" }) }
+            .first { $0.hasPrefix("filename=") }
+            .map { $0.dropFirst("filename=".count) }
+        guard var parameter else { throw MultipartError.invalidFileName }
+        if parameter.first == "\"" { parameter = parameter.dropFirst() }
+        if parameter.last == "\"" { parameter = parameter.dropLast() }
+        guard !parameter.isEmpty else { throw MultipartError.invalidFileName }
 
-        self.init(filename: String(match.1), data: multipart.body)
+        self.init(filename: String(parameter), data: multipart.body)
     }
 }
