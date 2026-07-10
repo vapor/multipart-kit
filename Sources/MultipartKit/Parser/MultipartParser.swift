@@ -15,19 +15,28 @@ public struct MultipartParser<Body: MultipartPartBodyElement> {
     }
 
     let crlfWithBoundary: ArraySlice<UInt8>
-    let boundary: ArraySlice<UInt8>
     private(set) var state: State
 
+    /// `--<boundary>`: a slice of ``crlfWithBoundary``, dropping the leading CRLF.
+    var boundary: ArraySlice<UInt8> { crlfWithBoundary.dropFirst(2) }
+
     init(boundary: some Collection<UInt8>) {
-        self.boundary = .init(boundary)
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(2 + boundary.count)
+        bytes.append(contentsOf: ArraySlice.crlf)
+        bytes.append(contentsOf: boundary)
+        self.crlfWithBoundary = bytes[...]
         self.state = .initial
-        self.crlfWithBoundary = .crlf + boundary
     }
 
     public init(boundary: String) {
-        self.boundary = .twoHyphens + ArraySlice(boundary.utf8)
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(4 + boundary.utf8.count)
+        bytes.append(contentsOf: ArraySlice.crlf)
+        bytes.append(contentsOf: ArraySlice.twoHyphens)
+        bytes.append(contentsOf: boundary.utf8)
+        self.crlfWithBoundary = bytes[...]
         self.state = .initial
-        self.crlfWithBoundary = .crlf + self.boundary
     }
 
     enum ReadResult {
