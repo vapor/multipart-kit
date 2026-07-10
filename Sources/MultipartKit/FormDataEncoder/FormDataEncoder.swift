@@ -41,14 +41,13 @@ public struct FormDataEncoder: Sendable {
     ///
     /// ```swift
     /// let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
-    /// var buffer = ByteBuffer()
-    /// let data = try FormDataEncoder().encode(a, boundary: "123", into: &buffer)
+    /// let data: [UInt8] = try FormDataEncoder().encode(a, boundary: "123")
     /// ```
     ///
     /// - parameters:
     ///     - encodable: Generic `Encodable` item.
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
-    ///     - to: Buffer to write to.
+    ///     - to: Buffer type to write to.
     /// - throws: Any errors encoding the model with `Codable` or serializing the data.
     public func encode<E: Encodable, Body: MultipartPartBodyElement>(
         _ encodable: E,
@@ -66,6 +65,33 @@ public struct FormDataEncoder: Sendable {
         }
         writer._finish()
         return writer.getResult()
+    }
+
+    /// Encodes an `Encodable` item into some ``MultipartPartBodyElement`` using the supplied boundary.
+    ///
+    /// ```swift
+    /// let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
+    /// var buffer = ByteBufferView()
+    /// let data = try FormDataEncoder().encode(a, boundary: "123", into: &buffer)
+    /// ```
+    ///
+    /// - parameters:
+    ///     - encodable: Generic `Encodable` item.
+    ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
+    ///     - buffer: Buffer to write to.
+    /// - throws: Any errors encoding the model with `Codable` or serializing the data.
+    public func encode<E: Encodable, Body: MultipartPartBodyElement>(
+        _ encodable: E,
+        boundary: String,
+        into buffer: inout Body
+    ) throws {
+        let parts: [MultipartPart<Body>] = try self.parts(from: encodable)
+        var writer = MemoryMultipartWriter<Body>(boundary: boundary, buffer: &buffer)
+        for part in parts {
+            writer._writePart(part)
+        }
+        writer._finish()
+        buffer = writer.getResult()
     }
 
     private func parts<E: Encodable, Body: MultipartPartBodyElement>(from encodable: E) throws -> [MultipartPart<Body>] {
