@@ -1,4 +1,4 @@
-import HTTPTypes
+public import HTTPTypes
 
 /// A protocol that defines the interface for writing multipart data.
 ///

@@ -1,3 +1,4 @@
+import HTTPTypes
 import MultipartKit
 
 struct File: Codable, Equatable, MultipartPartConvertible {
@@ -42,18 +43,16 @@ struct File: Codable, Equatable, MultipartPartConvertible {
 
     init(multipart: MultipartPart<Body>) throws {
         let contentDisposition = multipart.headerFields[.contentDisposition] ?? ""
-        let filenamePattern = "filename=\"([^\"]+)\""
-        let filename: String
 
-        if let range = contentDisposition.range(of: filenamePattern, options: .regularExpression) {
-            let match = contentDisposition[range]
-            let startIndex = match.index(match.startIndex, offsetBy: 10)  // Skip 'filename="'
-            let endIndex = match.index(before: match.endIndex)  // Skip closing quote
-            filename = String(contentDisposition[startIndex..<endIndex])
-        } else {
-            throw MultipartError.invalidFileName
-        }
+        let parameter = contentDisposition.split(separator: ";")
+            .map { $0.drop(while: { $0 == " " || $0 == "\t" }) }
+            .first { $0.hasPrefix("filename=") }
+            .map { $0.dropFirst("filename=".count) }
+        guard var parameter else { throw MultipartError.invalidFileName }
+        if parameter.first == "\"" { parameter = parameter.dropFirst() }
+        if parameter.last == "\"" { parameter = parameter.dropLast() }
+        guard !parameter.isEmpty else { throw MultipartError.invalidFileName }
 
-        self.init(filename: filename, data: multipart.body)
+        self.init(filename: String(parameter), data: multipart.body)
     }
 }
