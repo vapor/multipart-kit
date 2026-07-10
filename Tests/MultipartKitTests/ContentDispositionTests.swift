@@ -1,3 +1,4 @@
+#if canImport(Testing)
 import HTTPTypes
 import MultipartKit
 import Testing
@@ -119,3 +120,5 @@ struct ContentDispositionTests {
         }
     }
 }
+
+#endif  // canImport(Testing)
