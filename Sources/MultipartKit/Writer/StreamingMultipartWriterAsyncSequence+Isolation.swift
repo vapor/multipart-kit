@@ -5,6 +5,6 @@ extension StreamingMultipartWriterAsyncSequence.AsyncIterator {
             return nil
         }
 
-        return try await serialize(section)
+        return try await serialize(section, isolation: actor)
     }
 }

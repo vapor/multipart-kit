@@ -100,7 +100,10 @@ where
         ///
         /// Shared by ``next()`` and ``next(isolation:)``, which differ only in how they
         /// obtain the next section from the backing iterator.
-        mutating func serialize(_ section: MultipartSection<BackingBody>) async throws -> OutboundBody {
+        mutating func serialize(
+            _ section: MultipartSection<BackingBody>,
+            isolation: isolated (any Actor)? = #isolation
+        ) async throws -> OutboundBody {
             writer.buffer.removeAll(keepingCapacity: true)
 
             switch section {
