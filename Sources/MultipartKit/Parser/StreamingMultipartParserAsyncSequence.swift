@@ -40,7 +40,7 @@ where BackingSequence.Element: MultipartPartBodyElement {
         public typealias Element = MultipartSection<BackingSequence.Element>
 
         var parser: MultipartParser<BackingSequence.Element>
-        var iterator: BackingSequence.AsyncIterator
+        var backingIterator: BackingSequence.AsyncIterator
 
         var pendingBodyChunk: BackingSequence.Element?
 
@@ -79,10 +79,17 @@ where BackingSequence.Element: MultipartPartBodyElement {
                 case .needMoreData:
                     let next: BackingSequence.Element?
                     do {
-                        next = try await iterator.next()
+                        if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
+                            next = try await backingIterator.next(isolation: #isolation)
+                        } else {
+                            nonisolated(unsafe) var iterator = backingIterator
+                            defer { backingIterator = iterator }
+                            next = try await iterator.next()
+                        }
                     } catch {
                         throw MultipartParserError.backingSequenceError(reason: "\(error)")
                     }
+
                     if let next {
                         parser.append(buffer: next)
                     } else {
@@ -126,6 +133,6 @@ where BackingSequence.Element: MultipartPartBodyElement {
     }
 
     public func makeAsyncIterator() -> AsyncIterator {
-        .init(parser: parser, iterator: buffer.makeAsyncIterator())
+        .init(parser: parser, backingIterator: buffer.makeAsyncIterator())
     }
 }

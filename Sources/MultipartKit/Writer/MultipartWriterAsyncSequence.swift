@@ -102,9 +102,16 @@ where
         /// - Throws: Any error that occurs during serialization.
         public mutating func next() async throws -> OutboundBody? {
             while true {
-                guard let section = try await backingIterator.next() else {
-                    return nil
+                let section: MultipartSection<BackingBody>?
+                if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
+                    section = try await backingIterator.next(isolation: #isolation)
+                } else {
+                    nonisolated(unsafe) var iterator = backingIterator
+                    defer { backingIterator = iterator }
+                    section = try await iterator.next()
                 }
+
+                guard let section else { return nil }
 
                 writer.buffer.removeAll(keepingCapacity: true)
 

@@ -68,12 +68,11 @@ extension FormDataDecoder.Decoder: SingleValueDecodingContainer {
     }
 
     func decode(_: String.Type) throws -> String {
-        guard
-            let part = data.part,
-            let decoded = String(bytes: part.body, encoding: .utf8)
-        else {
+        guard let part = data.part else {
             throw DecodingError.dataCorrupted(.init(codingPath: codingPath, debugDescription: "Could not decode String."))
         }
+
+        let decoded = String(decoding: part.body, as: UTF8.self)
 
         return decoded
     }

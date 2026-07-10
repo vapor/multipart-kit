@@ -3,6 +3,12 @@ import HTTPTypes
 import MultipartKit
 import Testing
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
 @Suite("Parser Tests")
 struct ParserTests {
     @Test("Parse Example")

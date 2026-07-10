@@ -69,7 +69,7 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
 
     // Internal sync version of some of the methods, used in ``FormDataEncoder``.
 
-    @inlinable
+    @usableFromInline
     mutating func _writePart(_ part: MultipartPart<some MultipartPartBodyElement>) {
         buffer.reserveCapacity(part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
         buffer.append(contentsOf: ArraySlice.twoHyphens)
