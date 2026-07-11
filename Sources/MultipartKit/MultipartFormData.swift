@@ -153,52 +153,57 @@ extension MultipartFormData {
 }
 
 extension MultipartFormData {
-    fileprivate mutating func insert(_ part: MultipartPart<Body>, at path: ArraySlice<String>, remainingNestingDepth: Int) {
-        self = inserting(part, at: path, remainingNestingDepth: remainingNestingDepth)
-    }
-
-    fileprivate func inserting(_ part: MultipartPart<Body>, at path: ArraySlice<String>, remainingNestingDepth: Int)
-        -> MultipartFormData
-    {
+    fileprivate mutating func insert(
+        _ part: MultipartPart<Body>,
+        at path: ArraySlice<String>,
+        remainingNestingDepth: Int
+    ) {
         guard let head = path.first else {
-            return .single(part)
+            self = .single(part)
+            return
         }
 
         guard remainingNestingDepth > 1 else {
-            return .nestingDepthExceeded
+            self = .nestingDepthExceeded
+            return
         }
 
-        func insertPart(into data: inout MultipartFormData) {
-            data.insert(part, at: path.dropFirst(), remainingNestingDepth: remainingNestingDepth - 1)
-        }
-
-        func insertingPart(at index: Int?) -> MultipartFormData {
-            var array = self.array ?? []
-            let count = array.count
-            let index = index ?? count
-
-            switch index {
-            case count:
-                array.append(.empty)
-            case 0..<count:
-                break
-            default:
-                // ignore indices outside the range of 0...count
-                return self
-            }
-
-            insertPart(into: &array[index])
-            return .array(array)
-        }
+        let tail = path.dropFirst()
+        let nextDepth = remainingNestingDepth - 1
 
         if head.isEmpty {
-            return insertingPart(at: nil)
+            insert(part, at: nil, tail: tail, depth: nextDepth)
         } else if let index = Int(head) {
-            return insertingPart(at: index)
+            insert(part, at: index, tail: tail, depth: nextDepth)
         } else {
-            var dictionary = self.dictionary ?? [:]
-            insertPart(into: &dictionary[String(head), default: .empty])
-            return .keyed(dictionary)
+            var dictionary: Keyed = [:]
+            if case .keyed(let existing) = self {
+                self = .nestingDepthExceeded
+                dictionary = existing
+            }
+            dictionary[String(head), default: .empty].insert(part, at: tail, remainingNestingDepth: nextDepth)
+            self = .keyed(dictionary)
         }
+    }
+
+    private mutating func insert(_ part: MultipartPart<Body>, at index: Int?, tail: ArraySlice<String>, depth: Int) {
+        var array: [MultipartFormData] = []
+        if case .array(let existing) = self {
+            self = .nestingDepthExceeded
+            array = existing
+        }
+
+        let count = array.count
+        let idx = index ?? count
+        switch idx {
+        case count: array.append(.empty)
+        case 0..<count: break
+        default:
+            self = .array(array)
+            return  // out-of-range: restore and ignore
+        }
+
+        array[idx].insert(part, at: tail, remainingNestingDepth: depth)
+        self = .array(array)
     }
 }
