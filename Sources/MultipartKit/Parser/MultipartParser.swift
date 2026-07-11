@@ -18,11 +18,18 @@ public struct MultipartParser<Body: MultipartPartBodyElement> {
         case finished
     }
 
-    let boundary: ArraySlice<UInt8>
+    let crlfWithBoundary: ArraySlice<UInt8>
     private(set) var state: State
 
+    /// `--<boundary>`: a slice of ``crlfWithBoundary``, dropping the leading CRLF.
+    var boundary: ArraySlice<UInt8> { crlfWithBoundary.dropFirst(2) }
+
     init(boundary: some Collection<UInt8>) {
-        self.boundary = .init(boundary)
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(2 + boundary.count)
+        bytes.append(contentsOf: ArraySlice.crlf)
+        bytes.append(contentsOf: boundary)
+        self.crlfWithBoundary = bytes[...]
         self.state = .initial
     }
 
@@ -31,7 +38,12 @@ public struct MultipartParser<Body: MultipartPartBodyElement> {
     /// - Parameter boundary: The boundary separating the parts of the message, without its
     ///   leading hyphens. For a message delimited by `--abc123`, pass `abc123`.
     public init(boundary: String) {
-        self.boundary = .twoHyphens + ArraySlice(boundary.utf8)
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(4 + boundary.utf8.count)
+        bytes.append(contentsOf: ArraySlice.crlf)
+        bytes.append(contentsOf: ArraySlice.twoHyphens)
+        bytes.append(contentsOf: boundary.utf8)
+        self.crlfWithBoundary = bytes[...]
         self.state = .initial
     }
 
@@ -95,7 +107,7 @@ public struct MultipartParser<Body: MultipartPartBodyElement> {
 
     private mutating func parseBody(from buffer: ArraySlice<UInt8>) -> ReadResult {
         // read until CRLF
-        switch buffer.getFirstRange(of: .crlf + boundary) {
+        switch buffer.getFirstRange(of: crlfWithBoundary) {
         case .prematureEnd:  // found part of body end, request more data
             self.state = .parsing(.body, buffer)
             return .needMoreData
