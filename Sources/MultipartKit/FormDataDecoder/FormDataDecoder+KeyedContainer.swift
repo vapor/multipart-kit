@@ -34,7 +34,21 @@ extension FormDataDecoder.KeyedContainer: KeyedDecodingContainerProtocol {
     }
 
     func decodeNil(forKey key: K) throws -> Bool {
-        false
+        !contains(key)
+    }
+
+    func decodeIfPresent<T: Decodable>(_ type: T.Type, forKey key: K) throws -> T? {
+        guard contains(key) else { return nil }
+        do {
+            return try decode(type, forKey: key)
+        } catch {
+            // Multipart form data has no native null representation.
+            // Browsers always send all form fields, even when empty
+            // (e.g. an unselected file input sends a part with no filename).
+            // When a key exists but its value can't be decoded as the
+            // expected type, treat it as absent for optional fields.
+            return nil
+        }
     }
 
     func decode<T: Decodable>(_ type: T.Type, forKey key: K) throws -> T {
