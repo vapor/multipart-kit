@@ -2,7 +2,7 @@ import HTTPTypes
 
 extension MultipartParser {
     /// Synchronously parse the multipart data into an array of ``MultipartPart``.
-    public func parse(_ data: Body) throws -> [MultipartPart<Body>] {
+    public func parse(_ data: Body) throws(MultipartParserError) -> [MultipartPart<Body>] {
         var output: [MultipartPart<Body>] = []
         var parser = MultipartParser(boundary: self.boundary)
 
@@ -36,7 +36,7 @@ extension MultipartParser {
             case .needMoreData:
                 // In synchronous parsing with all data provided upfront,
                 // needing more data indicates an incomplete/corrupted message
-                throw MultipartParserError.unexpectedEndOfFile
+                throw .unexpectedEndOfFile
 
             case .error(let error):
                 throw error

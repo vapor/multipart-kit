@@ -16,6 +16,8 @@ import HTTPTypes
 /// let result = writer.getResult()
 /// ```
 public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: MultipartWriter {
+    public typealias Failure = Never
+
     public let boundary: String
 
     @usableFromInline
@@ -43,7 +45,7 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
     }
 
     @inlinable
-    public mutating func write(bytes: some Collection<UInt8> & Sendable) async throws {
+    public mutating func write(bytes: some Collection<UInt8> & Sendable) {
         buffer.append(contentsOf: bytes)
     }
 
@@ -57,12 +59,12 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
     }
 
     @inlinable
-    public mutating func finish() async throws {
+    public mutating func finish() {
         self._finish()
     }
 
     @inlinable
-    public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) async throws {
+    public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) {
         // Since we have the internal, somewhat more efficient methods, might as well use those.
         self._writePart(part)
     }

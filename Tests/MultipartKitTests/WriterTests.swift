@@ -35,10 +35,10 @@ struct WriterTests {
         var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
 
         for part in example {
-            try await writer.writePart(part)
+            writer.writePart(part)
         }
 
-        try await writer.finish()
+        await writer.finish()
 
         let expected = ArraySlice(
             """
@@ -119,11 +119,11 @@ struct WriterTests {
     func writeBoundary() async throws {
         var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
 
-        try await writer.writeBoundary()
+        await writer.writeBoundary()
         let result1 = writer.getResult()
         #expect(result1 == ArraySlice("--test\r\n".utf8))
 
-        try await writer.writeBoundary(end: true)
+        await writer.writeBoundary(end: true)
         let result2 = writer.getResult()
         #expect(result2 == ArraySlice("--test--\r\n".utf8))
     }
@@ -137,7 +137,7 @@ struct WriterTests {
             .contentDisposition: "form-data; name=\"test\"",
         ]
 
-        try await writer.writeHeaders(headers)
+        await writer.writeHeaders(headers)
         let result = writer.getResult()
 
         let resultString = String(decoding: result, as: UTF8.self)
@@ -150,7 +150,7 @@ struct WriterTests {
     func writeBodyChunks() async throws {
         var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
 
-        try await writer.writeBodyChunk(ArraySlice("chunk1".utf8))
+        await writer.writeBodyChunk(ArraySlice("chunk1".utf8))
         let result1 = writer.getResult()
         #expect(result1 == ArraySlice("chunk1".utf8))
 
@@ -159,7 +159,7 @@ struct WriterTests {
             ArraySlice("chunk2".utf8),
             ArraySlice("chunk3".utf8),
         ]
-        try await writer.writeBodyChunks(chunks)
+        await writer.writeBodyChunks(chunks)
         let result2 = writer.getResult()
         #expect(result2 == ArraySlice("chunk1chunk2chunk3\r\n".utf8))
 
@@ -168,7 +168,7 @@ struct WriterTests {
     @Test("Empty boundary handling")
     func testEmptyBoundary() async throws {
         var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: "")
-        try await writer.writeBoundary()
+        await writer.writeBoundary()
         let result = writer.getResult()
         #expect(result == ArraySlice("--\r\n".utf8))
     }
@@ -184,8 +184,8 @@ struct WriterTests {
         )
 
         var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: boundary)
-        try await writer.writePart(part)
-        try await writer.finish()
+        writer.writePart(part)
+        await writer.finish()
 
         let result = writer.getResult()
         #expect(result.count > largeBody.count)
@@ -195,7 +195,7 @@ struct WriterTests {
     func getResultClearsBuffer() async throws {
         var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
 
-        try await writer.writeBoundary()
+        await writer.writeBoundary()
         let result1 = writer.getResult()
         #expect(!result1.isEmpty)
 
@@ -211,7 +211,7 @@ struct WriterTests {
             .contentDisposition: "form-data; name=\"tëst\"; filename=\"filé.txt\""
         ]
 
-        try await writer.writeHeaders(headers)
+        await writer.writeHeaders(headers)
         let result = writer.getResult()
 
         let resultString = String(decoding: result, as: UTF8.self)
@@ -246,17 +246,17 @@ struct WriterTests {
             underlyingWriter: mockWriter
         )
 
-        try await writer.write(bytes: ArraySlice("This is a small write".utf8))
+        await writer.write(bytes: ArraySlice("This is a small write".utf8))
         #expect(mockWriter.writeCallCount == 0)
 
         let largeData = ArraySlice(Array(repeating: UInt8(65), count: 150))
-        try await writer.write(bytes: largeData)
+        await writer.write(bytes: largeData)
         let countAfterFirstWrite = mockWriter.writeCallCount
 
         #expect(mockWriter.writeCallCount > 0)
         #expect(mockWriter.lastWrittenData != nil)
 
-        try await writer.finish(writingEndBoundary: false)
+        await writer.finish(writingEndBoundary: false)
 
         #expect(mockWriter.writeCallCount == countAfterFirstWrite)
     }
@@ -279,8 +279,8 @@ struct WriterTests {
             body: ArraySlice("Test content".utf8)
         )
 
-        try await writer.writePart(part)
-        try await writer.finish()
+        await writer.writePart(part)
+        await writer.finish()
 
         #expect(mockWriter.boundary == "test-boundary")
     }
@@ -295,10 +295,10 @@ struct WriterTests {
             underlyingWriter: mockWriter
         )
 
-        try await writer.write(bytes: ArraySlice("First chunk of data".utf8))
-        try await writer.write(bytes: ArraySlice("Second chunk of data".utf8))
-        try await writer.write(bytes: ArraySlice("Third chunk of data".utf8))
-        try await writer.finish()
+        await writer.write(bytes: ArraySlice("First chunk of data".utf8))
+        await writer.write(bytes: ArraySlice("Second chunk of data".utf8))
+        await writer.write(bytes: ArraySlice("Third chunk of data".utf8))
+        await writer.finish()
 
         #expect(mockWriter.writeCallCount > 1)
     }
@@ -320,8 +320,8 @@ struct WriterTests {
             body: largeBody
         )
 
-        try await writer.writePart(part)
-        try await writer.finish()
+        await writer.writePart(part)
+        await writer.finish()
 
         #expect(mockWriter.writeCallCount > 1)
     }
@@ -333,7 +333,7 @@ struct WriterTests {
             var writes: [[UInt8]] = []
             let boundary: String
             init(boundary: String) { self.boundary = boundary }
-            func write(bytes: some Collection<UInt8> & Sendable) async throws {
+            func write(bytes: some Collection<UInt8> & Sendable) {
                 writes.append(Array(bytes))
             }
             func finish() async throws {}
@@ -347,19 +347,19 @@ struct WriterTests {
         )
 
         // Write less than bufferCapacity, should not flush yet
-        try await writer.write(bytes: ArraySlice("12345".utf8))
+        await writer.write(bytes: ArraySlice("12345".utf8))
         #expect(countingWriter.writes.isEmpty)
 
         // Write enough to exceed bufferCapacity, should flush
-        try await writer.write(bytes: ArraySlice("67890".utf8))
+        await writer.write(bytes: ArraySlice("67890".utf8))
         #expect(!countingWriter.writes.isEmpty)
 
         // Write more, should buffer again
         let writesAfterFlush = countingWriter.writes.count
-        try await writer.write(bytes: ArraySlice("abc".utf8))
+        await writer.write(bytes: ArraySlice("abc".utf8))
         #expect(countingWriter.writes.count == writesAfterFlush)
 
-        try await writer.finish(writingEndBoundary: false)
+        await writer.finish(writingEndBoundary: false)
         #expect(countingWriter.writes.count > writesAfterFlush)
 
         // Check that all data is present in order
@@ -393,9 +393,9 @@ struct WriterTests {
             underlyingWriter: underlyingWriter
         )
 
-        try await bufferedWriter.writePart(part1)
-        try await bufferedWriter.writePart(part2)
-        try await bufferedWriter.finish()
+        await bufferedWriter.writePart(part1)
+        await bufferedWriter.writePart(part2)
+        await bufferedWriter.finish()
 
         let expected = ArraySlice(
             """
@@ -427,7 +427,7 @@ struct WriterTests {
             self.buffer = .init()
         }
 
-        func write(bytes: some Collection<UInt8> & Sendable) async throws {
+        func write(bytes: some Collection<UInt8> & Sendable) {
             writeCallCount += 1
             buffer.append(contentsOf: bytes)
             if let typedBytes = bytes as? OutboundBody {
@@ -439,7 +439,7 @@ struct WriterTests {
             }
         }
 
-        func finish() async throws {}
+        func finish() {}
     }
 
     private func makeSerializationStream<Body: MultipartPartBodyElement>(
