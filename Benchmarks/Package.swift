@@ -8,31 +8,31 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../"),
-        .package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.27.0"),
+        .package(url: "https://github.com/ordo-one/benchmark.git", from: "1.35.0"),
     ],
     targets: [
         .executableTarget(
             name: "Writer",
             dependencies: [
                 .product(name: "MultipartKit", package: "multipart-kit"),
-                .product(name: "Benchmark", package: "package-benchmark"),
+                .product(name: "Benchmark", package: "benchmark"),
                 .target(name: "Utilities"),
             ],
             path: "Writer",
             plugins: [
-                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+                .plugin(name: "BenchmarkPlugin", package: "benchmark")
             ]
         ),
         .executableTarget(
             name: "Parser",
             dependencies: [
                 .product(name: "MultipartKit", package: "multipart-kit"),
-                .product(name: "Benchmark", package: "package-benchmark"),
+                .product(name: "Benchmark", package: "benchmark"),
                 .target(name: "Utilities"),
             ],
             path: "Parser",
             plugins: [
-                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+                .plugin(name: "BenchmarkPlugin", package: "benchmark")
             ]
         ),
         .target(

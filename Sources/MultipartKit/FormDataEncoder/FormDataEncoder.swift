@@ -25,6 +25,10 @@ public struct FormDataEncoder: Sendable {
     public func encode<E: Encodable>(_ encodable: E, boundary: String) throws -> String {
         let parts: [MultipartPart<[UInt8]>] = try self.parts(from: encodable)
         var writer = MemoryMultipartWriter<[UInt8]>(boundary: boundary)
+        writer.buffer.reserveCapacity(
+            parts.reduce(0) { $0 + $1.headerFields.count * 64 + $1.body.count + boundary.utf8.count + 10 }
+                + boundary.utf8.count + 6  // closing --boundary--\r\n
+        )
         for part in parts {
             writer._writePart(part)
         }
@@ -52,6 +56,10 @@ public struct FormDataEncoder: Sendable {
     ) throws -> Body {
         let parts: [MultipartPart<Body>] = try self.parts(from: encodable)
         var writer = MemoryMultipartWriter<Body>(boundary: boundary)
+        writer.buffer.reserveCapacity(
+            parts.reduce(0) { $0 + $1.headerFields.count * 64 + $1.body.count + boundary.utf8.count + 10 }
+                + boundary.utf8.count + 6  // closing --boundary--\r\n
+        )
         for part in parts {
             writer._writePart(part)
         }
