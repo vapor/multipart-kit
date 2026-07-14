@@ -388,5 +388,31 @@ struct FormDataDecodingTests {
         #expect(decoded.image == user.image)
     }
 
+    @Test(
+        "Decode optional File sent as empty part by browser",
+        .bug("https://github.com/vapor/multipart-kit/issues/146"))
+    func decodeOptionalFileFromBrowserNullPart() throws {
+        struct Payload: Decodable, Equatable {
+            let file: File?
+            let files: [File]?
+        }
+
+        // Browsers always send all form fields, even when no file is selected.
+        // An unselected file input arrives as a part with no filename.
+        let data = """
+            --boundary\r
+            Content-Disposition: form-data; name="file"\r
+            \r
+            null\r
+            --boundary\r
+            Content-Disposition: form-data; filename="a.txt"; name="files[]"\r
+            \r
+            aaa\r
+            --boundary--\r\n
+            """
+        let decoded = try FormDataDecoder().decode(Payload.self, from: data, boundary: "boundary")
+        #expect(decoded.file == nil)
+        #expect(decoded.files == [File(filename: "a.txt", data: Array("aaa".utf8))])
+    }
 }
 #endif  // canImport(Testing)
