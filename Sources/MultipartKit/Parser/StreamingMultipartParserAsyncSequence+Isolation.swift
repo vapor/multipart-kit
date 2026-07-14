@@ -3,7 +3,7 @@ import HTTPTypes
 extension StreamingMultipartParserAsyncSequence.AsyncIterator {
     /// Advances to the next section of the message, inheriting the caller's actor isolation.
     ///
-    /// - Parameter actor: The actor to remain isolated to, defaulting to the caller's isolation.
+    /// - Parameter isolation: The actor to remain isolated to, defaulting to the caller's isolation.
     /// - Throws: ``MultipartParserError`` if the message is malformed, if it ends part-way
     ///   through a part, or if the backing sequence itself throws.
     /// - Returns: The next section, or `nil` once the message is complete.
@@ -66,7 +66,7 @@ extension StreamingMultipartParserAsyncSequence.AsyncIterator {
     /// Advances to the next section, gathering each part's body chunks into a single section,
     /// inheriting the caller's actor isolation.
     ///
-    /// - Parameter actor: The actor to remain isolated to, defaulting to the caller's isolation.
+    /// - Parameter isolation: The actor to remain isolated to, defaulting to the caller's isolation.
     /// - Throws: ``MultipartParserError`` if the message is malformed, if it ends part-way
     ///   through a part, or if the backing sequence itself throws.
     /// - Returns: The next section, or `nil` once the message is complete.
