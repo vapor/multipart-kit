@@ -96,41 +96,50 @@ where
             self.needsCRLFAfterBody = false
         }
 
+        /// Serializes a single section into the writer's buffer and returns it.
+        ///
+        /// Shared by ``next()`` and ``next(isolation:)``, which differ only in how they
+        /// obtain the next section from the backing iterator.
+        mutating func serialize(
+            _ section: MultipartSection<BackingBody>,
+            isolation: isolated (any Actor)? = #isolation
+        ) async throws -> OutboundBody {
+            writer.buffer.removeAll(keepingCapacity: true)
+
+            switch section {
+            case .boundary(let end):
+                if needsCRLFAfterBody {
+                    needsCRLFAfterBody = false
+                    try await writer.write(bytes: ArraySlice.crlf)
+                }
+                try await writer.writeBoundary(end: end)
+            case .headerFields(let fields):
+                try await writer.writeHeaders(fields)
+            case .bodyChunk(let chunk):
+                try await writer.writeBodyChunk(chunk)
+                self.needsCRLFAfterBody = true
+            }
+
+            return writer.buffer
+        }
+
         /// Advances to the next serialized chunk of multipart data.
         ///
         /// - Returns: The next chunk of serialized multipart data, or `nil` if the sequence is complete.
         /// - Throws: Any error that occurs during serialization.
         public mutating func next() async throws -> OutboundBody? {
-            while true {
-                let section: MultipartSection<BackingBody>?
-                if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
-                    section = try await backingIterator.next(isolation: #isolation)
-                } else {
-                    nonisolated(unsafe) var iterator = backingIterator
-                    defer { backingIterator = iterator }
-                    section = try await iterator.next()
-                }
-
-                guard let section else { return nil }
-
-                writer.buffer.removeAll(keepingCapacity: true)
-
-                switch section {
-                case .boundary(let end):
-                    if needsCRLFAfterBody {
-                        needsCRLFAfterBody = false
-                        try await writer.write(bytes: ArraySlice.crlf)
-                    }
-                    try await writer.writeBoundary(end: end)
-                case .headerFields(let fields):
-                    try await writer.writeHeaders(fields)
-                case .bodyChunk(let chunk):
-                    try await writer.writeBodyChunk(chunk)
-                    self.needsCRLFAfterBody = true
-                }
-
-                return writer.buffer
+            let section: MultipartSection<BackingBody>?
+            if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
+                section = try await backingIterator.next(isolation: #isolation)
+            } else {
+                nonisolated(unsafe) var iterator = backingIterator
+                defer { backingIterator = iterator }
+                section = try await iterator.next()
             }
+
+            guard let section else { return nil }
+
+            return try await serialize(section)
         }
     }
 }
