@@ -8,43 +8,33 @@ public import HTTPTypes
 ///
 /// ### Implementing a Custom Writer
 ///
-/// Here's an example of implementing a custom writer that accumulates data in memory:
+/// Only ``write(bytes:)`` has to be implemented. Boundaries, header fields, and whole parts are
+/// all written in terms of it by the default implementations, so a writer that sends a message
+/// somewhere is as small as this:
 ///
 /// ```swift
-/// struct MemoryMultipartWriter: MultipartWriter {
+/// struct StdoutMultipartWriter: MultipartWriter {
 ///     typealias OutboundBody = [UInt8]
 ///
 ///     let boundary: String
-///     private var buffer: [UInt8] = []
 ///
-///     init(boundary: String) {
-///         self.boundary = boundary
-///     }
-///
-///     mutating func write(bytes: some Collection<UInt8> & Sendable) async throws {
-///         buffer.append(contentsOf: bytes)
-///     }
-///
-///     mutating func finish() async throws {
-///         try await writeBoundary(end: true)
-///     }
-///
-///     var data: [UInt8] {
-///         buffer
+///     func write(bytes: some Collection<UInt8> & Sendable) async throws {
+///         print(String(decoding: bytes, as: UTF8.self), terminator: "")
 ///     }
 /// }
 ///
 /// // Usage example:
-/// var writer = MemoryMultipartWriter(boundary: "boundary123")
+/// var writer = StdoutMultipartWriter(boundary: "boundary123")
 /// try await writer.writeBoundary()
 /// try await writer.writeHeaders([.contentType: "text/plain"])
-/// try await writer.writeBodyChunk("Hello, world!".utf8)
+/// try await writer.writeBodyChunk(Array("Hello, world!".utf8))
 /// try await writer.finish()
-/// let result = writer.data
 /// ```
 public protocol MultipartWriter<OutboundBody>: Sendable {
     /// The type of the body element that the writer will produce.
     associatedtype OutboundBody: MultipartPartBodyElement
+    /// The error the conforming writer will throw. Defaults to `Never`,
+    /// i.e. the writer doesn't throw.
     associatedtype Failure: Error = Never
 
     /// Boundary string used to separate parts in the multipart data.
@@ -171,11 +161,13 @@ extension MultipartWriter {
     }
 }
 
-/// Creates a properly formatted boundary to be used in a custom ``MultipartSerializer.writeBoundary`` method.
+/// Creates a properly formatted boundary to be used in a custom
+/// ``MultipartWriter/writeBoundary(end:)`` implementation.
 ///
 /// - Parameters:
 ///   - boundary: The boundary to be formatted.
 ///   - end: Whether this is the end boundary of the message.
+///   - as: The body type to produce the boundary as.
 /// - Returns: A formatted boundary.
 public func makeBoundaryBytes<OutboundBody: MultipartPartBodyElement>(
     _ boundary: String,

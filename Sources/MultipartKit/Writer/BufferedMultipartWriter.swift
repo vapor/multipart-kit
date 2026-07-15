@@ -20,7 +20,9 @@ import HTTPTypes
 /// try await writer.finish()
 /// ```
 public struct BufferedMultipartWriter<UnderlyingWriter: MultipartWriter>: MultipartWriter {
+    /// The body type of the underlying writer, which this writer buffers into before forwarding.
     public typealias OutboundBody = UnderlyingWriter.OutboundBody
+    /// This writer only throws errors that originate from the underlying writer.
     public typealias Failure = UnderlyingWriter.Failure
 
     /// The boundary string used to separate multipart parts.

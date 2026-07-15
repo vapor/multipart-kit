@@ -1,6 +1,12 @@
 import Algorithms
 public import HTTPTypes
 
+/// The requirements a type must meet to be used as the body of a ``MultipartPart``.
+///
+/// Any collection of bytes which can be built up incrementally qualifies, which includes
+/// `[UInt8]`, `ArraySlice<UInt8>`, and SwiftNIO's `ByteBufferView`, among others. Parsers and
+/// writers are generic over this type, so a message can be parsed into, or serialized out of,
+/// whichever byte container best suits the surrounding code.
 public typealias MultipartPartBodyElement = RangeReplaceableCollection<UInt8> & Sendable
 
 /// Represents a single part of a multipart-encoded message.
@@ -27,8 +33,10 @@ public struct MultipartPart<Body: MultipartPartBodyElement>: Sendable {
 
     /// Parses and returns the Content-Disposition information from the part's headers.
     ///
-    /// - Throws: `ContentDisposition.Error` if the header has an invalid format, or is missing required fields.
-    /// - Returns: A parsed `ContentDisposition` instance, or `nil` if it can't be parsed.
+    /// - Throws: ``ContentDisposition/Error`` if the header is present but has an invalid format,
+    ///   or is missing required fields.
+    /// - Returns: A parsed ``ContentDisposition`` instance, or `nil` if the part carries no
+    ///   `Content-Disposition` header.
     public var contentDisposition: ContentDisposition? {
         get throws(ContentDisposition.Error) {
             guard let field = self.headerFields[.contentDisposition] else {
@@ -166,7 +174,7 @@ public struct ContentDisposition: Sendable {
             /// The Content-Disposition header is not present.
             case missingContentDisposition
 
-            /// The format of the parameter is invalid.o
+            /// The format of the parameter is invalid.
             case invalidParameterFormat(String)
         }
 
@@ -197,6 +205,10 @@ public struct ContentDisposition: Sendable {
             self.init(backing: .missingField(field))
         }
 
+        /// Creates an error indicating a parameter could not be read as a `key=value` pair.
+        ///
+        /// - Parameter parameter: The malformed parameter found in the header.
+        /// - Returns: An error instance.
         public static func invalidParameterFormat(_ parameter: String) -> Self {
             self.init(backing: .invalidParameterFormat(parameter))
         }

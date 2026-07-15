@@ -1,6 +1,12 @@
 import HTTPTypes
 
 extension StreamingMultipartParserAsyncSequence.AsyncIterator {
+    /// Advances to the next section of the message, inheriting the caller's actor isolation.
+    ///
+    /// - Parameter isolation: The actor to remain isolated to, defaulting to the caller's isolation.
+    /// - Throws: ``MultipartParserError`` if the message is malformed, if it ends part-way
+    ///   through a part, or if the backing sequence itself throws.
+    /// - Returns: The next section, or `nil` once the message is complete.
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
     public mutating func next(isolation actor: isolated (any Actor)? = #isolation) async throws(MultipartParserError) -> Self.Element? {
         if let pendingBodyChunk {
@@ -57,6 +63,13 @@ extension StreamingMultipartParserAsyncSequence.AsyncIterator {
         }
     }
 
+    /// Advances to the next section, gathering each part's body chunks into a single section,
+    /// inheriting the caller's actor isolation.
+    ///
+    /// - Parameter isolation: The actor to remain isolated to, defaulting to the caller's isolation.
+    /// - Throws: ``MultipartParserError`` if the message is malformed, if it ends part-way
+    ///   through a part, or if the backing sequence itself throws.
+    /// - Returns: The next section, or `nil` once the message is complete.
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
     public mutating func nextCollatedPart(isolation actor: isolated (any Actor)? = #isolation) async throws(MultipartParserError)
         -> MultipartSection<BackingSequence.Element>?
