@@ -140,13 +140,13 @@ Serialization goes through the `MultipartWriter` protocol. `MemoryMultipartWrite
 ```swift
 var writer = MemoryMultipartWriter<[UInt8]>(boundary: boundary)
 
-try await writer.writePart(
+writer.writePart(
     MultipartPart(
         headerFields: [.contentDisposition: #"form-data; name="file"; filename="hello.txt""#],
         body: Array("Hello, world!".utf8)
     )
 )
-try await writer.finish()
+writer.finish()
 
 let serialized = writer.getResult()
 ```

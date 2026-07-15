@@ -127,7 +127,7 @@ extension MultipartWriter {
     /// Writes body chunks from an async sequence followed by a CRLF sequence.
     ///
     /// - Parameter chunks: An async sequence of body chunks to write.
-    /// - Throws: The writer's `Failure`.
+    /// - Throws: The writer's `Failure` or any error from the backing sequence.
     @inlinable
     public mutating func writeBodyChunks<Chunks: AsyncSequence>(_ chunks: Chunks) async throws
     where Chunks.Element: MultipartPartBodyElement {
