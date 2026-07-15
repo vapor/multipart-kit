@@ -10,7 +10,7 @@ extension MultipartParser {
     /// - Throws: ``MultipartParserError`` if the message is malformed, or
     ///   ``MultipartParserError/unexpectedEndOfFile`` if it is incomplete.
     /// - Returns: The parts of the message, in the order they appeared.
-    public func parse(_ data: Body) throws -> [MultipartPart<Body>] {
+    public func parse(_ data: Body) throws(MultipartParserError) -> [MultipartPart<Body>] {
         var output: [MultipartPart<Body>] = []
         var parser = MultipartParser(boundary: self.boundary)
 
@@ -44,7 +44,7 @@ extension MultipartParser {
             case .needMoreData:
                 // In synchronous parsing with all data provided upfront,
                 // needing more data indicates an incomplete/corrupted message
-                throw MultipartParserError.unexpectedEndOfFile
+                throw .unexpectedEndOfFile
 
             case .error(let error):
                 throw error

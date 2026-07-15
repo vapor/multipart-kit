@@ -81,7 +81,7 @@ where
                 self.buffer = .init()
             }
 
-            mutating func write(bytes: some Collection<UInt8> & Sendable) async throws {
+            mutating func write(bytes: some Collection<UInt8> & Sendable) {
                 buffer.append(contentsOf: bytes)
             }
         }
@@ -118,13 +118,13 @@ where
             case .boundary(let end):
                 if needsCRLFAfterBody {
                     needsCRLFAfterBody = false
-                    try await writer.write(bytes: ArraySlice.crlf)
+                    writer.write(bytes: ArraySlice.crlf)
                 }
-                try await writer.writeBoundary(end: end)
+                await writer.writeBoundary(end: end)
             case .headerFields(let fields):
-                try await writer.writeHeaders(fields)
+                await writer.writeHeaders(fields)
             case .bodyChunk(let chunk):
-                try await writer.writeBodyChunk(chunk)
+                await writer.writeBodyChunk(chunk)
                 self.needsCRLFAfterBody = true
             }
 

@@ -22,6 +22,8 @@ import HTTPTypes
 public struct BufferedMultipartWriter<UnderlyingWriter: MultipartWriter>: MultipartWriter {
     /// The body type of the underlying writer, which this writer buffers into before forwarding.
     public typealias OutboundBody = UnderlyingWriter.OutboundBody
+    /// This writer only throws errors that originate from the underlying writer.
+    public typealias Failure = UnderlyingWriter.Failure
 
     /// The boundary string used to separate multipart parts.
     public let boundary: String
@@ -81,7 +83,7 @@ public struct BufferedMultipartWriter<UnderlyingWriter: MultipartWriter>: Multip
     ///
     /// - Parameter bytes: The bytes to write to the buffer.
     @inlinable
-    public mutating func write(bytes: some Collection<UInt8> & Sendable) async throws {
+    public mutating func write(bytes: some Collection<UInt8> & Sendable) async throws(Failure) {
         // If buffer would overflow, flush it
         if currentBufferCount + bytes.count >= bufferCapacity {
             try await underlyingWriter.write(bytes: self.buffer)
@@ -106,7 +108,7 @@ public struct BufferedMultipartWriter<UnderlyingWriter: MultipartWriter>: Multip
     ///
     /// By default, writes the end boundary as required by the multipart protocol.
     @inlinable
-    public mutating func finish(writingEndBoundary: Bool = true) async throws {
+    public mutating func finish(writingEndBoundary: Bool = true) async throws(Failure) {
         if writingEndBoundary {
             try await writeBoundary(end: true)
         }

@@ -16,6 +16,8 @@ import HTTPTypes
 /// let result = writer.getResult()
 /// ```
 public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: MultipartWriter {
+    /// This ``MultipartWriter`` doesn't throw.
+    public typealias Failure = Never
     /// The boundary separating the parts of the message, without its leading hyphens.
     public let boundary: String
 
@@ -47,7 +49,7 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
     ///
     /// - Parameter bytes: The bytes to append.
     @inlinable
-    public mutating func write(bytes: some Collection<UInt8> & Sendable) async throws {
+    public mutating func write(bytes: some Collection<UInt8> & Sendable) {
         buffer.append(contentsOf: bytes)
     }
 
@@ -64,7 +66,7 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
     ///
     /// Call ``getResult()`` afterwards to take the completed message out of the writer.
     @inlinable
-    public mutating func finish() async throws {
+    public mutating func finish() {
         self._finish()
     }
 
@@ -72,7 +74,7 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
     ///
     /// - Parameter part: The part to append.
     @inlinable
-    public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) async throws {
+    public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) {
         // Since we have the internal, somewhat more efficient methods, might as well use those.
         self._writePart(part)
     }
