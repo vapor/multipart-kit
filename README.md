@@ -6,7 +6,7 @@
 </picture> 
 <br>
 <br>
-<a href="https://api.vapor.codes/multipartkit/documentation/multipartkit"><img src="https://design.vapor.codes/images/readthedocs.svg" alt="Documentation"></a>
+<a href="https://api.vapor.codes/multipartkit"><img src="https://design.vapor.codes/images/readthedocs.svg" alt="Documentation"></a>
 <a href="https://discord.gg/vapor"><img src="https://design.vapor.codes/images/discordchat.svg" alt="Team Chat"></a>
 <a href="LICENSE"><img src="https://design.vapor.codes/images/mitlicense.svg" alt="MIT License"></a>
 <a href="https://github.com/vapor/multipart-kit/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/vapor/multipart-kit/test.yml?event=push&style=plastic&logo=github&label=tests&logoColor=%23ccc" alt="Continuous Integration"></a>
