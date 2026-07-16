@@ -1,12 +1,12 @@
 import HTTPTypes
 
 /// This sequence, based on top of an `AsyncSequence` which produces ``MultipartSection``s,
-/// produces ``StreamMultipartPart``s, which are ``MultipartPart``s made up of headers and a
+/// produces ``StreamingMultipartPart``s, which are ``MultipartPart``s made up of headers and a
 /// streamable body.
-public struct StreamMultipartPartAsyncSequence<
+public struct StreamingMultipartPartAsyncSequence<
     BackingSequence: AsyncSequence & Sendable,
     BodyChunk: MultipartPartBodyElement
->: AsyncSequence where BackingSequence.Element == MultipartSection<BodyChunk> {
+>: AsyncSequence, Sendable where BackingSequence.Element == MultipartSection<BodyChunk> {
     let makeBackingIterator: @Sendable () -> BackingSequence.AsyncIterator
 
     public init(backingSequence: BackingSequence) {
@@ -14,9 +14,9 @@ public struct StreamMultipartPartAsyncSequence<
     }
 
     public struct AsyncIterator: AsyncIteratorProtocol {
-        public typealias Element = StreamMultipartPart<BackingSequence, BodyChunk>
+        public typealias Element = StreamingMultipartPart<StreamingMultipartPartBody<BackingSequence, BodyChunk>>
 
-        let sharedIterator: StreamMultipartPartSharedIterator<BackingSequence, BodyChunk>
+        let sharedIterator: StreamingMultipartPartSharedIterator<BackingSequence, BodyChunk>
 
         public func next() async throws -> Element? {
             try await sharedIterator.nextPart()

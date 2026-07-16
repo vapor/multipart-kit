@@ -1,6 +1,6 @@
 import HTTPTypes
 
-extension StreamMultipartPartSharedIterator {
+extension StreamingMultipartPartSharedIterator {
     struct StateMachine {
         enum State {
             case initial

@@ -1,10 +1,11 @@
 import HTTPTypes
 
-actor StreamMultipartPartSharedIterator<
+actor StreamingMultipartPartSharedIterator<
     BackingSequence: AsyncSequence,
     BodyChunk: MultipartPartBodyElement
 > where BackingSequence.Element == MultipartSection<BodyChunk> {
     typealias BackingIterator = BackingSequence.AsyncIterator
+    typealias Element = StreamingMultipartPart<StreamingMultipartPartBody<BackingSequence, BodyChunk>>?
 
     var pendingBodyChunk: BodyChunk?
     var pendingHeaderFields: HTTPFields?
@@ -21,10 +22,10 @@ actor StreamMultipartPartSharedIterator<
         self.stateMachine = .init()
     }
 
-    func nextPart() async throws -> StreamMultipartPart<BackingSequence, BodyChunk>? {
+    func nextPart() async throws -> Element {
         switch stateMachine.nextPart() {
         case .currentlyStreamingBody:
-            throw StreamMultipartPartError.nextPartRequestedWhileStreamingPreviousBody
+            throw StreamingMultipartPartError.nextPartRequestedWhileStreamingPreviousBody
         case .noMoreParts: return nil
         case .goodToGo: break
         }
@@ -50,11 +51,10 @@ actor StreamMultipartPartSharedIterator<
             case .headerFields(let fields):
                 headerFields.append(contentsOf: fields)
             case .bodyChunk(let chunk):
-                defer { headerFields = [:] }
                 let id = stateMachine.bodyStreamingStarted()
                 self.pendingBodyChunk = chunk
-                let bodySequence = MultipartBodyAsyncSequence(sharedIterator: self, id: id)
-                return StreamMultipartPart(headerFields: headerFields, body: bodySequence)
+                let bodySequence = StreamingMultipartPartBody(sharedIterator: self, id: id)
+                return StreamingMultipartPart(headerFields: headerFields, body: bodySequence)
             case .boundary(let end):
                 if headerFields.isEmpty {
                     if end {
@@ -72,8 +72,8 @@ actor StreamMultipartPartSharedIterator<
                         stateMachine.partStreamingEnded()
                     }
                     // state has already moved past `id`, so this body is inert
-                    let body = MultipartBodyAsyncSequence(sharedIterator: self, id: id)
-                    return StreamMultipartPart(headerFields: headerFields, body: body)
+                    let body = StreamingMultipartPartBody(sharedIterator: self, id: id)
+                    return StreamingMultipartPart(headerFields: headerFields, body: body)
                 }
             }
         }

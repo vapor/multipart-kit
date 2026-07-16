@@ -2,10 +2,10 @@ import HTTPTypes
 import MultipartKit
 import Testing
 
-@Suite("Stream MultipartPart Tests")
-struct StreamMultipartPartTests {
+@Suite("Streaming MultipartPart Tests")
+struct StreamingMultipartPartTests {
     /// Wraps a fixed array of sections in an `AsyncStream` so it can back a
-    /// `StreamMultipartPartAsyncSequence`.
+    /// `StreamingMultipartPartAsyncSequence`.
     private func stream(
         _ sections: [MultipartSection<[UInt8]>]
     ) -> AsyncStream<MultipartSection<[UInt8]>> {
@@ -34,7 +34,7 @@ struct StreamMultipartPartTests {
             .boundary(end: true),
         ]
 
-        let sequence = StreamMultipartPartAsyncSequence(backingSequence: stream(sections))
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: stream(sections))
         let iterator = sequence.makeAsyncIterator()
 
         let part1 = try #require(try await iterator.next())
@@ -57,7 +57,7 @@ struct StreamMultipartPartTests {
             .boundary(end: true),
         ]
 
-        let sequence = StreamMultipartPartAsyncSequence(backingSequence: stream(sections))
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: stream(sections))
         let iterator = sequence.makeAsyncIterator()
 
         let part = try #require(try await iterator.next())
@@ -76,7 +76,7 @@ struct StreamMultipartPartTests {
             .boundary(end: true),
         ]
 
-        let sequence = StreamMultipartPartAsyncSequence(backingSequence: stream(sections))
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: stream(sections))
         let iterator = sequence.makeAsyncIterator()
 
         let part = try #require(try await iterator.next())
@@ -92,7 +92,7 @@ struct StreamMultipartPartTests {
 
     @Test("An empty upstream yields no parts")
     func emptyUpstream() async throws {
-        let sequence = StreamMultipartPartAsyncSequence(backingSequence: stream([]))
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: stream([]))
         let iterator = sequence.makeAsyncIterator()
         try #require(try await iterator.next() == nil)
     }
@@ -100,7 +100,7 @@ struct StreamMultipartPartTests {
     @Test("An upstream with only boundaries yields no parts")
     func onlyBoundaries() async throws {
         let sections: [MultipartSection<[UInt8]>] = [.boundary(end: false), .boundary(end: true)]
-        let sequence = StreamMultipartPartAsyncSequence(backingSequence: stream(sections))
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: stream(sections))
         let iterator = sequence.makeAsyncIterator()
         try #require(try await iterator.next() == nil)
     }
@@ -142,7 +142,7 @@ struct StreamMultipartPartTests {
             continuation.finish()
         }
 
-        let sequence = StreamMultipartPartAsyncSequence(backingSequence: upstream)
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: upstream)
         let iterator = sequence.makeAsyncIterator()
 
         let part1 = try #require(try await iterator.next())
@@ -175,7 +175,7 @@ struct StreamMultipartPartTests {
             .boundary(end: true),
         ]
 
-        let sequence = StreamMultipartPartAsyncSequence(backingSequence: stream(sections))
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: stream(sections))
         let iterator = sequence.makeAsyncIterator()
 
         // Consume part 1 correctly
@@ -184,7 +184,7 @@ struct StreamMultipartPartTests {
 
         // Take part 2 but skip its body, then reach for part 3
         _ = try #require(try await iterator.next())
-        await #expect(throws: StreamMultipartPartError.nextPartRequestedWhileStreamingPreviousBody) {
+        await #expect(throws: StreamingMultipartPartError.nextPartRequestedWhileStreamingPreviousBody) {
             _ = try await iterator.next()
         }
     }
@@ -198,7 +198,7 @@ struct StreamMultipartPartTests {
             .boundary(end: true),
         ]
 
-        let sequence = StreamMultipartPartAsyncSequence(backingSequence: stream(sections))
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: stream(sections))
         let iterator = sequence.makeAsyncIterator()
 
         let part = try #require(try await iterator.next())
@@ -217,7 +217,7 @@ struct StreamMultipartPartTests {
         for chunk in chunks { sections.append(.bodyChunk([UInt8](chunk.utf8))) }
         sections.append(.boundary(end: true))
 
-        let sequence = StreamMultipartPartAsyncSequence(backingSequence: stream(sections))
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: stream(sections))
         let iterator = sequence.makeAsyncIterator()
 
         let part = try #require(try await iterator.next())
@@ -235,7 +235,7 @@ struct StreamMultipartPartTests {
             sections.append(.boundary(end: index == names.count - 1))
         }
 
-        let sequence = StreamMultipartPartAsyncSequence(backingSequence: stream(sections))
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: stream(sections))
         let iterator = sequence.makeAsyncIterator()
 
         var index = 0
@@ -259,7 +259,7 @@ struct StreamMultipartPartTests {
             .boundary(end: true),
         ]
 
-        let sequence = StreamMultipartPartAsyncSequence(backingSequence: stream(sections))
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: stream(sections))
         let iterator = sequence.makeAsyncIterator()
 
         let part1 = try #require(try await iterator.next())
@@ -283,7 +283,7 @@ struct StreamMultipartPartTests {
             .boundary(end: true),
         ]
 
-        let sequence = StreamMultipartPartAsyncSequence(backingSequence: stream(sections))
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: stream(sections))
         let iterator = sequence.makeAsyncIterator()
 
         let part1 = try #require(try await iterator.next())
@@ -309,7 +309,7 @@ struct StreamMultipartPartTests {
             .boundary(end: true),
         ]
 
-        let sequence = StreamMultipartPartAsyncSequence(backingSequence: stream(sections))
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: stream(sections))
         let iterator = sequence.makeAsyncIterator()
 
         var count = 0
