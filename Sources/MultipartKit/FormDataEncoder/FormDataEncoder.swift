@@ -1,22 +1,21 @@
-import NIOCore
-
 /// Encodes `Encodable` items to `multipart/form-data` encoded `Data`.
 ///
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
 ///
-/// Seealso `MultipartParser` for more information about the `multipart` encoding.
+/// - Seealso: ``MultipartParser`` for more information about the `multipart` encoding.
 public struct FormDataEncoder: Sendable {
-
     /// Any contextual information set by the user for encoding.
     public var userInfo: [CodingUserInfoKey: any Sendable] = [:]
 
     /// Creates a new `FormDataEncoder`.
-    public init() { }
+    public init() {}
 
     /// Encodes an `Encodable` item to `String` using the supplied boundary.
     ///
-    ///     let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
-    ///     let data = try FormDataEncoder().encode(a, boundary: "123")
+    /// ```swift
+    /// let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
+    /// let data = try FormDataEncoder().encode(a, boundary: "123")
+    /// ```
     ///
     /// - parameters:
     ///     - encodable: Generic `Encodable` item.
@@ -24,26 +23,79 @@ public struct FormDataEncoder: Sendable {
     /// - throws: Any errors encoding the model with `Codable` or serializing the data.
     /// - returns: `multipart/form-data`-encoded `String`.
     public func encode<E: Encodable>(_ encodable: E, boundary: String) throws -> String {
-        try MultipartSerializer().serialize(parts: parts(from: encodable), boundary: boundary)
+        let parts: [MultipartPart<[UInt8]>] = try self.parts(from: encodable)
+        var writer = MemoryMultipartWriter<[UInt8]>(boundary: boundary)
+        writer.buffer.reserveCapacity(
+            parts.reduce(0) { $0 + $1.headerFields.count * 64 + $1.body.count + boundary.utf8.count + 10 }
+                + boundary.utf8.count + 6  // closing --boundary--\r\n
+        )
+        for part in parts {
+            writer._writePart(part)
+        }
+        writer._finish()
+        let serialized = writer.getResult()
+        return String(decoding: serialized, as: Unicode.UTF8.self)
     }
 
-    /// Encodes an `Encodable` item into a `ByteBuffer` using the supplied boundary.
+    /// Encodes an `Encodable` item into some ``MultipartPartBodyElement`` using the supplied boundary.
     ///
-    ///     let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
-    ///     var buffer = ByteBuffer()
-    ///     let data = try FormDataEncoder().encode(a, boundary: "123", into: &buffer)
+    /// ```swift
+    /// let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
+    /// let data: [UInt8] = try FormDataEncoder().encode(a, boundary: "123")
+    /// ```
+    ///
+    /// - parameters:
+    ///     - encodable: Generic `Encodable` item.
+    ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
+    ///     - to: Buffer type to write to.
+    /// - throws: Any errors encoding the model with `Codable` or serializing the data.
+    public func encode<E: Encodable, Body: MultipartPartBodyElement>(
+        _ encodable: E,
+        boundary: String,
+        to: Body.Type = Body.self
+    ) throws -> Body {
+        let parts: [MultipartPart<Body>] = try self.parts(from: encodable)
+        var writer = MemoryMultipartWriter<Body>(boundary: boundary)
+        writer.buffer.reserveCapacity(
+            parts.reduce(0) { $0 + $1.headerFields.count * 64 + $1.body.count + boundary.utf8.count + 10 }
+                + boundary.utf8.count + 6  // closing --boundary--\r\n
+        )
+        for part in parts {
+            writer._writePart(part)
+        }
+        writer._finish()
+        return writer.getResult()
+    }
+
+    /// Encodes an `Encodable` item into some ``MultipartPartBodyElement`` using the supplied boundary.
+    ///
+    /// ```swift
+    /// let a = Foo(string: "a", int: 42, double: 3.14, array: [1, 2, 3])
+    /// var buffer = ByteBufferView()
+    /// let data = try FormDataEncoder().encode(a, boundary: "123", into: &buffer)
+    /// ```
     ///
     /// - parameters:
     ///     - encodable: Generic `Encodable` item.
     ///     - boundary: Multipart boundary to use for encoding. This must not appear anywhere in the encoded data.
     ///     - buffer: Buffer to write to.
     /// - throws: Any errors encoding the model with `Codable` or serializing the data.
-    public func encode<E: Encodable>(_ encodable: E, boundary: String, into buffer: inout ByteBuffer) throws {
-        try MultipartSerializer().serialize(parts: parts(from: encodable), boundary: boundary, into: &buffer)
+    public func encode<E: Encodable, Body: MultipartPartBodyElement>(
+        _ encodable: E,
+        boundary: String,
+        into buffer: inout Body
+    ) throws {
+        let parts: [MultipartPart<Body>] = try self.parts(from: encodable)
+        var writer = MemoryMultipartWriter<Body>(boundary: boundary, buffer: &buffer)
+        for part in parts {
+            writer._writePart(part)
+        }
+        writer._finish()
+        buffer = writer.getResult()
     }
 
-    private func parts<E: Encodable>(from encodable: E) throws -> [MultipartPart] {
-        let encoder = Encoder(codingPath: [], userInfo: userInfo)
+    private func parts<E: Encodable, Body: MultipartPartBodyElement>(from encodable: E) throws -> [MultipartPart<Body>] {
+        let encoder = Encoder<Body>(codingPath: [], userInfo: userInfo)
         try encodable.encode(to: encoder)
         return encoder.storage.data?.namedParts() ?? []
     }

@@ -1,9 +1,28 @@
 name: test
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 on:
   pull_request: { branches: ['*'] }
   push: { branches: ['main'] }
 
 jobs:
   unit-tests:
+    permissions:
+      contents: read
     uses: vapor/ci/.github/workflows/run-unit-tests.yml@main
+    with:
+      warnings_as_errors: true
+      with_linting: true
+      with_windows: true
+      with_musl: true
+      ios_scheme_name: multipart-kit
+      with_android: true
+    secrets: inherit
+
+  submit-dependencies:
+    permissions:
+      contents: write
+    if: ${{ github.event_name == 'push' }}
+    uses: vapor/ci/.github/workflows/submit-deps.yml@main
     secrets: inherit

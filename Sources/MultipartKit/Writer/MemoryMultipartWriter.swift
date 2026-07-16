@@ -1,0 +1,109 @@
+import HTTPTypes
+
+/// A synchronous ``MultipartWriter`` that buffers the output in memory.
+///
+/// This writer accumulates all multipart data in an internal buffer, making it suitable
+/// for scenarios where you need to generate the complete multipart message before sending.
+/// The buffer can be retrieved using ``getResult()`` after writing all parts.
+///
+/// ```swift
+/// var writer = MemoryMultipartWriter<[UInt8]>(boundary: "boundary123")
+/// try await writer.writePart(MultipartPart(
+///     headerFields: [.contentType: "text/plain"],
+///     body: Array("Hello, world!".utf8)
+/// ))
+/// try await writer.finish()
+/// let result = writer.getResult()
+/// ```
+public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: MultipartWriter {
+    /// This ``MultipartWriter`` doesn't throw.
+    public typealias Failure = Never
+    /// The boundary separating the parts of the message, without its leading hyphens.
+    public let boundary: String
+
+    @usableFromInline
+    var buffer: OutboundBody
+
+    /// Creates a new buffered multipart writer with the specified boundary.
+    ///
+    /// - Parameter boundary: The boundary string to use for separating multipart parts.
+    @inlinable
+    public init(boundary: String) {
+        self.boundary = boundary
+        self.buffer = OutboundBody()
+    }
+
+    /// Creates a new buffered multipart writer that writes into an existing buffer.
+    ///
+    /// - Parameters:
+    ///   - boundary: The boundary string to use for separating multipart parts.
+    ///   - buffer: An existing buffer to append into. The buffer is moved into the writer; the original is left empty.
+    @inlinable
+    public init(boundary: String, buffer: inout OutboundBody) {
+        self.boundary = boundary
+        self.buffer = OutboundBody()
+        swap(&self.buffer, &buffer)
+    }
+
+    /// Appends the given bytes to the internal buffer.
+    ///
+    /// - Parameter bytes: The bytes to append.
+    @inlinable
+    public mutating func write(bytes: some Collection<UInt8> & Sendable) {
+        buffer.append(contentsOf: bytes)
+    }
+
+    /// Retrieves the buffered result and clears the internal buffer.
+    ///
+    /// - Returns: The complete multipart message as the specified body type.
+    @inlinable
+    public mutating func getResult() -> OutboundBody {
+        defer { buffer.removeAll() }
+        return buffer
+    }
+
+    /// Appends the end boundary, terminating the multipart message.
+    ///
+    /// Call ``getResult()`` afterwards to take the completed message out of the writer.
+    @inlinable
+    public mutating func finish() {
+        self._finish()
+    }
+
+    /// Appends a complete multipart part: its leading boundary, header fields, and body.
+    ///
+    /// - Parameter part: The part to append.
+    @inlinable
+    public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) {
+        // Since we have the internal, somewhat more efficient methods, might as well use those.
+        self._writePart(part)
+    }
+
+    // Internal sync version of some of the methods, used in ``FormDataEncoder``.
+
+    @usableFromInline
+    mutating func _writePart(_ part: MultipartPart<some MultipartPartBodyElement>) {
+        buffer.reserveCapacity(part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
+        buffer.append(contentsOf: ArraySlice.twoHyphens)
+        buffer.append(contentsOf: boundary.utf8)
+        buffer.append(contentsOf: ArraySlice.crlf)
+        for field in part.headerFields {
+            buffer.append(contentsOf: field.name.rawName.utf8)
+            buffer.append(contentsOf: ArraySlice.colonSpace)
+            buffer.append(contentsOf: field.value.utf8)
+            buffer.append(contentsOf: ArraySlice.crlf)
+        }
+        buffer.append(contentsOf: ArraySlice.crlf)
+        buffer.append(contentsOf: part.body)
+        buffer.append(contentsOf: ArraySlice.crlf)
+    }
+
+    @inlinable
+    mutating func _finish() {
+        buffer.reserveCapacity(boundary.utf8.count + 10)
+        buffer.append(contentsOf: ArraySlice.twoHyphens)
+        buffer.append(contentsOf: boundary.utf8)
+        buffer.append(contentsOf: ArraySlice.twoHyphens)
+        buffer.append(contentsOf: ArraySlice.crlf)
+    }
+}

@@ -1,0 +1,58 @@
+import HTTPTypes
+import MultipartKit
+
+struct File: Codable, Equatable, MultipartPartConvertible {
+    typealias Body = [UInt8]
+
+    let filename: String
+    let data: Body
+
+    enum MultipartError: Error {
+        case invalidFileName
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case data, filename
+    }
+
+    init(filename: String, data: [UInt8]) {
+        self.filename = filename
+        self.data = data
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let data = try container.decode(Body.self, forKey: .data)
+        let filename = try container.decode(String.self, forKey: .filename)
+        self.init(filename: filename, data: data)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(data, forKey: .data)
+        try container.encode(self.filename, forKey: .filename)
+    }
+
+    var multipart: MultipartPart<Body> {
+        let part = MultipartPart(
+            headerFields: [.contentDisposition: "form-data; name=\"image\"; filename=\"\(filename)\""],
+            body: self.data
+        )
+        return part
+    }
+
+    init(multipart: MultipartPart<Body>) throws {
+        let contentDisposition = multipart.headerFields[.contentDisposition] ?? ""
+
+        let parameter = contentDisposition.split(separator: ";")
+            .map { $0.drop(while: { $0 == " " || $0 == "\t" }) }
+            .first { $0.hasPrefix("filename=") }
+            .map { $0.dropFirst("filename=".count) }
+        guard var parameter else { throw MultipartError.invalidFileName }
+        if parameter.first == "\"" { parameter = parameter.dropFirst() }
+        if parameter.last == "\"" { parameter = parameter.dropLast() }
+        guard !parameter.isEmpty else { throw MultipartError.invalidFileName }
+
+        self.init(filename: String(parameter), data: multipart.body)
+    }
+}

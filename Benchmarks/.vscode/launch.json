@@ -1,0 +1,40 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [ ],
+            "cwd": "${workspaceFolder:Benchmarks}",
+            "name": "Debug Writer",
+            "program": "${workspaceFolder:Benchmarks}/.build/debug/Writer",
+            "preLaunchTask": "swift: Build Debug Writer"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [ ],
+            "cwd": "${workspaceFolder:Benchmarks}",
+            "name": "Release Writer",
+            "program": "${workspaceFolder:Benchmarks}/.build/release/Writer",
+            "preLaunchTask": "swift: Build Release Writer"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [ ],
+            "cwd": "${workspaceFolder:Benchmarks}",
+            "name": "Debug Parser",
+            "program": "${workspaceFolder:Benchmarks}/.build/debug/Parser",
+            "preLaunchTask": "swift: Build Debug Parser"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [ ],
+            "cwd": "${workspaceFolder:Benchmarks}",
+            "name": "Release Parser",
+            "program": "${workspaceFolder:Benchmarks}/.build/release/Parser",
+            "preLaunchTask": "swift: Build Release Parser"
+        }
+    ]
+}

@@ -1,7 +1,9 @@
+import OrderedCollections
+
 extension FormDataDecoder {
-    struct KeyedContainer<K: CodingKey> {
-        let data: MultipartFormData.Keyed
-        let decoder: FormDataDecoder.Decoder
+    struct KeyedContainer<K: CodingKey, Body: MultipartPartBodyElement> {
+        let data: MultipartFormData<Body>.Keyed
+        let decoder: FormDataDecoder.Decoder<Body>
     }
 }
 
@@ -18,10 +20,11 @@ extension FormDataDecoder.KeyedContainer: KeyedDecodingContainerProtocol {
         data.keys.contains(key.stringValue)
     }
 
-    func getValue(forKey key: any CodingKey) throws -> MultipartFormData {
+    func getValue(forKey key: any CodingKey) throws -> MultipartFormData<Body> {
         guard let value = data[key.stringValue] else {
             throw DecodingError.keyNotFound(
-                key, .init(
+                key,
+                .init(
                     codingPath: codingPath,
                     debugDescription: "No value associated with key \"\(key.stringValue)\"."
                 )
@@ -31,7 +34,21 @@ extension FormDataDecoder.KeyedContainer: KeyedDecodingContainerProtocol {
     }
 
     func decodeNil(forKey key: K) throws -> Bool {
-        false
+        !contains(key)
+    }
+
+    func decodeIfPresent<T: Decodable>(_ type: T.Type, forKey key: K) throws -> T? {
+        guard contains(key) else { return nil }
+        do {
+            return try decode(type, forKey: key)
+        } catch {
+            // Multipart form data has no native null representation.
+            // Browsers always send all form fields, even when empty
+            // (e.g. an unselected file input sends a part with no filename).
+            // When a key exists but its value can't be decoded as the
+            // expected type, treat it as absent for optional fields.
+            return nil
+        }
     }
 
     func decode<T: Decodable>(_ type: T.Type, forKey key: K) throws -> T {
@@ -54,7 +71,7 @@ extension FormDataDecoder.KeyedContainer: KeyedDecodingContainerProtocol {
         try decoderForKey(key)
     }
 
-    func decoderForKey(_ key: any CodingKey) throws -> FormDataDecoder.Decoder {
+    func decoderForKey(_ key: any CodingKey) throws -> FormDataDecoder.Decoder<Body> {
         decoder.nested(at: key, with: try getValue(forKey: key))
     }
 }

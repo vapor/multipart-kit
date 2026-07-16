@@ -1,8 +1,10 @@
 Packages
 .build
+.index-build
 .DS_Store
 *.xcodeproj
 Package.pins
 Package.resolved
 DerivedData
 .swiftpm
+.index-build/
