@@ -11,6 +11,17 @@ where Body.Element: MultipartPartBodyElement {
     }
 }
 
-@nonexhaustive public enum StreamingMultipartPartError: Error {
-    case nextPartRequestedWhileStreamingPreviousBody
+// TODO: Make this @nonexhaustive when we drop 6.1
+public struct StreamingMultipartPartError: Error, Equatable {
+    enum Backing {
+        case nextPartRequestedWhileStreamingPreviousBody
+    }
+
+    let backing: Backing
+
+    init(_ backing: Backing) {
+        self.backing = backing
+    }
+
+    public static let nextPartRequestedWhileStreamingPreviousBody = Self(.nextPartRequestedWhileStreamingPreviousBody)
 }
