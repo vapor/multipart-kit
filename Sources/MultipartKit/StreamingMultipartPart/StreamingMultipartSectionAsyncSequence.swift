@@ -10,8 +10,6 @@ where
     Parts.Element == StreamingMultipartPart<Body>,
     Body.Element: MultipartPartBodyElement
 {
-    public typealias BodyChunk = Body.Element
-
     let makeBackingIterator: @Sendable () -> Parts.AsyncIterator
 
     public init(parts: Parts) {
@@ -19,7 +17,7 @@ where
     }
 
     public struct AsyncIterator: AsyncIteratorProtocol {
-        public typealias Element = MultipartSection<BodyChunk>
+        public typealias Element = MultipartSection<Body.Element>
 
         var stateMachine: StateMachine
 
@@ -27,13 +25,13 @@ where
             self.stateMachine = .init(backingIterator: backingIterator)
         }
 
-        public mutating func next() async throws -> MultipartSection<BodyChunk>? {
+        public mutating func next() async throws -> MultipartSection<Body.Element>? {
             try await stateMachine.next()
         }
 
         @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
         public mutating func next(isolation actor: isolated (any Actor)? = #isolation) async throws(Failure) -> Element? {
-            try await stateMachine.next()
+            try await stateMachine.next(isolation: actor)
         }
     }
 
@@ -54,7 +52,7 @@ extension StreamingMultipartSectionAsyncSequence {
         var state: State = .initial
         var backingIterator: Parts.AsyncIterator
 
-        mutating func next() async throws -> MultipartSection<BodyChunk>? {
+        mutating func next() async throws -> MultipartSection<Body.Element>? {
             switch state {
             case .initial:
                 guard let part = try await nextPart() else {
@@ -83,31 +81,23 @@ extension StreamingMultipartSectionAsyncSequence {
             }
         }
 
-        mutating func finish() -> MultipartSection<BodyChunk> {
+        mutating func finish() -> MultipartSection<Body.Element> {
             self.state = .finished
             return .boundary(end: true)
         }
 
         mutating func nextPart() async throws -> StreamingMultipartPart<Body>? {
-            if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
-                return try await backingIterator.next(isolation: #isolation)
-            } else {
-                nonisolated(unsafe) var iterator = backingIterator
-                defer { backingIterator = iterator }
-                return try await iterator.next()
-            }
+            nonisolated(unsafe) var iterator = backingIterator
+            defer { backingIterator = iterator }
+            return try await iterator.next()
         }
     }
 }
 
 extension AsyncIteratorProtocol where Element: MultipartPartBodyElement {
     fileprivate mutating func nextChunk() async throws -> Element? {
-        if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
-            return try await self.next(isolation: #isolation)
-        } else {
-            nonisolated(unsafe) var iterator = self
-            defer { self = iterator }
-            return try await iterator.next()
-        }
+        nonisolated(unsafe) var iterator = self
+        defer { self = iterator }
+        return try await iterator.next()
     }
 }
