@@ -8,10 +8,10 @@ actor StreamingMultipartPartSharedIterator<
     typealias Element = StreamingMultipartPart<StreamingMultipartPartBody<BackingSequence, BodyChunk>>?
 
     var pendingBodyChunk: BodyChunk?
-    var pendingHeaderFields: HTTPFields?
 
     private var backingIterator: BackingIterator
     private var stateMachine: StateMachine
+    private var isReading: Bool
 
     init(
         makeBackingIterator: @Sendable () -> BackingIterator,
@@ -20,9 +20,14 @@ actor StreamingMultipartPartSharedIterator<
         self.backingIterator = makeBackingIterator()
         self.pendingBodyChunk = pendingBodyChunk
         self.stateMachine = .init()
+        self.isReading = false
     }
 
     func nextPart() async throws -> Element {
+        precondition(!isReading, "Streaming multipart message was iterated concurrently")
+        isReading = true
+        defer { isReading = false }
+
         switch stateMachine.nextPart() {
         case .currentlyStreamingBody:
             throw StreamingMultipartPartError.nextPartRequestedWhileStreamingPreviousBody
@@ -82,6 +87,10 @@ actor StreamingMultipartPartSharedIterator<
     }
 
     func nextBodyChunkForSubsequence(id: Int) async throws -> BodyChunk? {
+        precondition(!isReading, "StreamingMultipartPart body was iterated concurrently")
+        isReading = true
+        defer { isReading = false }
+
         switch stateMachine.nextChunk(id: id) {
         case .goodToGo: break
         case .endOfBody: return nil
@@ -109,8 +118,12 @@ actor StreamingMultipartPartSharedIterator<
             return nil
         case .bodyChunk(let chunk):
             return chunk
-        case .boundary:
-            stateMachine.partStreamingEnded()
+        case .boundary(let end):
+            if end {
+                stateMachine.finish()
+            } else {
+                stateMachine.partStreamingEnded()
+            }
             return nil
         }
     }
