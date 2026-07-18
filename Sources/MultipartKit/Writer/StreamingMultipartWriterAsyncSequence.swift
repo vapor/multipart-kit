@@ -29,9 +29,9 @@
 /// ```
 public struct StreamingMultipartWriterAsyncSequence<
     OutboundBody: MultipartPartBodyElement,
-    BackingSequence: AsyncSequence,
+    BackingSequence: AsyncSequence & Sendable,
     BackingBody: MultipartPartBodyElement
->: AsyncSequence
+>: AsyncSequence, Sendable
 where
     BackingSequence.Element == MultipartSection<BackingBody>,
     BackingBody: MultipartPartBodyElement

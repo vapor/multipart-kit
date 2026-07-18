@@ -21,7 +21,7 @@ import HTTPTypes
 ///     }
 /// }
 /// ```
-public struct MultipartParserAsyncSequence<BackingSequence: AsyncSequence>: AsyncSequence
+public struct MultipartParserAsyncSequence<BackingSequence: AsyncSequence & Sendable>: AsyncSequence, Sendable
 where BackingSequence.Element: MultipartPartBodyElement {
     let streamingSequence: StreamingMultipartParserAsyncSequence<BackingSequence>
 

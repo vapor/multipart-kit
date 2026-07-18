@@ -1,0 +1,120 @@
+import HTTPTypes
+
+/// An asynchronous sequence that expands a stream of ``StreamingMultipartPart``s back into ``MultipartSection``s.
+///
+/// This is the inverse of ``StreamingMultipartPartAsyncSequence``: it walks each part in turn,
+/// emitting its boundary, header fields, and body chunks as ``MultipartSection`` values. Pair it
+/// with ``StreamingMultipartWriterAsyncSequence`` to serialize the sections back into bytes.
+///
+/// ```swift
+/// let sections = StreamingMultipartSectionAsyncSequence(parts: parts)
+///
+/// for try await section in sections {
+///     // e.g. feed each section to a writer
+/// }
+/// ```
+///
+/// - Note: The sequence is single-pass. Iterating it more than once is not supported.
+public struct StreamingMultipartSectionAsyncSequence<
+    Parts: AsyncSequence & Sendable,
+    Body: AsyncSequence & Sendable
+>: AsyncSequence, Sendable
+where
+    Parts.Element == StreamingMultipartPart<Body>,
+    Body.Element: MultipartPartBodyElement
+{
+    let makeBackingIterator: @Sendable () -> Parts.AsyncIterator
+
+    /// Creates a sequence that expands `parts` into their constituent ``MultipartSection``s.
+    ///
+    /// - Parameter parts: An asynchronous sequence of ``StreamingMultipartPart``s, such as a
+    ///   ``StreamingMultipartPartAsyncSequence``.
+    public init(parts: Parts) {
+        self.makeBackingIterator = { parts.makeAsyncIterator() }
+    }
+
+    public struct AsyncIterator: AsyncIteratorProtocol {
+        public typealias Element = MultipartSection<Body.Element>
+
+        var stateMachine: StateMachine
+
+        init(backingIterator: Parts.AsyncIterator) {
+            self.stateMachine = .init(backingIterator: backingIterator)
+        }
+
+        public mutating func next() async throws -> MultipartSection<Body.Element>? {
+            try await stateMachine.next()
+        }
+
+        @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+        public mutating func next(isolation actor: isolated (any Actor)? = #isolation) async throws(Failure) -> Element? {
+            try await stateMachine.next(isolation: actor)
+        }
+    }
+
+    public func makeAsyncIterator() -> AsyncIterator {
+        AsyncIterator(backingIterator: makeBackingIterator())
+    }
+}
+
+extension StreamingMultipartSectionAsyncSequence {
+    struct StateMachine {
+        enum State {
+            case initial
+            case emitHeaders(StreamingMultipartPart<Body>)
+            case streamingBody(Body.AsyncIterator)
+            case finished
+        }
+
+        var state: State = .initial
+        var backingIterator: Parts.AsyncIterator
+
+        mutating func next() async throws -> MultipartSection<Body.Element>? {
+            switch state {
+            case .initial:
+                guard let part = try await nextPart() else {
+                    return finish()
+                }
+                state = .emitHeaders(part)
+                return .boundary(end: false)
+
+            case .emitHeaders(let part):
+                state = .streamingBody(part.body.makeAsyncIterator())
+                return .headerFields(part.headerFields)
+
+            case .streamingBody(var body):
+                if let chunk = try await body.nextChunk() {
+                    state = .streamingBody(body)
+                    return .bodyChunk(chunk)
+                }
+                guard let part = try await nextPart() else {
+                    return finish()
+                }
+                state = .emitHeaders(part)
+                return .boundary(end: false)
+
+            case .finished:
+                return nil
+            }
+        }
+
+        mutating func finish() -> MultipartSection<Body.Element> {
+            self.state = .finished
+            return .boundary(end: true)
+        }
+
+        mutating func nextPart() async throws -> StreamingMultipartPart<Body>? {
+            nonisolated(unsafe) var iterator = backingIterator
+            defer { backingIterator = iterator }
+            return try await iterator.next()
+        }
+    }
+}
+
+extension AsyncIteratorProtocol where Element: MultipartPartBodyElement {
+    fileprivate mutating func nextChunk() async throws -> Element? {
+        nonisolated(unsafe) var iterator = self
+        defer { self = iterator }
+        return try await iterator.next()
+    }
+}

@@ -23,7 +23,7 @@ import HTTPTypes
 /// ```
 ///
 /// - Note: The sequence is single-pass. Iterating it more than once is not supported.
-public struct StreamingMultipartParserAsyncSequence<BackingSequence: AsyncSequence>: AsyncSequence
+public struct StreamingMultipartParserAsyncSequence<BackingSequence: AsyncSequence & Sendable>: AsyncSequence, Sendable
 where BackingSequence.Element: MultipartPartBodyElement {
     let parser: MultipartParser<BackingSequence.Element>
     let buffer: BackingSequence

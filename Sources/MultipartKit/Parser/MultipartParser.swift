@@ -5,7 +5,7 @@ import HTTPTypes
 /// Use ``parse(_:)`` when the whole message is already in memory. To parse a message as it
 /// arrives, wrap the incoming chunks in a ``StreamingMultipartParserAsyncSequence`` or a
 /// ``MultipartParserAsyncSequence`` instead.
-public struct MultipartParser<Body: MultipartPartBodyElement> {
+public struct MultipartParser<Body: MultipartPartBodyElement>: Sendable {
     enum State: Equatable {
         enum Part: Equatable {
             case boundary
