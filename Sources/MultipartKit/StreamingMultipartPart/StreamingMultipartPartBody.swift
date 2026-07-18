@@ -1,4 +1,11 @@
-/// This iterates over a `StreamingMultipartPart`'s body.
+/// The streamed body of a ``StreamingMultipartPart``.
+///
+/// Yields the part's body one ``MultipartPartBodyElement`` chunk at a time as the chunks are
+/// produced by the underlying ``StreamingMultipartPartAsyncSequence``, so the whole body is never
+/// held in memory at once.
+///
+/// - Note: This shares a cursor with the sequence that produced the part, so it must be fully
+///   consumed before the next part is requested.
 public struct StreamingMultipartPartBody<BackingSequence: AsyncSequence, BodyChunk: MultipartPartBodyElement>: AsyncSequence, Sendable
 where BackingSequence.Element == MultipartSection<BodyChunk> {
     let sharedIterator: StreamingMultipartPartSharedIterator<BackingSequence, BodyChunk>

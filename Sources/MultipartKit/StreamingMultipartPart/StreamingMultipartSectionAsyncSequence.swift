@@ -1,7 +1,20 @@
 import HTTPTypes
 
-/// This sequence, based on top of an `AsyncSequence` which produces ``StreamingMultipartPart``s,
-/// produces ``StreamMultipartSection``s.
+/// An asynchronous sequence that expands a stream of ``StreamingMultipartPart``s back into ``MultipartSection``s.
+///
+/// This is the inverse of ``StreamingMultipartPartAsyncSequence``: it walks each part in turn,
+/// emitting its boundary, header fields, and body chunks as ``MultipartSection`` values. Pair it
+/// with ``StreamingMultipartWriterAsyncSequence`` to serialize the sections back into bytes.
+///
+/// ```swift
+/// let sections = StreamingMultipartSectionAsyncSequence(parts: parts)
+///
+/// for try await section in sections {
+///     // e.g. feed each section to a writer
+/// }
+/// ```
+///
+/// - Note: The sequence is single-pass. Iterating it more than once is not supported.
 public struct StreamingMultipartSectionAsyncSequence<
     Parts: AsyncSequence & Sendable,
     Body: AsyncSequence & Sendable
@@ -12,6 +25,10 @@ where
 {
     let makeBackingIterator: @Sendable () -> Parts.AsyncIterator
 
+    /// Creates a sequence that expands `parts` into their constituent ``MultipartSection``s.
+    ///
+    /// - Parameter parts: An asynchronous sequence of ``StreamingMultipartPart``s, such as a
+    ///   ``StreamingMultipartPartAsyncSequence``.
     public init(parts: Parts) {
         self.makeBackingIterator = { parts.makeAsyncIterator() }
     }
