@@ -10,6 +10,7 @@ public import HTTPTypes
 ///
 /// - Note: A part's ``body`` shares a single underlying cursor with the sequence that produced it,
 ///   so it must be fully consumed before the next part is requested.
+@_spi(StreamingMultipartPart)
 public struct StreamingMultipartPart<Body: AsyncSequence & Sendable>: Sendable
 where Body.Element: MultipartPartBodyElement {
     /// The header fields for this part.

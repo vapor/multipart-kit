@@ -15,6 +15,7 @@ import HTTPTypes
 /// ```
 ///
 /// - Note: The sequence is single-pass. Iterating it more than once is not supported.
+@_spi(StreamingMultipartPart)
 public struct StreamingMultipartSectionAsyncSequence<
     Parts: AsyncSequence & Sendable,
     Body: AsyncSequence & Sendable

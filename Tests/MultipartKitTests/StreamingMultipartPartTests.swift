@@ -1,5 +1,5 @@
 import HTTPTypes
-import MultipartKit
+@_spi(StreamingMultipartPart) import MultipartKit
 import Testing
 
 @Suite("Streaming MultipartPart Tests")

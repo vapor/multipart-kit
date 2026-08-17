@@ -20,6 +20,7 @@ import HTTPTypes
 /// - Note: The parts and their bodies share a single underlying cursor, so each part's body must be
 ///   fully consumed, and parts consumed in order. Requesting the next part while a body is still
 ///   streaming throws ``StreamingMultipartPartError/nextPartRequestedWhileStreamingPreviousBody``.
+@_spi(StreamingMultipartPart)
 public struct StreamingMultipartPartAsyncSequence<
     BackingSequence: AsyncSequence & Sendable,
     BodyChunk: MultipartPartBodyElement
