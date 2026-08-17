@@ -115,7 +115,8 @@ actor StreamingMultipartPartSharedIterator<
 
         switch next {
         case .headerFields:
-            return nil
+            stateMachine.finish()
+            throw StreamingMultipartPartError.unexpectedSectionWhileStreamingBody
         case .bodyChunk(let chunk):
             return chunk
         case .boundary(let end):
