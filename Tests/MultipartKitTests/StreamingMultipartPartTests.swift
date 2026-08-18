@@ -319,4 +319,31 @@ struct StreamingMultipartPartTests {
         }
         #expect(count == 2)
     }
+
+    @Test("Header fields part-way through a body throw instead of silently ending it")
+    func headerFieldsWhileStreamingBodyThrows() async throws {
+        let sections: [MultipartSection<[UInt8]>] = [
+            .boundary(end: false),
+            .headerFields([.contentDisposition: #"form-data; name="a""#]),
+            .bodyChunk([UInt8]("a1".utf8)),
+            // out of order
+            .headerFields([.contentDisposition: #"form-data; name="b""#]),
+            .bodyChunk([UInt8]("b1".utf8)),
+            .boundary(end: true),
+        ]
+
+        let sequence = StreamingMultipartPartAsyncSequence(backingSequence: stream(sections))
+        let iterator = sequence.makeAsyncIterator()
+
+        let part = try #require(try await iterator.next())
+        let body = part.body.makeAsyncIterator()
+        #expect(try await body.next() == [UInt8]("a1".utf8))
+
+        await #expect(throws: StreamingMultipartPartError.unexpectedSectionWhileStreamingBody) {
+            _ = try await body.next()
+        }
+
+        #expect(try await iterator.next() == nil)
+        #expect(try await body.next() == nil)
+    }
 }
