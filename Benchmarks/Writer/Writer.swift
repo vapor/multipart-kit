@@ -33,6 +33,17 @@ let benchmarks: @Sendable () -> Void = {
 
     let emptySections = [MultipartSection<ArraySlice<UInt8>>]()
 
+    // Many small parts, expressed as sections: maximizes framing (boundary/header)
+    // work per byte, which is the streaming writer's per-part overhead.
+    let sectionedParts: [MultipartSection<ArraySlice<UInt8>>] =
+        (0..<partCount).flatMap { _ -> [MultipartSection<ArraySlice<UInt8>>] in
+            [
+                .boundary(end: false),
+                .headerFields(examplePart.headerFields),
+                .bodyChunk(examplePart.body),
+            ]
+        } + [.boundary(end: true)]
+
     Benchmark(
         "MemoryWriter_Empty_Allocations",
         configuration: .init(
@@ -123,6 +134,48 @@ let benchmarks: @Sendable () -> Void = {
 
         for try await part in sequence {
             blackHole(part)
+        }
+    }
+
+    Benchmark(
+        "StreamingWriter_\(partCount)Parts_Allocations",
+        configuration: .init(
+            metrics: [.mallocCountTotal],
+            maxIterations: 1
+        )
+    ) { benchmark in
+        let backingSequence = sectionedParts.async
+
+        benchmark.startMeasurement()
+        let sequence = StreamingMultipartWriterAsyncSequence(
+            backingSequence: backingSequence,
+            boundary: boundary,
+            outboundBody: ArraySlice<UInt8>.self
+        )
+
+        for try await chunk in sequence {
+            blackHole(chunk)
+        }
+    }
+
+    Benchmark(
+        "StreamingWriter_100x\(partCount)Parts_Instructions",
+        configuration: .init(
+            metrics: [.instructions],
+            maxDuration: .seconds(10),
+            maxIterations: 20
+        )
+    ) { benchmark in
+        for _ in 0..<100 {
+            let sequence = StreamingMultipartWriterAsyncSequence(
+                backingSequence: sectionedParts.async,
+                boundary: boundary,
+                outboundBody: ArraySlice<UInt8>.self
+            )
+
+            for try await chunk in sequence {
+                blackHole(chunk)
+            }
         }
     }
 
