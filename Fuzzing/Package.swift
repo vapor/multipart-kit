@@ -13,7 +13,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../"),
-        .package(path: "/Users/timc/Developer/BrokenHands/swift-fuzz"),
+        .package(url: "https://github.com/brokenhandsio/swift-fuzz.git", from: "0.4.0"),
         .package(url: "https://github.com/apple/swift-http-types.git", from: "1.3.0"),
     ],
     targets: [
