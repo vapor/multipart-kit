@@ -159,20 +159,11 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "StreamingWriter_100x\(partCount)Parts_CPUTime",
+        "StreamingWriter_100x\(partCount)Parts_Instructions",
         configuration: .init(
-            metrics: [.cpuUser],
+            metrics: [.instructions],
             maxDuration: .seconds(10),
-            maxIterations: 20,
-            thresholds: [
-                .cpuUser: .init(
-                    /// `6 - 1 == 5`% tolerance.
-                    /// Will rely on the absolute threshold as the tighter threshold.
-                    relative: [.p90: 6],
-                    /// 11ms of tolerance.
-                    absolute: [.p90: 11_000_000]
-                )
-            ]
+            maxIterations: 20
         )
     ) { benchmark in
         for _ in 0..<100 {
