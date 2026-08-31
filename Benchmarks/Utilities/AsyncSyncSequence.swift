@@ -9,7 +9,7 @@ extension Sequence {
 ///
 /// > Warning: Not safe. Only for testing purposes.
 /// Use `swift-algorithms`'s `AsyncSyncSequence` instead if you're looking for something like this.
-package final class AsyncSyncSequence<Base: Sequence>: AsyncSequence, @unchecked Sendable {
+package final class AsyncSyncSequence<Base: Sequence>: AsyncSequence {
     package typealias Element = Base.Element
 
     package struct Iterator: AsyncIteratorProtocol {
