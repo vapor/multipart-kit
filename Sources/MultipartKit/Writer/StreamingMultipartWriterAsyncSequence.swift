@@ -71,6 +71,8 @@ where
         /// An embedded writer implementation used internally for serialization.
         struct EmbeddedWriter: MultipartWriter {
             let boundary: String
+            let boundaryBytes: OutboundBody
+            let endBoundaryBytes: OutboundBody
             var buffer: OutboundBody
 
             /// Creates a new embedded writer with the specified boundary.
@@ -79,6 +81,8 @@ where
             init(boundary: String) {
                 self.boundary = boundary
                 self.buffer = .init()
+                self.boundaryBytes = makeBoundaryBytes(boundary)
+                self.endBoundaryBytes = makeBoundaryBytes(boundary, end: true)
             }
 
             mutating func write(bytes: some Collection<UInt8> & Sendable) {
@@ -105,13 +109,7 @@ where
         }
 
         /// Serializes a single section into the writer's buffer and returns it.
-        ///
-        /// Shared by ``next()`` and ``next(isolation:)``, which differ only in how they
-        /// obtain the next section from the backing iterator.
-        mutating func serialize(
-            _ section: MultipartSection<BackingBody>,
-            isolation: isolated (any Actor)? = #isolation
-        ) async throws -> OutboundBody {
+        mutating func serialize(_ section: MultipartSection<BackingBody>) -> OutboundBody {
             writer.buffer.removeAll(keepingCapacity: true)
 
             switch section {
@@ -120,11 +118,11 @@ where
                     needsCRLFAfterBody = false
                     writer.write(bytes: ArraySlice.crlf)
                 }
-                await writer.writeBoundary(end: end)
+                writer.write(bytes: end ? writer.endBoundaryBytes : writer.boundaryBytes)
             case .headerFields(let fields):
-                await writer.writeHeaders(fields)
+                writer.buffer.appendHeaders(fields)
             case .bodyChunk(let chunk):
-                await writer.writeBodyChunk(chunk)
+                writer.buffer.append(contentsOf: chunk)
                 self.needsCRLFAfterBody = true
             }
 
@@ -147,7 +145,7 @@ where
 
             guard let section else { return nil }
 
-            return try await serialize(section)
+            return serialize(section)
         }
     }
 }
