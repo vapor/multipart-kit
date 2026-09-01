@@ -66,14 +66,17 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "StreamingParserInstructions_\(fileSizeInMiB)MiB",
         configuration: .init(
-            metrics: [.instructions],
+            metrics: [.instructions, .cpuUser],
             warmupIterations: cpuBenchsWarmupIterations,
             maxDuration: cpuBenchsMaxDuration,
             maxIterations: cpuBenchsMaxIterations,
             thresholds: [
                 /// Instruction counts are near-deterministic, so a small relative
                 /// tolerance is enough; no absolute fudge needed.
-                .instructions: .init(relative: [.p90: 3])
+                .instructions: .init(relative: [.p90: 3]),
+                /// CPU time is reported for informational purposes only; the
+                /// tolerance is wide enough that it never fails the check.
+                .cpuUser: .init(absolute: [.p90: 60_000_000_000]),
             ]
         )
     ) { benchmark in
