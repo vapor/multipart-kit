@@ -64,20 +64,16 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "StreamingParserCPUTime_\(fileSizeInMiB)MiB",
+        "StreamingParserInstructions_\(fileSizeInMiB)MiB",
         configuration: .init(
-            metrics: [.cpuUser],
+            metrics: [.instructions],
             warmupIterations: cpuBenchsWarmupIterations,
             maxDuration: cpuBenchsMaxDuration,
             maxIterations: cpuBenchsMaxIterations,
             thresholds: [
-                .cpuUser: .init(
-                    /// `5 - 1 == 4`% tolerance.
-                    /// Will rely on the absolute threshold as the tighter threshold.
-                    relative: [.p90: 5],
-                    /// 21ms of tolerance.
-                    absolute: [.p90: 21_000_000]
-                )
+                /// Instruction counts are near-deterministic, so a small relative
+                /// tolerance is enough; no absolute fudge needed.
+                .instructions: .init(relative: [.p90: 3])
             ]
         )
     ) { benchmark in
@@ -138,20 +134,16 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
-        "CollatingParserCPUTime_\(fileSizeInMiB)MiB",
+        "CollatingParserInstructions_\(fileSizeInMiB)MiB",
         configuration: .init(
-            metrics: [.cpuUser],
+            metrics: [.instructions],
             warmupIterations: cpuBenchsWarmupIterations,
             maxDuration: cpuBenchsMaxDuration,
             maxIterations: cpuBenchsMaxIterations,
             thresholds: [
-                .cpuUser: .init(
-                    /// `5 - 1 == 4`% tolerance.
-                    /// Will rely on the absolute threshold as the tighter threshold.
-                    relative: [.p90: 5],
-                    /// 21ms of tolerance.
-                    absolute: [.p90: 21_000_000]
-                )
+                /// Instruction counts are near-deterministic, so a small relative
+                /// tolerance is enough; no absolute fudge needed.
+                .instructions: .init(relative: [.p90: 3])
             ]
         )
     ) { benchmark in
