@@ -163,7 +163,12 @@ let benchmarks: @Sendable () -> Void = {
         configuration: .init(
             metrics: [.instructions],
             maxDuration: .seconds(10),
-            maxIterations: 20
+            maxIterations: 20,
+            thresholds: [
+                /// Instruction counts are near-deterministic, so a small relative
+                /// tolerance is enough; no absolute fudge needed.
+                .instructions: .init(relative: [.p90: 3])
+            ]
         )
     ) { benchmark in
         for _ in 0..<100 {
