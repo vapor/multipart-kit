@@ -71,8 +71,6 @@ where
         /// An embedded writer implementation used internally for serialization.
         struct EmbeddedWriter: MultipartWriter {
             let boundary: String
-            let boundaryBytes: OutboundBody
-            let endBoundaryBytes: OutboundBody
             var buffer: OutboundBody
 
             /// Creates a new embedded writer with the specified boundary.
@@ -81,8 +79,6 @@ where
             init(boundary: String) {
                 self.boundary = boundary
                 self.buffer = .init()
-                self.boundaryBytes = makeBoundaryBytes(boundary)
-                self.endBoundaryBytes = makeBoundaryBytes(boundary, end: true)
             }
 
             mutating func write(bytes: some Collection<UInt8> & Sendable) {
@@ -118,7 +114,7 @@ where
                     needsCRLFAfterBody = false
                     writer.write(bytes: ArraySlice.crlf)
                 }
-                writer.write(bytes: end ? writer.endBoundaryBytes : writer.boundaryBytes)
+                writer.buffer.appendBoundary(writer.boundary, end: end)
             case .headerFields(let fields):
                 writer.buffer.appendHeaders(fields)
             case .bodyChunk(let chunk):

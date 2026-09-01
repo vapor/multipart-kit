@@ -175,6 +175,7 @@ public func makeBoundaryBytes<OutboundBody: MultipartPartBodyElement>(
     as: OutboundBody.Type = OutboundBody.self
 ) -> OutboundBody {
     var bytes = OutboundBody()
+    bytes.reserveCapacity(boundary.utf8.count + 6)
     bytes.appendBoundary(boundary, end: end)
     return bytes
 }
