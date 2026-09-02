@@ -80,12 +80,8 @@ extension MultipartWriter {
     /// - Throws: The writer's `Failure`.
     @inlinable
     public mutating func writeBoundary(end: Bool = false) async throws(Failure) {
-        try await write(bytes: ArraySlice.twoHyphens)
-        try await write(bytes: boundary.utf8)
-        if end {
-            try await write(bytes: ArraySlice.twoHyphens)
-        }
-        try await write(bytes: ArraySlice.crlf)
+        let boundary = makeBoundaryBytes(self.boundary, end: end, as: [UInt8].self)
+        try await write(bytes: boundary)
     }
 
     /// Writes HTTP header fields for a multipart part.
@@ -94,13 +90,10 @@ extension MultipartWriter {
     /// - Throws: The writer's `Failure`.
     @inlinable
     public mutating func writeHeaders(_ httpFields: HTTPFields) async throws(Failure) {
-        for field in httpFields {
-            try await write(bytes: field.name.rawName.utf8)
-            try await write(bytes: ArraySlice.colonSpace)
-            try await write(bytes: field.value.utf8)
-            try await write(bytes: ArraySlice.crlf)
-        }
-        try await write(bytes: ArraySlice.crlf)
+        var bytes = [UInt8]()
+        bytes.reserveCapacity(httpFields.count * 64 + 2)
+        bytes.appendHeaders(httpFields)
+        try await write(bytes: bytes)
     }
 
     /// Writes a single body chunk.
@@ -139,12 +132,19 @@ extension MultipartWriter {
 
     /// Writes a complete multipart part including boundary, headers, and body.
     ///
+    /// The boundary and header block are built into a single buffer so the part takes
+    /// three ``write(bytes:)`` calls in total: the framing prefix, the body, and the
+    /// trailing CRLF.
+    ///
     /// - Parameter part: The multipart part to write.
     /// - Throws: The writer's `Failure`.
     @inlinable
     public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) async throws(Failure) {
-        try await writeBoundary()
-        try await writeHeaders(part.headerFields)
+        var prefix = [UInt8]()
+        prefix.reserveCapacity(boundary.utf8.count + 6 + part.headerFields.count * 64 + 2)
+        prefix.appendBoundary(boundary, end: false)
+        prefix.appendHeaders(part.headerFields)
+        try await write(bytes: prefix)
         try await writeBodyChunk(part.body)
         try await write(bytes: ArraySlice.crlf)
     }
@@ -175,11 +175,7 @@ public func makeBoundaryBytes<OutboundBody: MultipartPartBodyElement>(
     as: OutboundBody.Type = OutboundBody.self
 ) -> OutboundBody {
     var bytes = OutboundBody()
-    bytes.append(contentsOf: ArraySlice.twoHyphens)
-    bytes.append(contentsOf: boundary.utf8)
-    if end {
-        bytes.append(contentsOf: ArraySlice.twoHyphens)
-    }
-    bytes.append(contentsOf: ArraySlice.crlf)
+    bytes.reserveCapacity(boundary.utf8.count + 6)
+    bytes.appendBoundary(boundary, end: end)
     return bytes
 }
