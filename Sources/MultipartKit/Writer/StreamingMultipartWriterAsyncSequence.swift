@@ -141,6 +141,11 @@ where
 
             guard let section else { return nil }
 
+            if case .bodyChunk(let chunk) = section, let chunk = chunk as? OutboundBody {
+                self.needsCRLFAfterBody = true
+                return chunk
+            }
+
             return serialize(section)
         }
     }
