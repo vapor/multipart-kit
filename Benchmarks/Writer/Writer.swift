@@ -138,6 +138,33 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
+        "StreamingWriter_\(fileSizeInMiB)MiB_Instructions",
+        configuration: .init(
+            metrics: [.instructions],
+            maxDuration: .seconds(10),
+            maxIterations: 20,
+            thresholds: [
+                /// Instruction counts are near-deterministic, so a small relative
+                /// tolerance is enough; no absolute fudge needed.
+                .instructions: .init(relative: [.p90: 3])
+            ]
+        )
+    ) { benchmark in
+        let backingSequence = chunkedMessage.async
+
+        benchmark.startMeasurement()
+        let sequence = StreamingMultipartWriterAsyncSequence(
+            backingSequence: backingSequence,
+            boundary: boundary,
+            outboundBody: ArraySlice<UInt8>.self
+        )
+
+        for try await chunk in sequence {
+            blackHole(chunk)
+        }
+    }
+
+    Benchmark(
         "StreamingWriter_\(partCount)Parts_Allocations",
         configuration: .init(
             metrics: [.mallocCountTotal],
