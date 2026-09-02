@@ -104,6 +104,11 @@ where
             self.needsCRLFAfterBody = false
         }
 
+        /// Body chunks at least this large are handed over as they are rather than copied
+        /// into the buffer: below this size the copy is cheaper than checking whether the
+        /// chunk can be handed over at all.
+        static var bodyChunkPassthroughThreshold: Int { 1024 }
+
         /// Serializes a single section into the writer's buffer and returns it.
         mutating func serialize(_ section: MultipartSection<BackingBody>) -> OutboundBody {
             writer.buffer.removeAll(keepingCapacity: true)
@@ -141,7 +146,7 @@ where
 
             guard let section else { return nil }
 
-            if case .bodyChunk(let chunk) = section, let chunk = chunk as? OutboundBody {
+            if case .bodyChunk(let chunk) = section, chunk.count >= Self.bodyChunkPassthroughThreshold, let chunk = chunk as? OutboundBody {
                 self.needsCRLFAfterBody = true
                 return chunk
             }
