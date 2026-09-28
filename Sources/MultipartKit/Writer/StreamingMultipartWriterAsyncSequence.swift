@@ -36,8 +36,10 @@ where
     BackingSequence.Element == MultipartSection<BackingBody>,
     BackingBody: MultipartPartBodyElement
 {
-    private let backingSequence: BackingSequence
-    private let boundary: String
+    @usableFromInline
+    let backingSequence: BackingSequence
+    @usableFromInline
+    let boundary: String
 
     /// Creates a new streaming multipart writer async sequence.
     ///
@@ -45,6 +47,7 @@ where
     ///   - backingSequence: The async sequence of multipart sections to serialize.
     ///   - boundary: The boundary string to use for separating multipart parts.
     ///   - outboundBody: The type of the output body elements (inferred from usage).
+    @inlinable
     public init(
         backingSequence: BackingSequence,
         boundary: String,
@@ -55,6 +58,7 @@ where
     }
 
     /// Creates an iterator over the serialized chunks of the message.
+    @inlinable
     public func makeAsyncIterator() -> AsyncIterator {
         AsyncIterator(
             backingIterator: backingSequence.makeAsyncIterator(),
@@ -69,25 +73,33 @@ where
     /// and CRLF sequences between parts.
     public struct AsyncIterator: AsyncIteratorProtocol {
         /// An embedded writer implementation used internally for serialization.
+        @usableFromInline
         struct EmbeddedWriter: MultipartWriter {
+            @usableFromInline
             let boundary: String
+            @usableFromInline
             var buffer: OutboundBody
 
             /// Creates a new embedded writer with the specified boundary.
             ///
             /// - Parameter boundary: The boundary string to use.
+            @inlinable
             init(boundary: String) {
                 self.boundary = boundary
                 self.buffer = .init()
             }
 
+            @inlinable
             mutating func write(bytes: some Collection<UInt8> & Sendable) {
                 buffer.append(contentsOf: bytes)
             }
         }
 
+        @usableFromInline
         var needsCRLFAfterBody: Bool
+        @usableFromInline
         var backingIterator: BackingSequence.AsyncIterator
+        @usableFromInline
         var writer: EmbeddedWriter
 
         /// Creates a new async iterator.
@@ -95,6 +107,7 @@ where
         /// - Parameters:
         ///   - backingIterator: The iterator from the backing sequence.
         ///   - boundary: The boundary string to use.
+        @inlinable
         init(
             backingIterator: BackingSequence.AsyncIterator,
             boundary: String
@@ -105,13 +118,8 @@ where
         }
 
         /// Serializes a single section into the writer's buffer and returns it.
-        ///
-        /// Shared by ``next()`` and ``next(isolation:)``, which differ only in how they
-        /// obtain the next section from the backing iterator.
-        mutating func serialize(
-            _ section: MultipartSection<BackingBody>,
-            isolation: isolated (any Actor)? = #isolation
-        ) async throws -> OutboundBody {
+        @inlinable
+        mutating func serialize(_ section: MultipartSection<BackingBody>) -> OutboundBody {
             writer.buffer.removeAll(keepingCapacity: true)
 
             switch section {
@@ -120,11 +128,11 @@ where
                     needsCRLFAfterBody = false
                     writer.write(bytes: ArraySlice.crlf)
                 }
-                await writer.writeBoundary(end: end)
+                writer.buffer.appendBoundary(writer.boundary, end: end)
             case .headerFields(let fields):
-                await writer.writeHeaders(fields)
+                writer.buffer.appendHeaders(fields)
             case .bodyChunk(let chunk):
-                await writer.writeBodyChunk(chunk)
+                writer.buffer.append(contentsOf: chunk)
                 self.needsCRLFAfterBody = true
             }
 
@@ -135,6 +143,7 @@ where
         ///
         /// - Returns: The next chunk of serialized multipart data, or `nil` if the sequence is complete.
         /// - Throws: Any error that occurs during serialization.
+        @inlinable
         public mutating func next() async throws -> OutboundBody? {
             let section: MultipartSection<BackingBody>?
             if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
@@ -147,7 +156,12 @@ where
 
             guard let section else { return nil }
 
-            return try await serialize(section)
+            if case .bodyChunk(let chunk) = section, let chunk = chunk as? OutboundBody {
+                self.needsCRLFAfterBody = true
+                return chunk
+            }
+
+            return serialize(section)
         }
     }
 }
