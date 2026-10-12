@@ -1,18 +1,21 @@
 import HTTPTypes
 import MultipartKit
 
+@available(anyAppleOS 26, *)
 struct File: Codable, Equatable, MultipartPartConvertible {
-    typealias Body = [UInt8]
-
     let filename: String
-    let data: Body
+    let data: [UInt8]
 
     enum MultipartError: Error {
         case invalidFileName
     }
 
-    enum CodingKeys: String, CodingKey {
-        case data, filename
+    var headerFields: HTTPFields {
+        [.contentDisposition: "form-data; name=\"image\"; filename=\"\(filename)\""]
+    }
+
+    func withBody<R>(_ closure: (RawSpan) throws -> R) rethrows -> R {
+        try closure(self.data.span.bytes)
     }
 
     init(filename: String, data: [UInt8]) {
@@ -20,9 +23,13 @@ struct File: Codable, Equatable, MultipartPartConvertible {
         self.data = data
     }
 
+    enum CodingKeys: String, CodingKey {
+        case data, filename
+    }
+
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let data = try container.decode(Body.self, forKey: .data)
+        let data = try container.decode([UInt8].self, forKey: .data)
         let filename = try container.decode(String.self, forKey: .filename)
         self.init(filename: filename, data: data)
     }
@@ -33,16 +40,8 @@ struct File: Codable, Equatable, MultipartPartConvertible {
         try container.encode(self.filename, forKey: .filename)
     }
 
-    var multipart: MultipartPart<Body> {
-        let part = MultipartPart(
-            headerFields: [.contentDisposition: "form-data; name=\"image\"; filename=\"\(filename)\""],
-            body: self.data
-        )
-        return part
-    }
-
-    init(multipart: MultipartPart<Body>) throws {
-        let contentDisposition = multipart.headerFields[.contentDisposition] ?? ""
+    init(headerFields: HTTPFields, body: RawSpan) throws {
+        let contentDisposition = headerFields[.contentDisposition] ?? ""
 
         let parameter = contentDisposition.split(separator: ";")
             .map { $0.drop(while: { $0 == " " || $0 == "\t" }) }
@@ -53,6 +52,7 @@ struct File: Codable, Equatable, MultipartPartConvertible {
         if parameter.last == "\"" { parameter = parameter.dropLast() }
         guard !parameter.isEmpty else { throw MultipartError.invalidFileName }
 
-        self.init(filename: String(parameter), data: multipart.body)
+        let data = body.withUnsafeBytes { [UInt8]($0) }
+        self.init(filename: String(parameter), data: data)
     }
 }
