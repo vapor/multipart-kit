@@ -49,7 +49,7 @@ extension FormDataEncoder.Encoder: SingleValueEncodingContainer {
     private func collectBody<B: MultipartPartBodyElement>(
         of encodable: some MultipartPartEncodable, as _: B.Type
     ) -> B {
-        encodable.withBody { $0.withUnsafeBytes { B($0 )} }
+        encodable.withBody { $0.withUnsafeBytes { B($0) } }
     }
 
     func encode<T: Encodable>(_ value: T) throws {
