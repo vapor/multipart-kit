@@ -303,6 +303,7 @@ struct FormDataEncodingTests {
         #expect(prefixedBuffer == prefix + expected)
     }
 
+    @available(anyAppleOS 26, *)
     @Test("Encode simil-Vapor File type")
     func encodeSimilVaporFileType() async throws {
         struct User: Codable {

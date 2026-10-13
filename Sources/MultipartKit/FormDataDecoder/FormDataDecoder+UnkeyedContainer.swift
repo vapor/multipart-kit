@@ -1,7 +1,7 @@
 extension FormDataDecoder {
     struct UnkeyedContainer<Body: MultipartPartBodyElement> {
         var currentIndex: Int = 0
-        let data: [MultipartFormData<Body>]
+        let data: [MultipartFormData<MultipartPart<Body>>]
         let decoder: FormDataDecoder.Decoder<Body>
     }
 }
@@ -39,7 +39,7 @@ extension FormDataDecoder.UnkeyedContainer: UnkeyedDecodingContainer {
         return try decoder.nested(at: index, with: getValue())
     }
 
-    mutating func getValue() throws -> MultipartFormData<Body> {
+    mutating func getValue() throws -> MultipartFormData<MultipartPart<Body>> {
         guard !isAtEnd else {
             throw DecodingError.valueNotFound(
                 FormDataDecoder.Decoder<Body>.self,
