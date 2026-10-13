@@ -25,7 +25,7 @@ import HTTPTypes
 /// - Note: The sequence is single-pass. Iterating it more than once is not supported.
 public struct StreamingMultipartParserAsyncSequence<BackingSequence: AsyncSequence & Sendable>: AsyncSequence, Sendable
 where BackingSequence.Element: MultipartPartBodyElement {
-    let parser: MultipartParser<BackingSequence.Element>
+    let parser: MultipartParser
     let buffer: BackingSequence
 
     /// Creates a sequence that parses the multipart message carried by `buffer`.
@@ -45,7 +45,7 @@ where BackingSequence.Element: MultipartPartBodyElement {
         /// The sections produced by this iterator.
         public typealias Element = MultipartSection<BackingSequence.Element>
 
-        var parser: MultipartParser<BackingSequence.Element>
+        var parser: MultipartParser
         var backingIterator: BackingSequence.AsyncIterator
 
         var pendingBodyChunk: BackingSequence.Element?
@@ -77,14 +77,14 @@ where BackingSequence.Element: MultipartPartBodyElement {
                             continue
                         case .bodyChunk(let chunk):
                             if !headerFields.isEmpty {
-                                pendingBodyChunk = chunk
+                                pendingBodyChunk = .init(chunk)
                                 let returningFields = headerFields
                                 headerFields = .init()
                                 return .headerFields(returningFields)
                             }
-                            return .bodyChunk(chunk)
-                        case .boundary:
-                            return part
+                            return .bodyChunk(.init(chunk))
+                        case .boundary(let end):
+                            return .boundary(end: end)
                         }
                     }
                 case .needMoreData:
@@ -102,7 +102,7 @@ where BackingSequence.Element: MultipartPartBodyElement {
                     }
 
                     if let next {
-                        parser.append(buffer: next)
+                        parser.append(buffer: .init(next))
                     } else {
                         switch parser.state {
                         case .initial, .finished:

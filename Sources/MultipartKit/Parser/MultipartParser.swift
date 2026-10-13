@@ -5,7 +5,7 @@ import HTTPTypes
 /// Use ``parse(_:)`` when the whole message is already in memory. To parse a message as it
 /// arrives, wrap the incoming chunks in a ``StreamingMultipartParserAsyncSequence`` or a
 /// ``MultipartParserAsyncSequence`` instead.
-public struct MultipartParser<Body: MultipartPartBodyElement>: Sendable {
+public struct MultipartParser: Sendable {
     enum State: Equatable {
         enum Part: Equatable {
             case boundary
@@ -49,15 +49,15 @@ public struct MultipartParser<Body: MultipartPartBodyElement>: Sendable {
 
     enum ReadResult {
         case finished
-        case success(reading: MultipartSection<Body>? = nil)
+        case success(reading: MultipartSection<ArraySlice<UInt8>>? = nil)
         case error(MultipartParserError)
         case needMoreData
     }
 
-    mutating func append(buffer: Body) {
+    mutating func append(buffer: ArraySlice<UInt8>) {
         switch self.state {
         case .initial:
-            self.state = .parsing(.boundary, .init(buffer))
+            self.state = .parsing(.boundary, buffer)
         case .parsing(let part, var existingBuffer):
             existingBuffer.append(contentsOf: buffer)
             self.state = .parsing(part, existingBuffer)
@@ -117,12 +117,12 @@ public struct MultipartParser<Body: MultipartPartBodyElement>: Sendable {
                 return .needMoreData
             }
             self.state = .parsing(.body, [])
-            return .success(reading: .bodyChunk(.init(buffer)))
+            return .success(reading: .bodyChunk(buffer))
         case .success(let range):  // end found
             let chunk = buffer[..<range.lowerBound]
             let bufferAfterCRLF = buffer[(range.lowerBound + 2)...]
             self.state = .parsing(.boundary, bufferAfterCRLF)
-            return .success(reading: .bodyChunk(.init(chunk)))
+            return .success(reading: .bodyChunk(chunk))
         }
     }
 

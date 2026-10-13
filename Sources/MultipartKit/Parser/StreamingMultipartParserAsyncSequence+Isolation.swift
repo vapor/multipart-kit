@@ -28,14 +28,14 @@ extension StreamingMultipartParserAsyncSequence.AsyncIterator {
                         continue
                     case .bodyChunk(let chunk):
                         if !headerFields.isEmpty {
-                            pendingBodyChunk = chunk
+                            pendingBodyChunk = .init(chunk)
                             let returningFields = headerFields
                             headerFields = .init()
                             return .headerFields(returningFields)
                         }
-                        return .bodyChunk(chunk)
-                    case .boundary:
-                        return part
+                        return .bodyChunk(.init(chunk))
+                    case .boundary(let end):
+                        return .boundary(end: end)
                     }
                 }
             case .needMoreData:
@@ -46,7 +46,7 @@ extension StreamingMultipartParserAsyncSequence.AsyncIterator {
                     throw MultipartParserError.backingSequenceError(reason: "\(error)")
                 }
                 if let next {
-                    parser.append(buffer: next)
+                    parser.append(buffer: .init(next))
                 } else {
                     switch parser.state {
                     case .initial, .finished:
