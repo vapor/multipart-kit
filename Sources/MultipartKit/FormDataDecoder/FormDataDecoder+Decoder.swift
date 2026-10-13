@@ -1,7 +1,7 @@
 extension FormDataDecoder {
     struct Decoder<Body: MultipartPartBodyElement> {
         let codingPath: [any CodingKey]
-        let data: MultipartFormData<Body>
+        let data: MultipartFormData<MultipartPart<Body>>
         let sendableUserInfo: [CodingUserInfoKey: any Sendable]
         let previousCodingPath: [any CodingKey]?
         let previousType: (any Decodable.Type)?
@@ -10,7 +10,7 @@ extension FormDataDecoder {
 
         init(
             codingPath: [any CodingKey],
-            data: MultipartFormData<Body>,
+            data: MultipartFormData<MultipartPart<Body>>,
             userInfo: [CodingUserInfoKey: any Sendable] = [:],
             previousCodingPath: [any CodingKey]? = nil,
             previousType: (any Decodable.Type)? = nil
@@ -45,7 +45,7 @@ extension FormDataDecoder.Decoder: Decoder {
 }
 
 extension FormDataDecoder.Decoder {
-    func nested(at key: any CodingKey, with data: MultipartFormData<Body>) -> Self {
+    func nested(at key: any CodingKey, with data: MultipartFormData<MultipartPart<Body>>) -> Self {
         .init(codingPath: codingPath + [key], data: data, userInfo: sendableUserInfo)
     }
 }
@@ -64,10 +64,10 @@ extension FormDataDecoder.Decoder {
                     underlyingError: nil
                 ))
         case .array:
-            encounteredType = [MultipartFormData<Body>].self
+            encounteredType = [MultipartFormData<MultipartPart<Body>>].self
             encounteredTypeDescription = "array"
         case .keyed:
-            encounteredType = MultipartFormData<Body>.Keyed.self
+            encounteredType = MultipartFormData<MultipartPart<Body>>.Keyed.self
             encounteredTypeDescription = "dictionary"
         case .single:
             encounteredType = MultipartPart<Body>.self

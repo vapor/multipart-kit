@@ -23,17 +23,7 @@ public struct FormDataEncoder: Sendable {
     /// - throws: Any errors encoding the model with `Codable` or serializing the data.
     /// - returns: `multipart/form-data`-encoded `String`.
     public func encode<E: Encodable>(_ encodable: E, boundary: String) throws -> String {
-        let parts: [MultipartPart<[UInt8]>] = try self.parts(from: encodable)
-        var writer = MemoryMultipartWriter<[UInt8]>(boundary: boundary)
-        writer.buffer.reserveCapacity(
-            parts.reduce(0) { $0 + $1.headerFields.count * 64 + $1.body.count + boundary.utf8.count + 10 }
-                + boundary.utf8.count + 6  // closing --boundary--\r\n
-        )
-        for part in parts {
-            writer._writePart(part)
-        }
-        writer._finish()
-        let serialized = writer.getResult()
+        let serialized: [UInt8] = try self.encode(encodable, boundary: boundary)
         return String(decoding: serialized, as: Unicode.UTF8.self)
     }
 
@@ -54,17 +44,9 @@ public struct FormDataEncoder: Sendable {
         boundary: String,
         to: Body.Type = Body.self
     ) throws -> Body {
-        let parts: [MultipartPart<Body>] = try self.parts(from: encodable)
-        var writer = MemoryMultipartWriter<Body>(boundary: boundary)
-        writer.buffer.reserveCapacity(
-            parts.reduce(0) { $0 + $1.headerFields.count * 64 + $1.body.count + boundary.utf8.count + 10 }
-                + boundary.utf8.count + 6  // closing --boundary--\r\n
-        )
-        for part in parts {
-            writer._writePart(part)
-        }
-        writer._finish()
-        return writer.getResult()
+        var buffer = Body()
+        try self.encode(encodable, boundary: boundary, into: &buffer)
+        return buffer
     }
 
     /// Encodes an `Encodable` item into some ``MultipartPartBodyElement`` using the supplied boundary.
@@ -85,18 +67,15 @@ public struct FormDataEncoder: Sendable {
         boundary: String,
         into buffer: inout Body
     ) throws {
-        let parts: [MultipartPart<Body>] = try self.parts(from: encodable)
+        let encoder = Encoder<Body>(codingPath: [], userInfo: userInfo)
+        try encodable.encode(to: encoder)
+        let parts: [DeferrableBodyPart<Body>] = encoder.storage.data?.namedParts() ?? []
+
         var writer = MemoryMultipartWriter<Body>(boundary: boundary, buffer: &buffer)
         for part in parts {
             writer._writePart(part)
         }
         writer._finish()
         buffer = writer.getResult()
-    }
-
-    private func parts<E: Encodable, Body: MultipartPartBodyElement>(from encodable: E) throws -> [MultipartPart<Body>] {
-        let encoder = Encoder<Body>(codingPath: [], userInfo: userInfo)
-        try encodable.encode(to: encoder)
-        return encoder.storage.data?.namedParts() ?? []
     }
 }
