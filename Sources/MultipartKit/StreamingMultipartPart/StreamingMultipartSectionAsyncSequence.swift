@@ -107,7 +107,16 @@ extension StreamingMultipartSectionAsyncSequence {
         mutating func nextPart() async throws -> StreamingMultipartPart<Body>? {
             nonisolated(unsafe) var iterator = backingIterator
             defer { backingIterator = iterator }
-            return try await iterator.next()
+
+            #if canImport(Darwin)
+            if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
+                return try await iterator.next(isolation: #isolation)
+            } else {
+                return try await iterator.next()
+            }
+            #else
+            return try await iterator.next(isolation: #isolation)
+            #endif
         }
     }
 }

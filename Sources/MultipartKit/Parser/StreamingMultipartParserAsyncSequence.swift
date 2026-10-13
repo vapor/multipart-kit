@@ -90,6 +90,7 @@ where BackingSequence.Element: MultipartPartBodyElement {
                 case .needMoreData:
                     let next: BackingSequence.Element?
                     do {
+                        #if canImport(Darwin)
                         if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
                             next = try await backingIterator.next(isolation: #isolation)
                         } else {
@@ -97,6 +98,9 @@ where BackingSequence.Element: MultipartPartBodyElement {
                             defer { backingIterator = iterator }
                             next = try await iterator.next()
                         }
+                        #else
+                        next = try await backingIterator.next(isolation: #isolation)
+                        #endif
                     } catch {
                         throw MultipartParserError.backingSequenceError(reason: "\(error)")
                     }

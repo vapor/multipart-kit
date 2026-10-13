@@ -146,13 +146,19 @@ where
         @inlinable
         public mutating func next() async throws -> OutboundBody? {
             let section: MultipartSection<BackingBody>?
+
+            nonisolated(unsafe) var iterator = backingIterator
+            defer { backingIterator = iterator }
+
+            #if canImport(Darwin)
             if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
-                section = try await backingIterator.next(isolation: #isolation)
+                section = try await iterator.next(isolation: #isolation)
             } else {
-                nonisolated(unsafe) var iterator = backingIterator
-                defer { backingIterator = iterator }
                 section = try await iterator.next()
             }
+            #else
+            section = try await iterator.next(isolation: #isolation)
+            #endif
 
             guard let section else { return nil }
 

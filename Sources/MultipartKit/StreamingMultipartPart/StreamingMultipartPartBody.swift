@@ -7,7 +7,7 @@
 /// - Note: This shares a cursor with the sequence that produced the part, so it must be fully
 ///   consumed before the next part is requested.
 @_spi(StreamingMultipartPart)
-public struct StreamingMultipartPartBody<BackingSequence: AsyncSequence, BodyChunk: MultipartPartBodyElement>: AsyncSequence, Sendable
+public struct StreamingMultipartPartBody<BackingSequence: AsyncSequence & Sendable, BodyChunk: MultipartPartBodyElement>: AsyncSequence, Sendable
 where BackingSequence.Element == MultipartSection<BodyChunk> {
     let sharedIterator: StreamingMultipartPartSharedIterator<BackingSequence, BodyChunk>
     let id: Int
