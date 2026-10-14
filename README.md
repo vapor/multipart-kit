@@ -11,7 +11,7 @@
 <a href="LICENSE"><img src="https://design.vapor.codes/images/mitlicense.svg" alt="MIT License"></a>
 <a href="https://github.com/vapor/multipart-kit/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/vapor/multipart-kit/test.yml?event=push&style=plastic&logo=github&label=tests&logoColor=%23ccc" alt="Continuous Integration"></a>
 <a href="https://codecov.io/github/vapor/multipart-kit"><img src="https://img.shields.io/codecov/c/github/vapor/multipart-kit?style=plastic&logo=codecov&label=Codecov&token=yDzzHja8lt"></a>
-<a href="https://swift.org"><img src="https://design.vapor.codes/images/swift61up.svg" alt="Swift 6.1+"></a>
+<a href="https://swift.org"><img src="https://design.vapor.codes/images/swift62up.svg" alt="Swift 6.2+"></a>
 </p>
 
 🏞 Multipart parser and serializer with `Codable` support for Multipart Form Data.
@@ -42,9 +42,9 @@ targets: [
 
 ### Supported Platforms
 
-MultipartKit requires Swift 6.1 or later and supports the following platforms:
+MultipartKit requires Swift 6.2 or later and supports the following platforms:
 
-- All Linux distributions supported by Swift 6.1+
+- All Linux distributions supported by Swift 6.2+
 - macOS 10.15+, iOS 13+, tvOS 13+, watchOS 6+, visionOS 1+
 
 ## Overview
