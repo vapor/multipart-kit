@@ -125,8 +125,7 @@ struct ParserTests {
             --\(boundary)--
             """
 
-        let parts = try MultipartParser<[UInt8]>(boundary: boundary)
-            .parse([UInt8](message.utf8))
+        let parts = try MultipartParser(boundary: boundary).parse([UInt8](message.utf8))
 
         #expect(parts.count == 1)
         #expect(
@@ -148,8 +147,7 @@ struct ParserTests {
         )
 
         #expect(throws: MultipartParserError.unexpectedEndOfFile) {
-            _ = try MultipartParser<[UInt8]>(boundary: boundary)
-                .parse([UInt8](message))
+            _ = try MultipartParser(boundary: boundary).parse([UInt8](message))
         }
 
         let stream = makeParsingStream(for: message)
@@ -200,8 +198,7 @@ struct ParserTests {
         )
 
         #expect(throws: MultipartParserError.invalidHeader(reason: "Invalid header name")) {
-            _ = try MultipartParser<[UInt8]>(boundary: boundary)
-                .parse([UInt8](message))
+            _ = try MultipartParser(boundary: boundary).parse([UInt8](message))
         }
 
         let stream = makeParsingStream(for: message)
@@ -250,8 +247,7 @@ struct ParserTests {
         )
 
         #expect(throws: MultipartParserError.unexpectedEndOfFile) {
-            _ = try MultipartParser<[UInt8]>(boundary: boundary)
-                .parse([UInt8](message))
+            _ = try MultipartParser(boundary: boundary).parse([UInt8](message))
         }
 
         let stream = makeParsingStream(for: message)
