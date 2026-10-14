@@ -31,28 +31,16 @@ where Body.Element: MultipartPartBodyElement {
 }
 
 /// An error thrown while consuming a ``StreamingMultipartPartAsyncSequence``.
-// TODO: Make this @nonexhaustive when we drop 6.1
-public struct StreamingMultipartPartError: Error, Equatable {
-    enum Backing {
-        case nextPartRequestedWhileStreamingPreviousBody
-        case unexpectedSectionWhileStreamingBody
-    }
-
-    let backing: Backing
-
-    init(_ backing: Backing) {
-        self.backing = backing
-    }
-
+@nonexhaustive public enum StreamingMultipartPartError: Error, Equatable {
     /// The next part was requested before the current part's body had been fully consumed.
     ///
     /// The parts and their bodies share a single underlying cursor, so each part's
     /// ``StreamingMultipartPart/body`` must be fully consumed before the next part is requested.
-    public static let nextPartRequestedWhileStreamingPreviousBody = Self(.nextPartRequestedWhileStreamingPreviousBody)
+    case nextPartRequestedWhileStreamingPreviousBody
 
     /// This gets thrown when receiving a header field gets returned while parsing a part's body.
     ///
     /// This is possible only in the scenario that a user feeds custom hand-rolled parts with
     /// the sections in the wrong order.
-    public static let unexpectedSectionWhileStreamingBody = Self(.unexpectedSectionWhileStreamingBody)
+    case unexpectedSectionWhileStreamingBody
 }
