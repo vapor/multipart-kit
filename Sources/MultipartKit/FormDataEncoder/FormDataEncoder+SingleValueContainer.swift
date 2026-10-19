@@ -46,16 +46,19 @@ extension FormDataEncoder.Encoder: SingleValueEncodingContainer {
         storage.dataContainer = SingleValueDataContainer(part: .init(headerFields: [:], body: Body(value.description.utf8)))
     }
 
+    private func collectBody<B: MultipartPartBodyElement>(
+        of encodable: some MultipartPartEncodable, as _: B.Type
+    ) -> B {
+        encodable.withBody { $0.withUnsafeBytes { B($0) } }
+    }
+
     func encode<T: Encodable>(_ value: T) throws {
         switch value {
-        case let multipartEncodable as any MultipartPartEncodable<Body>:
-            let multipart: MultipartPart<Body>
-            do {
-                multipart = try multipartEncodable.multipart
-            } catch {
-                return try value.encode(to: self)
-            }
-            storage.dataContainer = SingleValueDataContainer(part: multipart)
+        case let multipartEncodable as any MultipartPartEncodable:
+            storage.dataContainer = SingleValueDataContainer(
+                headerFields: try multipartEncodable.headerFields,
+                body: multipartEncodable
+            )
         case let multipart as MultipartPart<Body>:
             storage.dataContainer = SingleValueDataContainer(part: multipart)
         case let data as Data:

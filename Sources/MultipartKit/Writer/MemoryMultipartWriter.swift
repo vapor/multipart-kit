@@ -90,6 +90,23 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
         buffer.append(contentsOf: ArraySlice.crlf)
     }
 
+    mutating func _writePart(_ part: DeferrableBodyPart<some MultipartPartBodyElement>) {
+        buffer.reserveCapacity(part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
+        buffer.appendBoundary(boundary, end: false)
+        buffer.appendHeaders(part.headerFields)
+        switch part.body {
+        case .owned(let owned):
+            buffer.append(contentsOf: owned)
+        case .deferred(let encodable):
+            encodable.withBody {
+                $0.withUnsafeBytes {
+                    unsafe buffer.append(contentsOf: $0)
+                }
+            }
+        }
+        buffer.append(contentsOf: ArraySlice.crlf)
+    }
+
     @inlinable
     mutating func _finish() {
         buffer.reserveCapacity(boundary.utf8.count + 10)
