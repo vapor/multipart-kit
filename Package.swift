@@ -50,6 +50,5 @@ var swiftSettings: [SwiftSetting] {
         .enableUpcomingFeature("ExistentialAny"),
         .enableUpcomingFeature("MemberImportVisibility"),
         .enableUpcomingFeature("InternalImportsByDefault"),
-        .enableExperimentalFeature("AnyAppleOSAvailability"),
     ]
 }

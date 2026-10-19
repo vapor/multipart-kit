@@ -1,7 +1,6 @@
 import HTTPTypes
 import MultipartKit
 
-@available(anyAppleOS 26, *)
 struct File: Codable, Equatable, MultipartPartConvertible {
     let filename: String
     let data: [UInt8]
@@ -15,7 +14,11 @@ struct File: Codable, Equatable, MultipartPartConvertible {
     }
 
     func withBody<R>(_ closure: (RawSpan) throws -> R) rethrows -> R {
-        try closure(self.data.span.bytes)
+        if #available(macOS 26.0, iOS 26.0, watchOS 26.0, tvOS 26.0, visionOS 26.0, *) {
+            try closure(self.data.span.bytes)
+        } else {
+            try self.data.withUnsafeBytes { try closure($0.bytes) }
+        }
     }
 
     init(filename: String, data: [UInt8]) {

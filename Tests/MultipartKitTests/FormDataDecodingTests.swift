@@ -351,7 +351,6 @@ struct FormDataDecodingTests {
         #expect(deserializedBar == bar)
     }
 
-    @available(anyAppleOS 26, *)
     @Test("Decode simil-Vapor File type")
     func decodeSimilVaporFileType() async throws {
         struct User: Codable {
@@ -389,7 +388,6 @@ struct FormDataDecodingTests {
         #expect(decoded.image == user.image)
     }
 
-    @available(anyAppleOS 26, *)
     @Test(
         "Decode optional File sent as empty part by browser",
         .bug("https://github.com/vapor/multipart-kit/issues/146"))
