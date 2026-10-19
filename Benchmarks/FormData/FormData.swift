@@ -63,4 +63,36 @@ let benchmarks: @Sendable () -> Void = {
     ) { benchmark in
         blackHole(try FormDataDecoder().decode(Upload.self, from: encoded, boundary: boundary))
     }
+
+    Benchmark(
+        "Encoder_\(fileSizeInMiB)MiB_Instructions",
+        configuration: .init(
+            metrics: [.instructions],
+            maxDuration: .seconds(10),
+            maxIterations: 20,
+            thresholds: [
+                /// Instruction counts are near-deterministic, so a small relative
+                /// tolerance is enough; no absolute fudge needed.
+                .instructions: .init(relative: [.p90: 3])
+            ]
+        )
+    ) { benchmark in
+        blackHole(try FormDataEncoder().encode(upload, boundary: boundary, to: [UInt8].self))
+    }
+
+    Benchmark(
+        "Decoder_\(fileSizeInMiB)MiB_Instructions",
+        configuration: .init(
+            metrics: [.instructions],
+            maxDuration: .seconds(10),
+            maxIterations: 20,
+            thresholds: [
+                /// Instruction counts are near-deterministic, so a small relative
+                /// tolerance is enough; no absolute fudge needed.
+                .instructions: .init(relative: [.p90: 3])
+            ]
+        )
+    ) { benchmark in
+        blackHole(try FormDataDecoder().decode(Upload.self, from: encoded, boundary: boundary))
+    }
 }
