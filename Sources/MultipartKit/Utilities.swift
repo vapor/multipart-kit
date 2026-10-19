@@ -57,7 +57,7 @@ extension UInt8 {
     @usableFromInline static let space: UInt8 = 32
 }
 
-extension ArraySlice where Element == UInt8 {
+extension Array where Element == UInt8 {
     @usableFromInline static let crlf: Self = [.cr, .lf]
     @usableFromInline static let twoHyphens: Self = [.hyphen, .hyphen]
     @usableFromInline static let colonSpace: Self = [.colon, .space]
