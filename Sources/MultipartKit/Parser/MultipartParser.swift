@@ -67,6 +67,7 @@ public struct MultipartParser: Sendable {
     }
 
     mutating func read() -> ReadResult {
+        // TODO: Drop this when we drop 6.3
         let bytes = self.buffer
 
         switch stateMachine.read(bytes.span) {
