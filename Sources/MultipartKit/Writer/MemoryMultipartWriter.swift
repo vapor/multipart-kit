@@ -87,7 +87,7 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
         buffer.appendBoundary(boundary, end: false)
         buffer.appendHeaders(part.headerFields)
         buffer.append(contentsOf: part.body)
-        buffer.append(contentsOf: ArraySlice.crlf)
+        buffer.append(contentsOf: Array.crlf)
     }
 
     mutating func _writePart(_ part: DeferrableBodyPart<some MultipartPartBodyElement>) {
@@ -104,7 +104,7 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
                 }
             }
         }
-        buffer.append(contentsOf: ArraySlice.crlf)
+        buffer.append(contentsOf: Array.crlf)
     }
 
     @inlinable

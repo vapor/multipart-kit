@@ -33,7 +33,12 @@ extension MultipartParser {
         var boundary: [UInt8] { Array(crlfWithBoundary.dropFirst(2)) }
 
         mutating func read(_ bytes: Span<UInt8>) -> Action {
-            switch self.state {
+            guard !bytes.isEmpty else {
+                if case .finished = self.state { return .finished }
+                return .feedMoreData(consumed: 0)
+            }
+
+            return switch self.state {
             case .initial:
                 parseBoundary(from: bytes)
 
@@ -83,7 +88,7 @@ extension MultipartParser {
             switch buffer.getFirstRange(of: crlfWithBoundary) {
             case .prematureEnd:  // found part of body end, request more data
                 self.state = .parsing(.body)
-                return .feedMoreData(consumed: buffer.count)
+                return .feedMoreData(consumed: 0)
 
             case .notFound:  // end not in sight, emit body chunk
                 self.state = .parsing(.body)
@@ -111,14 +116,14 @@ extension MultipartParser {
 
             case .prematureEnd:
                 self.state = .parsing(.header)
-                return .feedMoreData(consumed: buffer.count)
+                return .feedMoreData(consumed: 0)
             }
 
             // check for second CRLF (end of headers)
             switch buffer.extracting(indexAfterFirstCRLF...).getIndexAfter(.crlf) {
             case .success(let index):  // end of headers found, move to body
                 self.state = .parsing(.body)
-                return .emit(.headerFields([:]), consumed: index)
+                return .emit(.headerFields([:]), consumed: indexAfterFirstCRLF + index)
 
             case .wrongCharacter:  // no end of headers
                 self.state = .parsing(.header)
@@ -130,8 +135,7 @@ extension MultipartParser {
 
             // read the header name until ":" or CR
             guard
-
-                let endOfHeaderNameIndex = buffer.extracting(indexAfterFirstCRLF...).firstIndex(where: { element in
+                var endOfHeaderNameIndex = buffer.extracting(indexAfterFirstCRLF...).firstIndex(where: { element in
                     element == .colon || element == .cr
                 })
             else {
@@ -139,21 +143,24 @@ extension MultipartParser {
                 return .feedMoreData(consumed: 0)
             }
 
-            let headerName = buffer.extracting(indexAfterFirstCRLF..<indexAfterFirstCRLF + endOfHeaderNameIndex)
-            let headerWithoutName = buffer.extracting((endOfHeaderNameIndex + indexAfterFirstCRLF)...)
+            endOfHeaderNameIndex += indexAfterFirstCRLF
+            let headerName = buffer.extracting(indexAfterFirstCRLF..<endOfHeaderNameIndex)
+            let headerWithoutName = buffer.extracting(endOfHeaderNameIndex...)
 
             // there should be a colon and space after the header name
             let indexAfterColonAndSpace: Span.Index
             switch headerWithoutName.getIndexAfter([UInt8.colon, .space]) {  // ": "
             case .wrongCharacter(at: let index):
-                return .fail(.invalidHeader(reason: "Expected ': ' after header name, found \(Character(UnicodeScalar(buffer[index])))"))
+                return .fail(
+                    .invalidHeader(reason: "Expected ': ' after header name, found \(Character(UnicodeScalar(headerWithoutName[index])))")
+                )
 
             case .prematureEnd:
                 self.state = .parsing(.header)
                 return .feedMoreData(consumed: 0)
 
             case .success(let index):
-                indexAfterColonAndSpace = index
+                indexAfterColonAndSpace = endOfHeaderNameIndex + index
             }
 
             // read the header value until CRLF
@@ -161,12 +168,12 @@ extension MultipartParser {
             let consumed: Int
             switch buffer.extracting(indexAfterColonAndSpace...).getFirstRange(of: .crlf) {
             case .success(let range):
-                consumed = range.upperBound
-                headerValue = buffer.extracting(indexAfterColonAndSpace..<range.lowerBound)
+                consumed = indexAfterColonAndSpace + range.lowerBound
+                headerValue = buffer.extracting(indexAfterColonAndSpace..<(indexAfterColonAndSpace + range.lowerBound))
 
             case .notFound, .prematureEnd:
                 self.state = .parsing(.header)
-                return .feedMoreData(consumed: buffer.count)
+                return .feedMoreData(consumed: 0)
             }
 
             // add the header to the fields

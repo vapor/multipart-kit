@@ -114,7 +114,7 @@ extension MultipartWriter {
         for chunk in chunks {
             try await write(bytes: chunk)
         }
-        try await write(bytes: ArraySlice.crlf)
+        try await write(bytes: Array.crlf)
     }
 
     /// Writes body chunks from an async sequence followed by a CRLF sequence.
@@ -127,7 +127,7 @@ extension MultipartWriter {
         for try await chunk in chunks {
             try await write(bytes: chunk)
         }
-        try await write(bytes: ArraySlice.crlf)
+        try await write(bytes: Array.crlf)
     }
 
     /// Writes a complete multipart part including boundary, headers, and body.
@@ -146,7 +146,7 @@ extension MultipartWriter {
         prefix.appendHeaders(part.headerFields)
         try await write(bytes: prefix)
         try await writeBodyChunk(part.body)
-        try await write(bytes: ArraySlice.crlf)
+        try await write(bytes: Array.crlf)
     }
 
     /// Writes the final boundary to the multipart data.

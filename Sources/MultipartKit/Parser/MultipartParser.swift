@@ -59,7 +59,7 @@ public struct MultipartParser: Sendable {
             .boundary(end: end)
 
         case .bodyChunk(let range):
-            .bodyChunk(buffer[range])
+            .bodyChunk(buffer[(buffer.startIndex + range.lowerBound)..<(buffer.startIndex + range.upperBound)])
 
         case .headerFields(let fields):
             .headerFields(fields)
@@ -69,8 +69,9 @@ public struct MultipartParser: Sendable {
     mutating func read() -> ReadResult {
         switch self.stateMachine.read(self.buffer.span) {
         case .emit(let smSection, let consumed):
+            let section = self.section(from: smSection)
             buffer = buffer.dropFirst(consumed)
-            return .success(reading: self.section(from: smSection))
+            return .success(reading: section)
 
         case .feedMoreData(let consumed):
             buffer = buffer.dropFirst(consumed)

@@ -77,12 +77,12 @@ where BackingSequence.Element: MultipartPartBodyElement {
                             continue
                         case .bodyChunk(let chunk):
                             if !headerFields.isEmpty {
-                                pendingBodyChunk = .init(chunk)
+                                pendingBodyChunk = chunk as? BackingSequence.Element ?? .init(chunk)
                                 let returningFields = headerFields
                                 headerFields = .init()
                                 return .headerFields(returningFields)
                             }
-                            return .bodyChunk(.init(chunk))
+                            return .bodyChunk(chunk as? BackingSequence.Element ?? .init(chunk))
                         case .boundary(let end):
                             return .boundary(end: end)
                         }
@@ -106,9 +106,9 @@ where BackingSequence.Element: MultipartPartBodyElement {
                     }
 
                     if let next {
-                        parser.append(buffer: .init(next))
+                        parser.append(buffer: next as? ArraySlice<UInt8> ?? .init(next))
                     } else {
-                        switch parser.state {
+                        switch parser.stateMachine.state {
                         case .initial, .finished:
                             return nil
                         case .parsing:
