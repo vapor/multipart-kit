@@ -9,6 +9,7 @@ let package = Package(
     dependencies: [
         .package(path: "../"),
         .package(url: "https://github.com/ordo-one/benchmark.git", from: "1.35.0"),
+        .package(url: "https://github.com/apple/swift-http-types.git", from: "1.3.0"),
     ],
     targets: [
         .executableTarget(
@@ -31,6 +32,18 @@ let package = Package(
                 .target(name: "Utilities"),
             ],
             path: "Parser",
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "benchmark")
+            ]
+        ),
+        .executableTarget(
+            name: "FormData",
+            dependencies: [
+                .product(name: "MultipartKit", package: "multipart-kit"),
+                .product(name: "Benchmark", package: "benchmark"),
+                .product(name: "HTTPTypes", package: "swift-http-types"),
+            ],
+            path: "FormData",
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "benchmark")
             ]
