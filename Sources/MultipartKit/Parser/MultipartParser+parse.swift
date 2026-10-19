@@ -13,13 +13,15 @@ extension MultipartParser {
     @_specialize(where Body == ArraySlice<UInt8>)
     public func parse<Body: MultipartPartBodyElement>(_ data: Body) throws(MultipartParserError) -> [MultipartPart<Body>] {
         // Arrays and slices can be shared with the parser instead of copied.
-        let bytes: ArraySlice<UInt8> =
-            switch data {
-            case let slice as ArraySlice<UInt8>: slice
-            case let array as [UInt8]: array[...]
-            default: ArraySlice(data)
-            }
-        return try self.parts(in: bytes)
+        try self.parts(in: Self.bytes(of: data))
+    }
+
+    static func bytes(of data: some MultipartPartBodyElement) -> ArraySlice<UInt8> {
+        switch data {
+        case let slice as ArraySlice<UInt8>: slice
+        case let array as [UInt8]: array[...]
+        default: ArraySlice(data)
+        }
     }
 
     /// Synchronously parse the multipart data into an array of ``MultipartPart``.
@@ -34,9 +36,9 @@ extension MultipartParser {
         try self.parts(in: data.withUnsafeBufferPointer { unsafe ArraySlice($0) })
     }
 
-    private func parts<Body: MultipartPartBodyElement>(in bytes: ArraySlice<UInt8>) throws(MultipartParserError) -> [MultipartPart<Body>] {
+    func parts<Body: MultipartPartBodyElement>(in bytes: ArraySlice<UInt8>) throws(MultipartParserError) -> [MultipartPart<Body>] {
         var output: [MultipartPart<Body>] = []
-        var parser = MultipartParser(boundaryWithDelimiters: self.boundary)
+        var parser = self
 
         var currentHeaders = HTTPFields()
         var currentBody = ArraySlice<UInt8>()

@@ -6,22 +6,8 @@ import HTTPTypes
 /// arrives, wrap the incoming chunks in a ``StreamingMultipartParserAsyncSequence`` or a
 /// ``MultipartParserAsyncSequence`` instead.
 public struct MultipartParser: Sendable {
-    let crlfWithBoundary: ArraySlice<UInt8>
     private(set) var stateMachine: StateMachine
     private(set) var buffer: ArraySlice<UInt8>
-
-    /// `--<boundary>`: a slice of ``crlfWithBoundary``, dropping the leading CRLF.
-    var boundary: ArraySlice<UInt8> { crlfWithBoundary.dropFirst(2) }
-
-    init(boundaryWithDelimiters: some Collection<UInt8>) {
-        var bytes: [UInt8] = []
-        bytes.reserveCapacity(2 + boundaryWithDelimiters.count)
-        bytes.append(contentsOf: Array.crlf)
-        bytes.append(contentsOf: boundaryWithDelimiters)
-        self.crlfWithBoundary = bytes[...]
-        self.stateMachine = .init(state: .initial, crlfWithBoundary: Array(crlfWithBoundary))
-        self.buffer = .init()
-    }
 
     /// Creates a new parser for messages separated by the given boundary.
     ///
@@ -33,8 +19,7 @@ public struct MultipartParser: Sendable {
         bytes.append(contentsOf: Array.crlf)
         bytes.append(contentsOf: Array.twoHyphens)
         bytes.append(contentsOf: boundary.utf8)
-        self.crlfWithBoundary = bytes[...]
-        self.stateMachine = .init(state: .initial, crlfWithBoundary: Array(crlfWithBoundary))
+        self.stateMachine = .init(state: .initial, crlfWithBoundary: bytes)
         self.buffer = .init()
     }
 
