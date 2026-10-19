@@ -13,14 +13,14 @@ package final class AsyncSyncSequence<Base: Sequence>: AsyncSequence, @unchecked
     package typealias Element = Base.Element
 
     package struct Iterator: AsyncIteratorProtocol {
-        var iterator: Base.Iterator?
+        var iterator: Base.Iterator
 
         init(_ iterator: Base.Iterator) {
             self.iterator = iterator
         }
 
         public mutating func next() async -> Base.Element? {
-            iterator?.next()
+            iterator.next()
         }
     }
 
