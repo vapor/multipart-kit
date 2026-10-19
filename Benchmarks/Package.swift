@@ -50,6 +50,9 @@ let package = Package(
         ),
         .target(
             name: "Utilities",
+            dependencies: [
+                .product(name: "MultipartKit", package: "multipart-kit")
+            ],
             path: "Utilities"
         ),
     ]
