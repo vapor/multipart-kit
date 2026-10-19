@@ -74,6 +74,7 @@ extension MultipartParser {
                     return .emit(.boundary(end: true), consumed: buffer.count)
 
                 case .prematureEnd:
+                    self.state = .parsing(.boundary)
                     return .feedMoreData(consumed: 0)
 
                 case .wrongCharacter:  // if it's not, move on to reading headers
