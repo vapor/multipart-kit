@@ -2,7 +2,7 @@ import OrderedCollections
 
 extension FormDataDecoder {
     struct KeyedContainer<K: CodingKey, Body: MultipartPartBodyElement> {
-        let data: MultipartFormData<Body>.Keyed
+        let data: MultipartFormData<MultipartPart<Body>>.Keyed
         let decoder: FormDataDecoder.Decoder<Body>
     }
 }
@@ -20,7 +20,7 @@ extension FormDataDecoder.KeyedContainer: KeyedDecodingContainerProtocol {
         data.keys.contains(key.stringValue)
     }
 
-    func getValue(forKey key: any CodingKey) throws -> MultipartFormData<Body> {
+    func getValue(forKey key: any CodingKey) throws -> MultipartFormData<MultipartPart<Body>> {
         guard let value = data[key.stringValue] else {
             throw DecodingError.keyNotFound(
                 key,

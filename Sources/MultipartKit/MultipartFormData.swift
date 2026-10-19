@@ -2,16 +2,26 @@ import Algorithms
 import HTTPTypes
 import OrderedCollections
 
+/// A single part that ``MultipartFormData`` can hold.
+///
+/// Can either be ``MultipartPart``, which ``FormDataDecoder`` always uses,
+/// or ``DeferrableBodyPart`` which ``FormDataEncoder`` may use, to be able to avoid an allocation.
+protocol FormDataSinglePart {
+    var headerFields: HTTPFields { get set }
+}
+extension MultipartPart: FormDataSinglePart {}
+extension DeferrableBodyPart: FormDataSinglePart {}
+
 /// Internal representation of parsed multipart form data with support for hierarchical structures.
 ///
 /// This type is used by the `FormDataDecoder` to represent the hierarchical structure
 /// of multipart form data, with support for nested objects and arrays through
 /// field name notation like `user[address][street]`.
-enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
+enum MultipartFormData<SinglePart: FormDataSinglePart> {
     typealias Keyed = OrderedDictionary<String, MultipartFormData>
 
     /// A single multipart part containing field data.
-    case single(MultipartPart<Body>)
+    case single(SinglePart)
 
     /// An array of form data items (represents indexed fields like `items[]`).
     case array([MultipartFormData])
@@ -22,10 +32,10 @@ enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
     /// Special case when the nesting depth limit has been exceeded.
     case nestingDepthExceeded
 
-    init(parts: [MultipartPart<Body>], nestingDepth: Int) throws {
+    init(parts: [SinglePart], nestingDepth: Int) throws {
         self = .empty
         for part in parts {
-            let name = try part.contentDisposition?.name
+            let name = try part.headerFields[.contentDisposition].flatMap(ContentDisposition.init(from:))?.name
             let path = name.map(makePath) ?? []
             insert(part, at: path, remainingNestingDepth: nestingDepth)
         }
@@ -45,7 +55,7 @@ enum MultipartFormData<Body: MultipartPartBodyElement>: Sendable {
         return dict
     }
 
-    var part: MultipartPart<Body>? {
+    var part: SinglePart? {
         guard case .single(let part) = self else { return nil }
         return part
     }
@@ -116,11 +126,11 @@ extension MultipartFormData {
     /// This method is used by `FormDataEncoder` to convert the structured form data
     /// back to a flat list of parts with appropriate `name` attributes in their
     /// Content-Disposition headers.
-    func namedParts() -> [MultipartPart<Body>] {
+    func namedParts() -> [SinglePart] {
         Self.namedParts(from: self)
     }
 
-    private static func namedParts(from data: MultipartFormData, path: String? = nil) -> [MultipartPart<Body>] {
+    private static func namedParts(from data: MultipartFormData, path: String? = nil) -> [SinglePart] {
         switch data {
         case .single(let part):
             // Create a new part with the updated name parameter
@@ -141,20 +151,16 @@ extension MultipartFormData {
     }
 
     /// Creates a new part with the given name parameter in its Content-Disposition header.
-    private static func createPartWithName(_ part: MultipartPart<Body>, name: String?) -> MultipartPart<Body> {
-        var headerFields = part.headerFields
-        headerFields.setParameter(.contentDisposition, "name", to: name)
-
-        return MultipartPart(
-            headerFields: headerFields,
-            body: part.body
-        )
+    private static func createPartWithName(_ part: SinglePart, name: String?) -> SinglePart {
+        var part = part
+        part.headerFields.setParameter(.contentDisposition, "name", to: name)
+        return part
     }
 }
 
 extension MultipartFormData {
     fileprivate mutating func insert(
-        _ part: MultipartPart<Body>,
+        _ part: SinglePart,
         at path: ArraySlice<String>,
         remainingNestingDepth: Int
     ) {
@@ -186,7 +192,7 @@ extension MultipartFormData {
         }
     }
 
-    private mutating func insert(_ part: MultipartPart<Body>, at index: Int?, tail: ArraySlice<String>, depth: Int) {
+    private mutating func insert(_ part: SinglePart, at index: Int?, tail: ArraySlice<String>, depth: Int) {
         var array: [MultipartFormData] = []
         if case .array(let existing) = self {
             self = .nestingDepthExceeded
