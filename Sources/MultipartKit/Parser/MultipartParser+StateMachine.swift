@@ -190,7 +190,7 @@ extension MultipartParser {
 }
 
 extension Span where Element == UInt8 {
-    /* @unsafe */ var utf8String: String {
+    var utf8String: String {
         if #available(macOS 26.0, iOS 26.0, watchOS 26.0, tvOS 26.0, visionOS 26.0, *),
             let utf8 = try? UTF8Span(validating: self)
         {
