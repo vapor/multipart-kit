@@ -94,7 +94,7 @@ extension FormDataDecoder.Decoder: SingleValueDecodingContainer {
             switch T.self {
             case let multipartDecodable as any MultipartPartDecodable.Type:
                 try part.body.withContiguousStorageIfAvailable {
-                    try multipartDecodable.init(headerFields: part.headerFields, body: RawSpan(_unsafeElements: $0))
+                    try multipartDecodable.init(headerFields: part.headerFields, body: $0.span.bytes)
                 } as? T ?? multipartDecodable.init(headerFields: part.headerFields, body: ContiguousArray(part.body).span.bytes) as? T
             case is MultipartPart<Body>.Type:
                 part as? T

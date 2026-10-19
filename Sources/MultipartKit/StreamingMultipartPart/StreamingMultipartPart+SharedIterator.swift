@@ -1,7 +1,7 @@
 import HTTPTypes
 
 actor StreamingMultipartPartSharedIterator<
-    BackingSequence: AsyncSequence,
+    BackingSequence: AsyncSequence & Sendable,
     BodyChunk: MultipartPartBodyElement
 > where BackingSequence.Element == MultipartSection<BodyChunk> {
     typealias BackingIterator = BackingSequence.AsyncIterator
@@ -44,11 +44,15 @@ actor StreamingMultipartPartSharedIterator<
             defer { backingIterator = iterator }
 
             let next: MultipartSection<BodyChunk>?
+            #if canImport(Darwin)
             if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
                 next = try await iterator.next(isolation: self)
             } else {
                 next = try await iterator.next()
             }
+            #else
+            next = try await iterator.next(isolation: self)
+            #endif
 
             guard let next else { break }
 
@@ -105,11 +109,15 @@ actor StreamingMultipartPartSharedIterator<
         defer { backingIterator = iterator }
 
         let next: MultipartSection<BodyChunk>?
+        #if canImport(Darwin)
         if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
             next = try await iterator.next(isolation: self)
         } else {
             next = try await iterator.next()
         }
+        #else
+        next = try await iterator.next(isolation: self)
+        #endif
 
         guard let next else { return nil }
 
