@@ -46,7 +46,7 @@ extension StreamingMultipartParserAsyncSequence.AsyncIterator {
                     throw MultipartParserError.backingSequenceError(reason: "\(error)")
                 }
                 if let next {
-                    parser.append(buffer: .init(next))
+                    parser.append(buffer: next as? ArraySlice<UInt8> ?? ArraySlice(next))
                 } else {
                     switch parser.state {
                     case .initial, .finished:
