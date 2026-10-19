@@ -231,53 +231,51 @@ extension ArraySlice where Element == UInt8 {
         return .success(resultIndex)
     }
 
-    /// The result of a ``Swift/ArraySlice/getFirstRange(of:)`` call.
-    enum FirstIndexOfSliceResult {
-        /// The slice was found. The associated index is the index before the slice.
-        case success(Range<Index>)
-        /// The slice was not found in the buffer.
-        case notFound
-        case prematureEnd
-    }
-
-    /// Returns the range of the matching slice if it matches.
-    /// - Parameters:
-    ///    - slice: The slice to match against the buffer.
-    /// - Returns: The range of the matching slice if it matches, ``FirstIndexOfSliceResult/notFound`` if the slice was not
-    ///     or ``FirstIndexOfSliceResult/prematureEnd``
-    func getFirstRange(of slice: ArraySlice<UInt8>) -> FirstIndexOfSliceResult {
-        guard !slice.isEmpty else { return .notFound }
-
-        var sliceIndex = slice.startIndex
-        var matchStartIndex: Index? = nil
-
-        for (currentIndex, element) in self.enumerated() {
-            if sliceIndex == slice.endIndex {
-                // we've matched the entire slice
-                let startIndex = self.index(self.startIndex, offsetBy: matchStartIndex!)
-                let endIndex = self.index(self.startIndex, offsetBy: currentIndex)
-                return .success(startIndex..<endIndex)
-            }
-            if element == slice[sliceIndex] {
-                // matching char found
-                if sliceIndex == slice.startIndex {
-                    matchStartIndex = currentIndex
-                }
-                sliceIndex = slice.index(after: sliceIndex)
-            } else {
-                // reset
-                sliceIndex = slice.startIndex
-                matchStartIndex = nil
-
-                // check if current char could start new match
-                if element == slice[sliceIndex] {
-                    matchStartIndex = currentIndex
-                    sliceIndex = slice.index(after: sliceIndex)
-                }
-            }
+    /// Returns the range of `slice` in this buffer, in this buffer's indices.
+    fileprivate func getFirstRange(of slice: ArraySlice<UInt8>) -> FirstIndexOfSliceResult {
+        switch self.span.getFirstRange(of: slice.span) {
+        case .success(let range):
+            .success((range.lowerBound + self.startIndex)..<(range.upperBound + self.startIndex))
+        case .notFound:
+            .notFound
+        case .prematureEnd:
+            .prematureEnd
         }
-        if sliceIndex != slice.startIndex {
-            return .prematureEnd
+    }
+}
+
+/// The result of a ``Swift/Span/getFirstRange(of:)`` call.
+private enum FirstIndexOfSliceResult {
+    /// The slice was found at the associated range.
+    case success(Range<Int>)
+    /// The slice was not found in the buffer.
+    case notFound
+    /// The buffer ends with the start of the slice, so more data is needed to tell.
+    case prematureEnd
+}
+
+extension Span where Element == UInt8 {
+    /// Returns the range of the first occurrence of `slice`, as offsets into this span.
+    /// - Parameters:
+    ///    - slice: The bytes to look for.
+    /// - Returns: The range of the match, ``FirstIndexOfSliceResult/notFound`` if there is none,
+    ///     or ``FirstIndexOfSliceResult/prematureEnd``.
+    fileprivate func getFirstRange(of slice: Span<UInt8>) -> FirstIndexOfSliceResult {
+        guard !slice.isEmpty else { return .notFound }
+        let first = slice[0]
+
+        for start in 0..<self.count where self[start] == first {
+            let available = Swift.min(slice.count, self.count - start)
+            var matched = 1
+            while matched < available && self[start + matched] == slice[matched] {
+                matched += 1
+            }
+            if matched == slice.count {
+                return .success(start..<(start + slice.count))
+            }
+            if matched == available {
+                return .prematureEnd
+            }
         }
         return .notFound
     }

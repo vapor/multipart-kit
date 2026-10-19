@@ -160,6 +160,33 @@ struct ParserTests {
         }
     }
 
+    @Test("Body is emitted when a chunk ends exactly at the closing boundary")
+    func parseChunkEndingAtBoundary() async throws {
+        let boundary = "boundary123"
+        // One chunk that ends right after `\r\n--boundary123`, then the stream ends.
+        let message = ArraySlice(
+            """
+            --\(boundary)\r
+            Content-Disposition: form-data; name="id"\r
+            \r
+            hello\r
+            --\(boundary)
+            """.utf8
+        )
+        let stream = AsyncStream<ArraySlice<UInt8>> {
+            $0.yield(message)
+            $0.finish()
+        }
+        var iterator = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: stream).makeAsyncIterator()
+
+        #expect(try await iterator.next() == .boundary(end: false))
+        #expect(try await iterator.next() == .headerFields([.contentDisposition: #"form-data; name="id""#]))
+        #expect(try await iterator.next() == .bodyChunk(ArraySlice("hello".utf8)))
+        await #expect(throws: MultipartParserError.unexpectedEndOfFile) {
+            _ = try await iterator.next()
+        }
+    }
+
     @Test("Parse Message with Invalid Header Name")
     func parseInvalidHeader() async throws {
         let boundary = "boundary123"
