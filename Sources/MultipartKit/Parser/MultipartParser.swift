@@ -67,7 +67,9 @@ public struct MultipartParser: Sendable {
     }
 
     mutating func read() -> ReadResult {
-        switch self.stateMachine.read(self.buffer.span) {
+        let bytes = self.buffer
+
+        switch stateMachine.read(bytes.span) {
         case .emit(let smSection, let consumed):
             let section = self.section(from: smSection)
             buffer = buffer.dropFirst(consumed)
