@@ -100,19 +100,27 @@ false
 
 Note that the array elements always include the index (as opposed to just `[]`) in order to support complex nesting.
 
-### Working with parts directly
+## Working with parts directly
 
-If you don't need `Codable`, you can work with ``MultipartPart`` values yourself. Each part exposes its header fields and body, and can parse its own `Content-Disposition` header into a ``ContentDisposition``.
+If you don't need `Codable`, you can work with ``MultipartPart`` values yourself. Each part exposes its ``MultipartPart/headerFields`` and ``MultipartPart/body``, and can parse its own `Content-Disposition` header.
 
 ```swift
-let parts = try MultipartParser<ArraySlice<UInt8>>(boundary: boundary).parse(message)
+let parts = try MultipartParser(boundary: boundary).parse(message)
 
 for part in parts {
     // ...
 }
 ```
 
-### Streaming
+``ContentDisposition`` gives you the parsed ``ContentDisposition/dispositionType``, ``ContentDisposition/name``, ``ContentDisposition/filename``, and any ``ContentDisposition/additionalParameters``, rather than making you pick the header apart by hand.
+
+If the message is already in a `Span<UInt8>`, parse it directly with ``MultipartParser/parse(_:as:)`` and choose the body type of the parts.
+
+```swift
+let parts = try MultipartParser(boundary: boundary).parse(span, as: [UInt8].self)
+```
+
+## Streaming
 
 ``MultipartParser/parse(_:)`` needs the whole message up front. To parse a message as it arrives, wrap any `AsyncSequence` of body chunks in one of the two parser sequences.
 
@@ -135,7 +143,7 @@ for try await section in sequence {
 
 ## Serializing
 
-Serialization goes through the `MultipartWriter` protocol. `MemoryMultipartWriter` collects the message in memory and hands it back to you.
+Serialization goes through the ``MultipartWriter`` protocol. ``MemoryMultipartWriter`` collects the message in memory and hands it back to you.
 
 ```swift
 var writer = MemoryMultipartWriter<[UInt8]>(boundary: boundary)
@@ -151,9 +159,9 @@ writer.finish()
 let serialized = writer.getResult()
 ```
 
-To write somewhere other than memory, conform your own type to `MultipartWriter`. Implementing `write(bytes:)` is enough: boundaries, headers, and parts all get default implementations on top of it.
+To write somewhere other than memory, conform your own type to ``MultipartWriter``. Implementing ``MultipartWriter/write(bytes:)`` is enough: boundaries, headers, and parts all get default implementations on top of it.
 
-Finally, `StreamingMultipartWriterAsyncSequence` turns an `AsyncSequence` of `MultipartSection`s into an `AsyncSequence` of serialized chunks, which is the mirror image of the streaming parser.
+Finally, ``StreamingMultipartWriterAsyncSequence`` turns an `AsyncSequence` of ``MultipartSection`` values into an `AsyncSequence` of serialized chunks, which is the mirror image of the streaming parser.
 
 ```swift
 let sequence = StreamingMultipartWriterAsyncSequence(
