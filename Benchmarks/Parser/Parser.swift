@@ -30,8 +30,13 @@ let benchmarks: @Sendable () -> Void = {
             boundary: boundary,
             buffer: NoOpAsyncSequence()
         )
-        for try await part in sequence {
-            blackHole(part)
+        // An empty stream isn't a multipart message, so parsing it throws `unexpectedEndOfFile`.
+        do {
+            for try await part in sequence {
+                blackHole(part)
+            }
+        } catch {
+            blackHole(error)
         }
     }
 
@@ -103,8 +108,13 @@ let benchmarks: @Sendable () -> Void = {
             boundary: boundary,
             buffer: NoOpAsyncSequence()
         )
-        for try await part in sequence {
-            blackHole(part)
+        // An empty stream isn't a multipart message, so parsing it throws `unexpectedEndOfFile`.
+        do {
+            for try await part in sequence {
+                blackHole(part)
+            }
+        } catch {
+            blackHole(error)
         }
     }
 

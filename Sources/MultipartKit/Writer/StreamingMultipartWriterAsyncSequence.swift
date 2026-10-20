@@ -98,6 +98,8 @@ where
         @usableFromInline
         var needsCRLFAfterBody: Bool
         @usableFromInline
+        var needsCRLFBeforeBody: Bool
+        @usableFromInline
         var backingIterator: BackingSequence.AsyncIterator
         @usableFromInline
         var writer: EmbeddedWriter
@@ -115,6 +117,7 @@ where
             self.backingIterator = backingIterator
             self.writer = .init(boundary: boundary)
             self.needsCRLFAfterBody = false
+            self.needsCRLFBeforeBody = false
         }
 
         /// Serializes a single section into the writer's buffer and returns it.
@@ -129,9 +132,15 @@ where
                     writer.write(bytes: Array.crlf)
                 }
                 writer.buffer.appendBoundary(writer.boundary, end: end)
+                needsCRLFBeforeBody = !end
             case .headerFields(let fields):
                 writer.buffer.appendHeaders(fields)
+                needsCRLFBeforeBody = false
             case .bodyChunk(let chunk):
+                if needsCRLFBeforeBody {
+                    needsCRLFBeforeBody = false
+                    writer.buffer.append(contentsOf: Array.crlf)
+                }
                 writer.buffer.append(contentsOf: chunk)
                 self.needsCRLFAfterBody = true
             }
@@ -162,7 +171,7 @@ where
 
             guard let section else { return nil }
 
-            if case .bodyChunk(let chunk) = section, let chunk = chunk as? OutboundBody {
+            if case .bodyChunk(let chunk) = section, !needsCRLFBeforeBody, let chunk = chunk as? OutboundBody {
                 self.needsCRLFAfterBody = true
                 return chunk
             }

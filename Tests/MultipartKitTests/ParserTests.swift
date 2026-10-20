@@ -307,6 +307,75 @@ struct ParserTests {
         }
     }
 
+    @Test("Collated parts include the body of an empty field")
+    func parseCollatedEmptyField() async throws {
+        let boundary = "boundary123"
+        let message = ArraySlice(
+            """
+            --\(boundary)\r
+            Content-Disposition: form-data; name="a"\r
+            \r
+            \r
+            --\(boundary)\r
+            Content-Disposition: form-data; name="b"\r
+            \r
+            xyz\r
+            --\(boundary)--\r\n
+            """.utf8
+        )
+
+        var sections: [MultipartSection<ArraySlice<UInt8>>] = []
+        for try await section in MultipartParserAsyncSequence(boundary: boundary, buffer: makeParsingStream(for: message)) {
+            sections.append(section)
+        }
+
+        #expect(
+            sections == [
+                .headerFields([.contentDisposition: #"form-data; name="a""#]),
+                .bodyChunk([]),
+                .headerFields([.contentDisposition: #"form-data; name="b""#]),
+                .bodyChunk(ArraySlice("xyz".utf8)),
+            ]
+        )
+    }
+
+    @Test("Parse a part without header fields")
+    func parsePartWithoutHeaders() throws {
+        let boundary = "boundary123"
+        let message = ArraySlice(
+            """
+            --\(boundary)\r
+            \r
+            AAA\r
+            --\(boundary)\r
+            Content-Disposition: form-data; name="x"\r
+            \r
+            BBB\r
+            --\(boundary)--\r\n
+            """.utf8
+        )
+
+        let parts = try MultipartParser(boundary: boundary).parse(message)
+
+        #expect(parts.count == 2)
+        #expect(parts.first?.headerFields.isEmpty == true)
+        #expect(parts.first?.body == ArraySlice("AAA".utf8))
+        #expect(parts.last?.body == ArraySlice("BBB".utf8))
+    }
+
+    @Test("Parse an empty message")
+    func parseEmptyMessage() async throws {
+        #expect(throws: MultipartParserError.unexpectedEndOfFile) {
+            _ = try MultipartParser(boundary: "boundary123").parse([UInt8]())
+        }
+
+        let stream = AsyncStream<ArraySlice<UInt8>> { $0.finish() }
+        var iterator = StreamingMultipartParserAsyncSequence(boundary: "boundary123", buffer: stream).makeAsyncIterator()
+        await #expect(throws: MultipartParserError.unexpectedEndOfFile) {
+            _ = try await iterator.next()
+        }
+    }
+
     private func makeParsingStream<Body: MultipartPartBodyElement>(for message: Body) -> AsyncStream<Body.SubSequence>
     where Body.SubSequence: Sendable {
         AsyncStream<Body.SubSequence> { continuation in

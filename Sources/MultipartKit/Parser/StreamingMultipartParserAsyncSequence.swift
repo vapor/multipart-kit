@@ -51,6 +51,7 @@ where BackingSequence.Element: MultipartPartBodyElement {
         var pendingBodyChunk: BackingSequence.Element?
 
         var currentCollatedBody = BackingSequence.Element()
+        var hasPendingCollatedBody = false
 
         /// Advances to the next section of the message.
         ///
@@ -109,9 +110,10 @@ where BackingSequence.Element: MultipartPartBodyElement {
                         parser.append(buffer: next as? ArraySlice<UInt8> ?? .init(next))
                     } else {
                         switch parser.stateMachine.state {
-                        case .initial, .finished:
+                        case .finished:
                             return nil
-                        case .parsing:
+                        case .initial, .parsing:
+                            // `.initial` means no bytes arrived at all, which isn't a multipart message either.
                             throw MultipartParserError.unexpectedEndOfFile
                         }
                     }
@@ -144,11 +146,16 @@ where BackingSequence.Element: MultipartPartBodyElement {
                     self.currentCollatedBody.append(contentsOf: chunk)
                     if !headerFields.isEmpty {
                         defer { headerFields = .init() }
+                        hasPendingCollatedBody = true
                         return .headerFields(headerFields)
                     }
                 case .boundary:
-                    if !currentCollatedBody.isEmpty {
-                        defer { currentCollatedBody = .init() }
+                    // A part whose header fields were returned gets its body too, even an empty one.
+                    if hasPendingCollatedBody || !currentCollatedBody.isEmpty {
+                        defer {
+                            currentCollatedBody = .init()
+                            hasPendingCollatedBody = false
+                        }
                         return .bodyChunk(currentCollatedBody)
                     }
                 }

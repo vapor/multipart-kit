@@ -81,6 +81,18 @@ struct ContentDispositionTests {
         #expect(disposition.filename == "file with spaces.txt")
     }
 
+    @Test("Parse Content-Disposition with separators inside quotes and any letter case")
+    func testContentDispositionQuotedSeparators() throws {
+        let disposition = try ContentDisposition(from: #"Form-Data; Name="report"; FILENAME="report; final.pdf""#)
+        #expect(disposition.dispositionType == .formData)
+        #expect(disposition.name == "report")
+        #expect(disposition.filename == "report; final.pdf")
+
+        // Single quotes aren't quoting characters in HTTP, so they stay part of the value.
+        let apostrophes = try ContentDisposition(from: #"form-data; name="f"; filename="'draft'.txt""#)
+        #expect(apostrophes.filename == "'draft'.txt")
+    }
+
     @Test("Edge case Content-Disposition headers")
     func testContentDispositionEdgeCases() {
         let empty = MultipartPart<[UInt8]>(

@@ -115,6 +115,31 @@ struct WriterTests {
         #expect(serialized == expected)
     }
 
+    @Test("Write through sequence keeps a part without header fields")
+    func writeSequencePartWithoutHeaders() async throws {
+        let boundary = "boundary123"
+        let sections: [MultipartSection<ArraySlice<UInt8>>] = [
+            .boundary(end: false),
+            .bodyChunk(ArraySlice("no headers".utf8)),
+            .boundary(end: true),
+        ]
+        let sequence = StreamingMultipartWriterAsyncSequence(
+            backingSequence: makeSerializationStream(for: sections),
+            boundary: boundary,
+            outboundBody: ArraySlice<UInt8>.self
+        )
+
+        var serialized: [UInt8] = []
+        for try await chunk in sequence {
+            serialized.append(contentsOf: chunk)
+        }
+        let parts = try MultipartParser(boundary: boundary).parse(serialized)
+
+        #expect(parts.count == 1)
+        #expect(parts.first?.headerFields.isEmpty == true)
+        #expect(parts.first?.body == Array("no headers".utf8))
+    }
+
     @Test("Writing boundary")
     func writeBoundary() async throws {
         var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: "test")
@@ -366,6 +391,49 @@ struct WriterTests {
         let allData = countingWriter.writes.flatMap { $0 }
         let expected = Array("1234567890abc".utf8)
         #expect(allData == expected)
+    }
+
+    @Test(
+        "BufferedMultipartWriter flushes while writing whole parts",
+        arguments: [true, false]
+    )
+    func testBufferedWriterFlushesWholeParts(writingEndBoundary: Bool) async throws {
+        final class RecordingWriter: MultipartWriter, @unchecked Sendable {
+            typealias OutboundBody = [UInt8]
+            var writes: [[UInt8]] = []
+            let boundary: String
+            init(boundary: String) { self.boundary = boundary }
+            func write(bytes: some Collection<UInt8> & Sendable) {
+                writes.append(Array(bytes))
+            }
+        }
+
+        let boundary = "boundary"
+        let bufferCapacity = 64
+        // Empty bodies are the case that used to never flush: only the body bytes were counted.
+        let parts = (0..<100).map { index in
+            MultipartPart(
+                headerFields: [.contentDisposition: #"form-data; name="f\#(index)""#],
+                body: index.isMultiple(of: 2) ? [] : Array("value".utf8)
+            )
+        }
+
+        let recordingWriter = RecordingWriter(boundary: boundary)
+        var writer = BufferedMultipartWriter(boundary: boundary, bufferCapacity: bufferCapacity, underlyingWriter: recordingWriter)
+        var expectedWriter = MemoryMultipartWriter<[UInt8]>(boundary: boundary)
+        for part in parts {
+            await writer.writePart(part)
+            expectedWriter.writePart(part)
+        }
+        await writer.finish(writingEndBoundary: writingEndBoundary)
+        if writingEndBoundary {
+            await expectedWriter.finish()
+        }
+
+        #expect(recordingWriter.writes.flatMap { $0 } == expectedWriter.getResult())
+        #expect(recordingWriter.writes.count > 1)
+        // A flush can carry at most one part's boundary and header fields past the capacity.
+        #expect(recordingWriter.writes.allSatisfy { $0.count < 2 * bufferCapacity })
     }
 
     @Test("BufferedMultipartWriter produces correct multipart output")

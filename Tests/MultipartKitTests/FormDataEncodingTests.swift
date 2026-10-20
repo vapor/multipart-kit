@@ -59,6 +59,20 @@ struct FormDataEncodingTests {
         )
     }
 
+    @Test("Encoding keeps a separator inside a quoted filename")
+    func encodeFilenameWithSeparator() throws {
+        struct Upload: Codable {
+            let file: File
+        }
+        let boundary = "abc123"
+        let encoded = try FormDataEncoder().encode(Upload(file: File(filename: "a;b.txt", data: Array("x".utf8))), boundary: boundary)
+        let parts = try MultipartParser(boundary: boundary).parse(Array(encoded.utf8))
+
+        let disposition = try #require(try parts.first?.contentDisposition)
+        #expect(disposition.name == "file")
+        #expect(disposition.filename == "a;b.txt")
+    }
+
     @Test("Nested Encoding")
     func nestedEncode() throws {
         struct FormData: Encodable, Equatable {
