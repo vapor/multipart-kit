@@ -29,13 +29,12 @@ extension MultipartParser {
 
         var state: State
         let crlfWithBoundary: [UInt8]
-        let boundary: [UInt8]
+        var boundary: ArraySlice<UInt8> { crlfWithBoundary.dropFirst(2) }
         let maxHeaderSize: Int
 
         init(state: State = .initial, crlfWithBoundary: [UInt8], maxHeaderSize: Int = 1024 * 8) {
             self.state = state
             self.crlfWithBoundary = crlfWithBoundary
-            self.boundary = Array(crlfWithBoundary.dropFirst(2))
             self.maxHeaderSize = maxHeaderSize
         }
 
@@ -75,7 +74,7 @@ extension MultipartParser {
                 return .feedMoreData(consumed: 0)
 
             case .success(let index):
-                switch buffer.extracting(index...).getIndexAfter(.twoHyphens) {  // check if it's the final boundary (ends with "--")
+                switch buffer.extracting(index...).getIndexAfter(Array.twoHyphens) {  // check if it's the final boundary (ends with "--")
                 case .success:  // if it is, finish
                     self.state = .finished
                     return .emit(.boundary(end: true), consumed: buffer.count)
@@ -120,7 +119,7 @@ extension MultipartParser {
         private mutating func parseHeader(from buffer: Span<UInt8>) -> Action {
             // check for CRLF
             let indexAfterFirstCRLF: Span.Index
-            switch buffer.getIndexAfter(.crlf) {
+            switch buffer.getIndexAfter(Array.crlf) {
             case .success(let index):
                 indexAfterFirstCRLF = index
                 self.state = .parsing(.header)
@@ -137,7 +136,7 @@ extension MultipartParser {
             }
 
             // check for second CRLF (end of headers)
-            switch buffer.extracting(indexAfterFirstCRLF...).getIndexAfter(.crlf) {
+            switch buffer.extracting(indexAfterFirstCRLF...).getIndexAfter(Array.crlf) {
             case .success(let index):  // end of headers found, move to body
                 self.state = .parsing(.body)
                 return .emit(.headerFields([:]), consumed: indexAfterFirstCRLF + index)
@@ -287,14 +286,14 @@ extension Span where Element == UInt8 {
     /// - Parameters:
     ///     - slice: The slice to match against the buffer.
     /// - Returns: The index after the slice if it matches, or the index of the first mismatching character.
-    func getIndexAfter(_ bytes: [UInt8]) -> IndexAfterSlice {
+    func getIndexAfter(_ bytes: some Collection<UInt8>) -> IndexAfterSlice {
         var resultIndex = 0
 
-        for i in 0..<bytes.count {
+        for byte in bytes {
             guard resultIndex < self.count else {
                 return .prematureEnd(at: resultIndex)
             }
-            guard self[resultIndex] == bytes[i] else {
+            guard self[resultIndex] == byte else {
                 return .wrongCharacter(at: resultIndex)
             }
             resultIndex += 1
