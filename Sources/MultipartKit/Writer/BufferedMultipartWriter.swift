@@ -103,6 +103,14 @@ public struct BufferedMultipartWriter<UnderlyingWriter: MultipartWriter>: Multip
         }
     }
 
+    public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) async throws(UnderlyingWriter.Failure) {
+        self.buffer.reserveCapacity(boundary.utf8.count + 6 + part.headerFields.count * 64 + 2)
+        self.buffer.appendBoundary(boundary, end: false)
+        self.buffer.appendHeaders(part.headerFields)
+        try await writeBodyChunk(part.body)
+        self.buffer.append(contentsOf: Array.crlf)
+    }
+
     /// If the buffer has not been emptied by the last write,
     /// flushes the final part of the message to the underlying writer.
     ///

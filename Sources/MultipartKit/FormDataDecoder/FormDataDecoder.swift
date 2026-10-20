@@ -55,7 +55,8 @@ public struct FormDataDecoder: Sendable {
         from buffer: Body,
         boundary: String
     ) throws -> D where Body.SubSequence: Equatable & Sendable {
-        let parts = try MultipartParser(boundary: boundary).parse(buffer)
+        let parts = try MultipartParser(boundary: boundary)
+            .parts(in: MultipartParser.bytes(of: buffer), as: ArraySlice<UInt8>.self)
         let data = try MultipartFormData(parts: parts, nestingDepth: nestingDepth)
         let decoder = FormDataDecoder.Decoder(codingPath: [], data: data, userInfo: userInfo)
         return try decoder.decode(D.self)

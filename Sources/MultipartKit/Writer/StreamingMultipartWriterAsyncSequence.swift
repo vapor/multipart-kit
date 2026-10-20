@@ -126,7 +126,7 @@ where
             case .boundary(let end):
                 if needsCRLFAfterBody {
                     needsCRLFAfterBody = false
-                    writer.write(bytes: ArraySlice.crlf)
+                    writer.write(bytes: Array.crlf)
                 }
                 writer.buffer.appendBoundary(writer.boundary, end: end)
             case .headerFields(let fields):

@@ -150,7 +150,7 @@ Note that the array elements always include the index (as opposed to just `[]`) 
 If you don't need `Codable`, you can work with `MultipartPart` values yourself. Each part exposes its `headerFields` and `body`, and can parse its own `Content-Disposition` header.
 
 ```swift
-let parts = try MultipartParser<ArraySlice<UInt8>>(boundary: boundary).parse(message)
+let parts = try MultipartParser(boundary: boundary).parse(message)
 
 for part in parts {
     // ...
@@ -159,12 +159,18 @@ for part in parts {
 
 `ContentDisposition` gives you the parsed `dispositionType`, `name`, `filename`, and any `additionalParameters`, rather than making you pick the header apart by hand.
 
+If the message is already in a `Span<UInt8>`, parse it directly and choose the body type of the parts.
+
+```swift
+let parts = try MultipartParser(boundary: boundary).parse(span, as: [UInt8].self)
+```
+
 ## Streaming
 
 `MultipartParser.parse(_:)` needs the whole message up front. To parse a message as it arrives, wrap any `AsyncSequence` of body chunks in one of the two parser sequences.
 
 `StreamingMultipartParserAsyncSequence` yields each body chunk as soon as it is parsed, so a large file never has to be held in memory in full.
-``MultipartParserAsyncSequence`` behaves the same way, but collates each part's body chunks into a single ``MultipartSection/bodyChunk(_:)`` section, which is friendlier when parts are small enough to hold in memory.
+`MultipartParserAsyncSequence` behaves the same way, but collates each part's body chunks into a single `.bodyChunk` section, which is friendlier when parts are small enough to hold in memory.
 
 ```swift
 let sequence = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: stream)
