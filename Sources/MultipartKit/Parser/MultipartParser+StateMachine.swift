@@ -29,8 +29,15 @@ extension MultipartParser {
 
         var state: State
         let crlfWithBoundary: [UInt8]
+        let boundary: [UInt8]
+        let maxHeaderSize: Int
 
-        var boundary: [UInt8] { Array(crlfWithBoundary.dropFirst(2)) }
+        init(state: State = .initial, crlfWithBoundary: [UInt8], maxHeaderSize: Int = 1024 * 8) {
+            self.state = state
+            self.crlfWithBoundary = crlfWithBoundary
+            self.boundary = Array(crlfWithBoundary.dropFirst(2))
+            self.maxHeaderSize = maxHeaderSize
+        }
 
         mutating func read(_ bytes: Span<UInt8>) -> Action {
             guard !bytes.isEmpty else {
@@ -87,9 +94,15 @@ extension MultipartParser {
         private mutating func parseBody(from buffer: Span<UInt8>) -> Action {
             // read until CRLF
             switch buffer.getFirstRange(of: crlfWithBoundary) {
-            case .prematureEnd:  // found part of body end, request more data
+            case .prematureEnd(let startingIndex):  // found part of body end
                 self.state = .parsing(.body)
-                return .feedMoreData(consumed: 0)
+                if startingIndex == 0 {
+                    // if it starts with the body end we need more data
+                    return .feedMoreData(consumed: 0)
+                }
+                // if we saw a body end but we also have a chunk to emit, emit it
+                let range = 0..<startingIndex
+                return .emit(.bodyChunk(range), consumed: range.count)
 
             case .notFound:  // end not in sight, emit body chunk
                 self.state = .parsing(.body)
@@ -116,6 +129,9 @@ extension MultipartParser {
                 return .fail(.invalidHeader(reason: "There should be a CRLF here"))
 
             case .prematureEnd:
+                guard buffer.count < self.maxHeaderSize else {
+                    return .fail(.invalidHeader(reason: "Header line exceeds max header size (\(maxHeaderSize) bytes)"))
+                }
                 self.state = .parsing(.header)
                 return .feedMoreData(consumed: 0)
             }
@@ -130,6 +146,9 @@ extension MultipartParser {
                 self.state = .parsing(.header)
 
             case .prematureEnd:  // might be end. ask for more data
+                guard buffer.count < self.maxHeaderSize else {
+                    return .fail(.invalidHeader(reason: "Header line exceeds max header size (\(maxHeaderSize) bytes)"))
+                }
                 self.state = .parsing(.header)
                 return .feedMoreData(consumed: 0)
             }
@@ -140,6 +159,10 @@ extension MultipartParser {
                     element == .colon || element == .cr
                 })
             else {
+                guard buffer.count < self.maxHeaderSize else {
+                    return .fail(.invalidHeader(reason: "Header line exceeds max header size (\(maxHeaderSize) bytes)"))
+                }
+
                 self.state = .parsing(.header)
                 return .feedMoreData(consumed: 0)
             }
@@ -157,6 +180,10 @@ extension MultipartParser {
                 )
 
             case .prematureEnd:
+                guard buffer.count < self.maxHeaderSize else {
+                    return .fail(.invalidHeader(reason: "Header line exceeds max header size (\(maxHeaderSize) bytes)"))
+                }
+
                 self.state = .parsing(.header)
                 return .feedMoreData(consumed: 0)
 
@@ -173,6 +200,10 @@ extension MultipartParser {
                 headerValue = buffer.extracting(indexAfterColonAndSpace..<(indexAfterColonAndSpace + range.lowerBound))
 
             case .notFound, .prematureEnd:
+                guard buffer.count < self.maxHeaderSize else {
+                    return .fail(.invalidHeader(reason: "Header line exceeds max header size (\(maxHeaderSize) bytes)"))
+                }
+
                 self.state = .parsing(.header)
                 return .feedMoreData(consumed: 0)
             }
@@ -209,7 +240,7 @@ private enum FirstIndexOfSliceResult {
     /// The slice was not found in the buffer.
     case notFound
     /// The buffer ends with the start of the slice, so more data is needed to tell.
-    case prematureEnd
+    case prematureEnd(startingIndex: Int)
 }
 
 extension Span where Element == UInt8 {
@@ -232,7 +263,7 @@ extension Span where Element == UInt8 {
                 return .success(start..<(start + bytes.count))
             }
             if matched == available {
-                return .prematureEnd
+                return .prematureEnd(startingIndex: start)
             }
         }
         return .notFound

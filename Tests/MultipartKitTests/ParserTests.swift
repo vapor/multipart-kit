@@ -258,6 +258,55 @@ struct ParserTests {
         }
     }
 
+    @Test("Body of carriage returns is streamed, not buffered whole")
+    func parseBodyOfCarriageReturns() async throws {
+        let boundary = "boundary123"
+        // Every chunk ends in `\r`, which could be the start of the closing `\r\n--boundary123`.
+        let body = [UInt8](repeating: UInt8(ascii: "\r"), count: 1024)
+        var message = ArraySlice("--\(boundary)\r\nContent-Type: text/plain\r\n\r\n".utf8)
+        message.append(contentsOf: body)
+        message.append(contentsOf: "\r\n--\(boundary)--\r\n".utf8)
+
+        var received: [UInt8] = []
+        var largestChunk = 0
+        for try await section in StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: makeParsingStream(for: message)) {
+            if case .bodyChunk(let chunk) = section {
+                received.append(contentsOf: chunk)
+                largestChunk = max(largestChunk, chunk.count)
+            }
+        }
+
+        #expect(received == body)
+        // `makeParsingStream` yields 16-byte chunks, so a larger body chunk means the parser held on to the body.
+        #expect(largestChunk <= 16)
+    }
+
+    @Test(
+        "Header line longer than the maximum header size is rejected",
+        arguments: [
+            "X-Pad: \(String(repeating: "a", count: 9000))",  // oversized value
+            String(repeating: "a", count: 9000),  // oversized name, no colon
+        ]
+    )
+    func parseOversizedHeaderLine(headerLine: String) async throws {
+        let boundary = "boundary123"
+        let message = ArraySlice(
+            """
+            --\(boundary)\r
+            \(headerLine)\r
+            \r
+            body\r
+            --\(boundary)--\r\n
+            """.utf8
+        )
+        var iterator = StreamingMultipartParserAsyncSequence(boundary: boundary, buffer: makeParsingStream(for: message))
+            .makeAsyncIterator()
+
+        await #expect(throws: MultipartParserError.invalidHeader(reason: "Header line exceeds max header size (8192 bytes)")) {
+            while try await iterator.next() != nil {}
+        }
+    }
+
     private func makeParsingStream<Body: MultipartPartBodyElement>(for message: Body) -> AsyncStream<Body.SubSequence>
     where Body.SubSequence: Sendable {
         AsyncStream<Body.SubSequence> { continuation in
