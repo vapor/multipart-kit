@@ -1,0 +1,77 @@
+name: fuzz
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # A cancelled main run would lose its corpus upload.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+on:
+  pull_request: { branches: ["*"] }
+  push: { branches: ["main"] }
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    container: swift:6.4-noble
+    timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - FormDataDecode
+          - FormDataRoundTrip
+          - MultipartBufferedWriter
+          - MultipartParse
+          - MultipartRoundTrip
+          - MultipartSections
+          - MultipartStreaming
+          - MultipartWriterStreaming
+    env:
+      CORPUS_S3: s3://vapor-fuzzing-corpuses/multipart-kit/${{ matrix.target }}/
+      CORPUS_DIR: Fuzzing/Corpus/${{ matrix.target }}
+      USE_S3: ${{ github.event_name == 'push' || !github.event.pull_request.head.repo.fork }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install AWS CLI
+        if: env.USE_S3 == 'true'
+        run: |
+          apt-get update -q && apt-get install -yq unzip curl
+          curl -sSfL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscli.zip
+          unzip -q /tmp/awscli.zip -d /tmp && /tmp/aws/install
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        if: env.USE_S3 == 'true'
+        with:
+          role-to-assume: arn:aws:iam::177420307256:role/vapor-fuzzing-ci
+          aws-region: eu-north-1
+
+      - name: Download corpus
+        if: env.USE_S3 == 'true'
+        run: aws s3 sync "$CORPUS_S3" "$CORPUS_DIR"
+
+      - name: Fuzz
+        working-directory: Fuzzing
+        run: swift package --allow-writing-to-package-directory fuzz ${{ matrix.target }} --time ${{ github.event_name == 'schedule' && 1800 || 120 }}
+
+      - name: Minimize corpus
+        id: minimize
+        if: github.event_name == 'schedule'
+        working-directory: Fuzzing
+        run: swift package --allow-writing-to-package-directory fuzz ${{ matrix.target }} --minimize-corpus
+
+      - name: Upload crashing inputs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crashes-${{ matrix.target }}
+          path: Fuzzing/Crashes/${{ matrix.target }}/
+          if-no-files-found: ignore
+
+      - name: Upload corpus
+        if: always() && env.USE_S3 == 'true' && github.event_name != 'pull_request'
+        run: aws s3 sync "$CORPUS_DIR" "$CORPUS_S3" ${{ steps.minimize.outcome == 'success' && '--delete' || '' }}
