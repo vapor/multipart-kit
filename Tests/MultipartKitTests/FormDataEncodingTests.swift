@@ -1,4 +1,5 @@
 #if canImport(Testing)
+import HTTPTypes
 import MultipartKit
 import Testing
 
@@ -57,6 +58,32 @@ struct FormDataEncodingTests {
                     """.utf8
                 )
         )
+    }
+
+    // The test `File` writes its filename unescaped, like some clients do.
+    @Test("Encoding keeps the filename and name intact", arguments: ["a;b.txt", #"a"b.txt"#])
+    func encodeFilenameWithSeparator(filename: String) throws {
+        struct Upload: Codable {
+            let file: File
+        }
+        let boundary = "abc123"
+        let encoded = try FormDataEncoder().encode(Upload(file: File(filename: filename, data: Array("x".utf8))), boundary: boundary)
+        let parts = try MultipartParser(boundary: boundary).parse(Array(encoded.utf8))
+
+        let disposition = try #require(try parts.first?.contentDisposition)
+        #expect(disposition.name == "file")
+        #expect(disposition.filename == filename)
+    }
+
+    @Test("Encoding escapes quotes and line breaks in names")
+    func encodeNameWithQuotesAndLineBreaks() throws {
+        let name = "a\"b\r\nc"
+        let boundary = "abc123"
+        let encoded = try FormDataEncoder().encode([name: "x"], boundary: boundary)
+        let parts = try MultipartParser(boundary: boundary).parse(Array(encoded.utf8))
+
+        #expect(parts.first?.headerFields[.contentDisposition] == #"form-data; name="a%22b%0D%0Ac""#)
+        #expect(try FormDataDecoder().decode([String: String].self, from: encoded, boundary: boundary) == [name: "x"])
     }
 
     @Test("Nested Encoding")

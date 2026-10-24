@@ -51,6 +51,7 @@ where BackingSequence.Element: MultipartPartBodyElement {
         var pendingBodyChunk: BackingSequence.Element?
 
         var currentCollatedBody = BackingSequence.Element()
+        var hasPendingCollatedBody = false
 
         /// Advances to the next section of the message.
         ///
@@ -109,9 +110,10 @@ where BackingSequence.Element: MultipartPartBodyElement {
                         parser.append(buffer: next as? ArraySlice<UInt8> ?? .init(next))
                     } else {
                         switch parser.stateMachine.state {
-                        case .initial, .finished:
+                        case .finished:
                             return nil
-                        case .parsing:
+                        case .initial, .parsing:
+                            // `.initial` means no bytes arrived at all, which isn't a multipart message either.
                             throw MultipartParserError.unexpectedEndOfFile
                         }
                     }
@@ -142,13 +144,17 @@ where BackingSequence.Element: MultipartPartBodyElement {
                     headerFields.append(contentsOf: fields)
                 case .bodyChunk(let chunk):
                     self.currentCollatedBody.append(contentsOf: chunk)
-                    if !headerFields.isEmpty {
-                        defer { headerFields = .init() }
+                    // Every part has a body chunk, even an empty one, so the first one ends the header fields.
+                    if !hasPendingCollatedBody {
+                        hasPendingCollatedBody = true
                         return .headerFields(headerFields)
                     }
                 case .boundary:
-                    if !currentCollatedBody.isEmpty {
-                        defer { currentCollatedBody = .init() }
+                    if hasPendingCollatedBody {
+                        defer {
+                            currentCollatedBody = .init()
+                            hasPendingCollatedBody = false
+                        }
                         return .bodyChunk(currentCollatedBody)
                     }
                 }

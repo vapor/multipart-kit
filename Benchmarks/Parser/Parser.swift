@@ -26,12 +26,18 @@ let benchmarks: @Sendable () -> Void = {
             maxIterations: 1
         )
     ) { benchmark in
-        let sequence = StreamingMultipartParserAsyncSequence(
+        var iterator = StreamingMultipartParserAsyncSequence(
             boundary: boundary,
             buffer: NoOpAsyncSequence()
-        )
-        for try await part in sequence {
-            blackHole(part)
+        ).makeAsyncIterator()
+        // An empty stream isn't a multipart message, so parsing it throws `unexpectedEndOfFile`.
+        // The typed `do` keeps the error from being boxed into an `any Error`, which would allocate.
+        do throws(MultipartParserError) {
+            while let part = try await iterator.next() {
+                blackHole(part)
+            }
+        } catch {
+            blackHole(error)
         }
     }
 
@@ -99,12 +105,18 @@ let benchmarks: @Sendable () -> Void = {
             maxIterations: 1
         )
     ) { benchmark in
-        let sequence = MultipartParserAsyncSequence(
+        var iterator = MultipartParserAsyncSequence(
             boundary: boundary,
             buffer: NoOpAsyncSequence()
-        )
-        for try await part in sequence {
-            blackHole(part)
+        ).makeAsyncIterator()
+        // An empty stream isn't a multipart message, so parsing it throws `unexpectedEndOfFile`.
+        // The typed `do` keeps the error from being boxed into an `any Error`, which would allocate.
+        do throws(MultipartParserError) {
+            while let part = try await iterator.next() {
+                blackHole(part)
+            }
+        } catch {
+            blackHole(error)
         }
     }
 

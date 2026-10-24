@@ -1,4 +1,3 @@
-import Algorithms
 public import HTTPTypes
 
 /// The requirements a type must meet to be used as the body of a ``MultipartPart``.
@@ -56,9 +55,6 @@ public struct MultipartPart<Body: MultipartPartBodyElement>: Sendable {
 /// - An optional "filename" parameter for file uploads
 /// - Any additional custom parameters
 public struct ContentDisposition: Sendable {
-    /// The original header field value.
-    var underlyingField: String
-
     /// The type of content disposition, indicating how the content should be handled.
     ///
     /// The disposition type provides a hint to the recipient about how the content
@@ -80,6 +76,7 @@ public struct ContentDisposition: Sendable {
     /// Additional parameters included in the Content-Disposition header.
     ///
     /// These are any parameters beyond the standard "name" and "filename" parameters.
+    /// Parameter names are case-insensitive, so they're stored lowercased.
     public let additionalParameters: [String: String]
 
     /// Initializes a ContentDisposition by parsing a raw header field value.
@@ -88,19 +85,14 @@ public struct ContentDisposition: Sendable {
     /// - Throws: `ContentDisposition.Error` if the header has an invalid format, contains an
     ///           unrecognized disposition type, or is missing required fields.
     public init(from field: HTTPFields.Value) throws(ContentDisposition.Error) {
-        self.underlyingField = field
-
-        var parameters =
-            field
-            .split(separator: ";")
-            .map { String($0.trimming(while: \.isWhitespace)) }
+        var parameters = field.headerValueParts()
 
         guard !parameters.isEmpty else {
             throw Error.missingContentDisposition
         }
         let dispositionType = parameters.removeFirst()
-        guard let type = DispositionType(rawValue: dispositionType) else {
-            throw Error.invalidDispositionType(dispositionType)
+        guard let type = DispositionType(rawValue: dispositionType.lowercased()) else {
+            throw Error.invalidDispositionType(String(dispositionType))
         }
 
         self.dispositionType = type
@@ -110,23 +102,22 @@ public struct ContentDisposition: Sendable {
         var additionalParameters: [String: String] = [:]
 
         for parameter in parameters {
-            if parameter.starts(with: "name=") {
+            guard let equalsIndex = parameter.firstIndex(of: "=") else {
+                throw Error.invalidParameterFormat(String(parameter))
+            }
+            let key = parameter[..<equalsIndex].trimmingWhitespace().lowercased()
+            // A sender escapes quotes either as `\"` or as `%22`, so a backslash-escaped value's `%22` is literal.
+            let (value, isBackslashEscaped) = parameter[parameter.index(after: equalsIndex)...].trimmingWhitespace().unquoted()
+
+            switch key {
+            case "name":
                 guard name == nil else { throw Error.duplicateField("name") }
-                name = String(parameter.dropFirst(5).trimming(while: { $0 == "\"" || $0 == "'" }))
-            } else if parameter.starts(with: "filename=") {
+                name = isBackslashEscaped ? String(value) : value.removingFormDataEscapes()
+            case "filename":
                 guard filename == nil else { throw Error.duplicateField("filename") }
-                filename = String(parameter.dropFirst(9).trimming(while: { $0 == "\"" || $0 == "'" }))
-            } else {
-                var split = parameter.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
-
-                guard split.count >= 2 else {
-                    throw Error.invalidParameterFormat(parameter)
-                }
-
-                let name = String(split.removeFirst())
-                let value = String(split.removeFirst().trimming(while: { $0 == "\"" || $0 == "'" }))
-
-                additionalParameters[name] = value
+                filename = isBackslashEscaped ? String(value) : value.removingFormDataEscapes()
+            default:
+                additionalParameters[key] = String(value)
             }
         }
 
