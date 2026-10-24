@@ -76,6 +76,7 @@ public struct ContentDisposition: Sendable {
     /// Additional parameters included in the Content-Disposition header.
     ///
     /// These are any parameters beyond the standard "name" and "filename" parameters.
+    /// Parameter names are case-insensitive, so they're stored lowercased.
     public let additionalParameters: [String: String]
 
     /// Initializes a ContentDisposition by parsing a raw header field value.
@@ -104,18 +105,19 @@ public struct ContentDisposition: Sendable {
             guard let equalsIndex = parameter.firstIndex(of: "=") else {
                 throw Error.invalidParameterFormat(String(parameter))
             }
-            let key = parameter[..<equalsIndex].trimmingWhitespace()
-            let value = String(parameter[parameter.index(after: equalsIndex)...].trimmingWhitespace().unquoted)
+            let key = parameter[..<equalsIndex].trimmingWhitespace().lowercased()
+            // A sender escapes quotes either as `\"` or as `%22`, so a backslash-escaped value's `%22` is literal.
+            let (value, isBackslashEscaped) = parameter[parameter.index(after: equalsIndex)...].trimmingWhitespace().unquoted()
 
-            switch key.lowercased() {
+            switch key {
             case "name":
                 guard name == nil else { throw Error.duplicateField("name") }
-                name = value
+                name = isBackslashEscaped ? String(value) : value.removingFormDataEscapes()
             case "filename":
                 guard filename == nil else { throw Error.duplicateField("filename") }
-                filename = value
+                filename = isBackslashEscaped ? String(value) : value.removingFormDataEscapes()
             default:
-                additionalParameters[String(key)] = value
+                additionalParameters[key] = String(value)
             }
         }
 

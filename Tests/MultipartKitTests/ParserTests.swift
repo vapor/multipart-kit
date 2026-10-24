@@ -363,6 +363,30 @@ struct ParserTests {
         #expect(parts.last?.body == ArraySlice("BBB".utf8))
     }
 
+    @Test("Collated parts include parts without header fields")
+    func parseCollatedPartsWithoutHeaders() async throws {
+        let boundary = "boundary123"
+        let message = ArraySlice(
+            """
+            --\(boundary)\r
+            \r
+            \r
+            --\(boundary)\r
+            \r
+            AAA\r
+            --\(boundary)--\r\n
+            """.utf8
+        )
+
+        var sections: [MultipartSection<ArraySlice<UInt8>>] = []
+        for try await section in MultipartParserAsyncSequence(boundary: boundary, buffer: makeParsingStream(for: message)) {
+            sections.append(section)
+        }
+
+        #expect(try MultipartParser(boundary: boundary).parse(message).count == 2)
+        #expect(sections == [.headerFields([:]), .bodyChunk([]), .headerFields([:]), .bodyChunk(ArraySlice("AAA".utf8))])
+    }
+
     @Test("Parse an empty message")
     func parseEmptyMessage() async throws {
         #expect(throws: MultipartParserError.unexpectedEndOfFile) {

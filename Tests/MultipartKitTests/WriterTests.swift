@@ -140,6 +140,38 @@ struct WriterTests {
         #expect(parts.first?.body == Array("no headers".utf8))
     }
 
+    @Test(
+        "Write through sequence ends parts that have no body chunk",
+        arguments: [
+            ([.boundary(end: false), .boundary(end: true)], "--b\r\n\r\n\r\n--b--\r\n"),
+            (
+                [.boundary(end: false), .headerFields([.contentType: "text/plain"]), .boundary(end: true)],
+                "--b\r\nContent-Type: text/plain\r\n\r\n\r\n--b--\r\n"
+            ),
+            (
+                [.boundary(end: false), .boundary(end: false), .bodyChunk(ArraySlice("x".utf8)), .boundary(end: true)],
+                "--b\r\n\r\n\r\n--b\r\n\r\nx\r\n--b--\r\n"
+            ),
+        ] as [([MultipartSection<ArraySlice<UInt8>>], String)]
+    )
+    func writeSequencePartWithoutBody(sections: [MultipartSection<ArraySlice<UInt8>>], expected: String) async throws {
+        let sequence = StreamingMultipartWriterAsyncSequence(
+            backingSequence: makeSerializationStream(for: sections),
+            boundary: "b",
+            outboundBody: ArraySlice<UInt8>.self
+        )
+
+        var serialized: [UInt8] = []
+        for try await chunk in sequence {
+            serialized.append(contentsOf: chunk)
+        }
+
+        let parts = try MultipartParser(boundary: "b").parse(serialized)
+
+        #expect(String(decoding: serialized, as: UTF8.self) == expected)
+        #expect(parts.count == sections.filter { $0 == .boundary(end: false) }.count)
+    }
+
     @Test("Writing boundary")
     func writeBoundary() async throws {
         var writer = MemoryMultipartWriter<ArraySlice<UInt8>>(boundary: "test")

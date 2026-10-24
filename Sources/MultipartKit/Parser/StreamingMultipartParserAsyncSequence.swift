@@ -144,14 +144,13 @@ where BackingSequence.Element: MultipartPartBodyElement {
                     headerFields.append(contentsOf: fields)
                 case .bodyChunk(let chunk):
                     self.currentCollatedBody.append(contentsOf: chunk)
-                    if !headerFields.isEmpty {
-                        defer { headerFields = .init() }
+                    // Every part has a body chunk, even an empty one, so the first one ends the header fields.
+                    if !hasPendingCollatedBody {
                         hasPendingCollatedBody = true
                         return .headerFields(headerFields)
                     }
                 case .boundary:
-                    // A part whose header fields were returned gets its body too, even an empty one.
-                    if hasPendingCollatedBody || !currentCollatedBody.isEmpty {
+                    if hasPendingCollatedBody {
                         defer {
                             currentCollatedBody = .init()
                             hasPendingCollatedBody = false
