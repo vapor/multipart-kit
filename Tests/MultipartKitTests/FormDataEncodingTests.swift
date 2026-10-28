@@ -86,6 +86,12 @@ struct FormDataEncodingTests {
         #expect(try FormDataDecoder().decode([String: String].self, from: encoded, boundary: boundary) == [name: "x"])
     }
 
+    @Test("Encoding round-trips names with backslashes", arguments: [#"a\b"#, #"a\\b"#, #"a\"#, #"a\"b"#])
+    func encodeNameWithBackslashes(name: String) throws {
+        let encoded = try FormDataEncoder().encode([name: "x"], boundary: "abc123")
+        #expect(try FormDataDecoder().decode([String: String].self, from: encoded, boundary: "abc123") == [name: "x"])
+    }
+
     @Test("Nested Encoding")
     func nestedEncode() throws {
         struct FormData: Encodable, Equatable {
