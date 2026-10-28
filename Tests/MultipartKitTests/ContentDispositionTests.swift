@@ -100,6 +100,10 @@ struct ContentDispositionTests {
         #expect(backslashes.filename == #"a"b\c%22.txt"#)
         #expect(backslashes.name == "file")
 
+        // What `curl --form-escape` sends for a file named `a";b`.
+        let escapedSeparator = try ContentDisposition(from: #"form-data; name="file"; filename="a\";b""#)
+        #expect(escapedSeparator.filename == #"a";b"#)
+
         // What browsers and curl send for a file named `a"b\c.txt`: only `"`, CR and LF are percent-encoded.
         let percents = try ContentDisposition(from: #"form-data; name="a%22b%0D%0Ac"; filename="a%22b\c.txt""#)
         #expect(percents.name == "a\"b\r\nc")
@@ -107,6 +111,15 @@ struct ContentDispositionTests {
 
         let windowsPath = try ContentDisposition(from: #"form-data; name="file"; filename="C:\Users\a.txt""#)
         #expect(windowsPath.filename == #"C:\Users\a.txt"#)
+
+        // Without a `\"`, as a browser sends them.
+        let doubleBackslash = try ContentDisposition(from: #"form-data; name="file"; filename="a\\b.txt""#)
+        #expect(doubleBackslash.filename == #"a\\b.txt"#)
+
+        // What Vapor sends for a file named `a\`, as it doesn't escape backslashes.
+        let trailingBackslash = try ContentDisposition(from: #"form-data; filename="a\"; name="file""#)
+        #expect(trailingBackslash.filename == #"a\"#)
+        #expect(trailingBackslash.name == "file")
     }
 
     @Test("Parse Content-Disposition with unescaped quotes")
@@ -119,9 +132,13 @@ struct ContentDispositionTests {
         #expect(quotedName.name == #"a"b"#)
         #expect(quotedName.filename == "x.txt")
 
-        let token = try ContentDisposition(from: #"form-data; name=a"b; filename="x.txt""#)
-        #expect(token.name == #"a"b"#)
-        #expect(token.filename == "x.txt")
+        let quoteBeforeSeparator = try ContentDisposition(from: #"form-data; name="a";b"; filename="x.txt";"#)
+        #expect(quoteBeforeSeparator.name == #"a";b"#)
+        #expect(quoteBeforeSeparator.filename == "x.txt")
+
+        #expect(throws: ContentDisposition.Error.invalidParameterFormat("foo")) {
+            try ContentDisposition(from: #"form-data; name="x"; foo; filename="y.txt""#)
+        }
     }
 
     @Test("Parse Content-Disposition parameter names in any letter case")

@@ -47,28 +47,23 @@ extension StringProtocol where SubSequence == Substring {
 
         var partStart = startIndex
         var isQuoted = false
-        var index = startIndex
-
-        while index < endIndex {
+        for index in indices {
             switch self[index] {
-            case "\\" where isQuoted:
-                // A quoted pair: the next character is literal, even when it is a quote.
-                index = self.index(after: index)
-            case "\"" where isQuoted:
-                // Some senders don't escape quotes inside a value, so only a quote before `;` or the end closes it.
-                let rest = self[self.index(after: index)...].drop(while: \.isWhitespace)
-                isQuoted = !(rest.isEmpty || rest.first == ";")
-            case "\"" where self[..<index].last(where: { !$0.isWhitespace }) == "=":
-                // A quoted string can only start a value; any other quote is part of the value.
+            case "\"" where !isQuoted:
                 isQuoted = true
+            case "\"":
+                // Not every sender escapes quotes inside a value, as in `name="a"b"`, so a quote only closes one
+                // at the end, or before a `;` that leads to the next `key=` rather than to another quote.
+                let rest = self[self.index(after: index)...].drop(while: \.isWhitespace)
+                let nextQuoteOrKey = rest.dropFirst().first { $0 == "=" || $0 == ";" || $0 == "\"" }
+                if rest.isEmpty || (rest.first == ";" && nextQuoteOrKey != "\"") {
+                    isQuoted = false
+                }
             case ";" where !isQuoted:
                 appendPart(self[partStart..<index])
                 partStart = self.index(after: index)
             default:
                 break
-            }
-            if index < endIndex {
-                index = self.index(after: index)
             }
         }
         appendPart(self[partStart..<endIndex])
@@ -84,53 +79,55 @@ extension Substring {
         return self[start..<end]
     }
 
-    /// The content of a quoted string such as `"a\"b"`, without its quotes and its `\"` and `\\` escapes,
-    /// and whether it had any. A value that isn't quoted is returned as it is.
-    func unquoted() -> (content: Substring, isEscaped: Bool) {
-        guard count >= 2, first == "\"", last == "\"" else { return (self, false) }
+    /// The text of a quoted string such as `"a\"b"` with its escapes undone, or the value as it is when it isn't
+    /// quoted. Browsers write `"`, CR and LF as `%22`, `%0D` and `%0A`. Other senders write `"` as `\"` and leave
+    /// `%` alone, so a value with a `\"` in it only has its `\"` and `\\` undone.
+    var unquoted: String {
+        guard count >= 2, first == "\"", last == "\"" else { return String(self) }
         let content = dropFirst().dropLast()
-        guard content.contains("\\") else { return (content, false) }
 
-        var unescaped = ""
-        var isEscaped = false
-        var index = content.startIndex
-        while index < content.endIndex {
-            let next = content.index(after: index)
-            // Browsers don't escape a backslash, so one only escapes a `"` or `\` after it, keeping `C:\dir` intact.
-            if content[index] == "\\", next < content.endIndex, content[next] == "\"" || content[next] == "\\" {
-                isEscaped = true
-                unescaped.append(content[next])
-                index = content.index(after: next)
-            } else {
-                unescaped.append(content[index])
-                index = next
+        var isBackslashEscaped = false
+        var previous: Character?
+        for character in content {
+            if previous == "\\" && character == "\"" {
+                isBackslashEscaped = true
+                break
             }
+            previous = character
         }
-        return (isEscaped ? unescaped[...] : content, isEscaped)
+
+        return isBackslashEscaped ? content.removingBackslashEscapes() : content.removingPercentEscapes()
     }
 
-    /// Undoes the `%22`, `%0D` and `%0A` escapes browsers write in form-data names and filenames.
-    /// Any other `%` is left as it is, as browsers don't escape it.
-    func removingFormDataEscapes() -> String {
+    // Only a backslash before `"` or `\` is an escape, so the one in `C:\dir` stays.
+    private func removingBackslashEscapes() -> String {
+        var result = ""
+        var index = startIndex
+        while index < endIndex {
+            let next = self.index(after: index)
+            if self[index] == "\\", next < endIndex, self[next] == "\"" || self[next] == "\\" {
+                index = next
+            }
+            result.append(self[index])
+            index = self.index(after: index)
+        }
+        return result
+    }
+
+    private func removingPercentEscapes() -> String {
         guard contains("%") else { return String(self) }
 
-        var result = ""
-        var rest = self
-        while let percent = rest.firstIndex(of: "%") {
-            result += rest[..<percent]
-            let escape = rest[percent...].prefix(3)
-            switch escape {
-            case "%22": result += "\""
-            case "%0D", "%0d": result += "\r"
-            case "%0A", "%0a": result += "\n"
-            default:
-                result += "%"
-                rest = rest[rest.index(after: percent)...]
-                continue
+        let pieces = split(separator: "%", omittingEmptySubsequences: false)
+        var result = String(pieces[0])
+        for piece in pieces.dropFirst() {
+            switch piece.prefix(2).uppercased() {
+            case "22": result += "\"" + piece.dropFirst(2)
+            case "0D": result += "\r" + piece.dropFirst(2)
+            case "0A": result += "\n" + piece.dropFirst(2)
+            default: result += "%" + piece
             }
-            rest = rest[escape.endIndex...]
         }
-        return result + rest
+        return result
     }
 }
 
@@ -138,7 +135,7 @@ extension String {
     /// Escapes quotes and line breaks in a form-data name or filename the way browsers do,
     /// so the value can't end its quoted string early.
     func addingFormDataEscapes() -> String {
-        guard utf8.contains(where: { $0 == UInt8(ascii: "\"") || $0 == .cr || $0 == .lf }) else { return self }
+        guard unicodeScalars.contains(where: { $0 == "\"" || $0 == "\r" || $0 == "\n" }) else { return self }
 
         var escaped = ""
         for scalar in unicodeScalars {

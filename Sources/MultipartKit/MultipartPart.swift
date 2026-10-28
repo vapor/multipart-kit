@@ -106,18 +106,17 @@ public struct ContentDisposition: Sendable {
                 throw Error.invalidParameterFormat(String(parameter))
             }
             let key = parameter[..<equalsIndex].trimmingWhitespace().lowercased()
-            // A sender escapes quotes either as `\"` or as `%22`, so a backslash-escaped value's `%22` is literal.
-            let (value, isBackslashEscaped) = parameter[parameter.index(after: equalsIndex)...].trimmingWhitespace().unquoted()
+            let value = parameter[parameter.index(after: equalsIndex)...].trimmingWhitespace().unquoted
 
             switch key {
             case "name":
                 guard name == nil else { throw Error.duplicateField("name") }
-                name = isBackslashEscaped ? String(value) : value.removingFormDataEscapes()
+                name = value
             case "filename":
                 guard filename == nil else { throw Error.duplicateField("filename") }
-                filename = isBackslashEscaped ? String(value) : value.removingFormDataEscapes()
+                filename = value
             default:
-                additionalParameters[key] = String(value)
+                additionalParameters[key] = value
             }
         }
 
