@@ -79,19 +79,21 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
         self._writePart(part)
     }
 
-    // Internal sync version of some of the methods, used in ``FormDataEncoder``.
-
     @usableFromInline
     mutating func _writePart(_ part: MultipartPart<some MultipartPartBodyElement>) {
-        buffer.reserveCapacity(buffer.count + part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
+        buffer.reserveCapacity(part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
         buffer.appendBoundary(boundary, end: false)
         buffer.appendHeaders(part.headerFields)
         buffer.append(contentsOf: part.body)
         buffer.append(contentsOf: Array.crlf)
     }
+}
 
+// Internal sync version of some of the methods, used in ``FormDataEncoder``.
+extension MemoryMultipartWriter {
+    // `FormDataEncoder` already  reserves room for the whole message before writing any part,
+    // so we don't need `reserveCapacity` here
     mutating func _writePart(_ part: DeferrableBodyPart<some MultipartPartBodyElement>) {
-        buffer.reserveCapacity(buffer.count + part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
         buffer.appendBoundary(boundary, end: false)
         buffer.appendHeaders(part.headerFields)
         switch part.body {
@@ -107,9 +109,10 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
         buffer.append(contentsOf: Array.crlf)
     }
 
+    // `FormDataEncoder` already  reserves room for the whole message before writing any part,
+    // so we don't need `reserveCapacity` here
     @inlinable
     mutating func _finish() {
-        buffer.reserveCapacity(buffer.count + boundary.utf8.count + 10)
         buffer.appendBoundary(boundary, end: true)
     }
 }

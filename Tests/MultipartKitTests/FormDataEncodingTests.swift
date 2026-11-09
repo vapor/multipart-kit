@@ -92,6 +92,22 @@ struct FormDataEncodingTests {
         #expect(try FormDataDecoder().decode([String: String].self, from: encoded, boundary: "abc123") == [name: "x"])
     }
 
+    @Test("Encoding a file after another field doesn't double the buffer")
+    func encodeLargeFileCapacity() throws {
+        struct Upload: Encodable {
+            let description: String
+            let file: File
+        }
+        // The field must be larger than the spare room malloc rounds a large allocation up to.
+        let upload = Upload(
+            description: String(repeating: "a", count: 128 << 10),
+            file: File(filename: "a.bin", data: .init(repeating: 0, count: 1 << 20))
+        )
+        let encoded = try FormDataEncoder().encode(upload, boundary: "abc123", to: [UInt8].self)
+        // Running out of room would double the buffer, copying the file.
+        #expect(encoded.capacity < encoded.count + encoded.count / 2)
+    }
+
     @Test("Nested Encoding")
     func nestedEncode() throws {
         struct FormData: Encodable, Equatable {
