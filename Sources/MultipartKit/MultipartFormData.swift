@@ -1,4 +1,3 @@
-import Algorithms
 import HTTPTypes
 import OrderedCollections
 
@@ -137,7 +136,7 @@ extension MultipartFormData {
             [createPartWithName(part, name: path)]
         case .array(let array):
             // For arrays, index each element and process recursively
-            array.indexed().flatMap { offset, element in
+            array.enumerated().flatMap { offset, element in
                 namedParts(from: element, path: path.map { "\($0)[\(offset)]" })
             }
         case .keyed(let dictionary):

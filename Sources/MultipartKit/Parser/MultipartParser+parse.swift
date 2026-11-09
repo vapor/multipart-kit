@@ -48,6 +48,8 @@ extension MultipartParser {
 
         var currentHeaders = HTTPFields()
         var currentBody = ArraySlice<UInt8>()
+        // A part can have no header fields, so whether one is open has to be tracked separately.
+        var isInPart = false
 
         // Append all data at once since this is synchronous
         parser.append(buffer: bytes)
@@ -66,14 +68,14 @@ extension MultipartParser {
                         currentBody.append(contentsOf: chunk)
                     }
 
-                case .boundary:
-                    if !currentHeaders.isEmpty {
+                case .boundary(let end):
+                    if isInPart {
                         let body = currentBody as? Body ?? Body(currentBody)
                         output.append(MultipartPart(headerFields: currentHeaders, body: body))
-                        // Reset for next part
                         currentHeaders = HTTPFields()
                         currentBody = ArraySlice()
                     }
+                    isInPart = !end
                 }
 
             case .success(nil):
@@ -88,13 +90,7 @@ extension MultipartParser {
                 throw error
 
             case .finished:
-                // Add final part if exists
-                if !currentHeaders.isEmpty {
-                    let body = currentBody as? Body ?? Body(currentBody)
-                    output.append(MultipartPart(headerFields: currentHeaders, body: body))
-                    currentHeaders = HTTPFields()
-                    currentBody = ArraySlice()
-                }
+                // The end boundary has already closed the last part.
                 return output
             }
         }

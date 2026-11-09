@@ -96,7 +96,9 @@ where
         }
 
         @usableFromInline
-        var needsCRLFAfterBody: Bool
+        var needsCRLFBeforeBoundary: Bool
+        @usableFromInline
+        var needsEndOfHeaders: Bool
         @usableFromInline
         var backingIterator: BackingSequence.AsyncIterator
         @usableFromInline
@@ -114,7 +116,8 @@ where
         ) {
             self.backingIterator = backingIterator
             self.writer = .init(boundary: boundary)
-            self.needsCRLFAfterBody = false
+            self.needsCRLFBeforeBoundary = false
+            self.needsEndOfHeaders = false
         }
 
         /// Serializes a single section into the writer's buffer and returns it.
@@ -124,16 +127,26 @@ where
 
             switch section {
             case .boundary(let end):
-                if needsCRLFAfterBody {
-                    needsCRLFAfterBody = false
-                    writer.write(bytes: Array.crlf)
+                // A part that got no header fields still needs the empty line that ends its header block.
+                if needsEndOfHeaders {
+                    writer.buffer.append(contentsOf: Array.crlf)
+                }
+                // The delimiter is `\r\n--boundary`, so every boundary but the first starts with a CRLF.
+                if needsCRLFBeforeBoundary {
+                    writer.buffer.append(contentsOf: Array.crlf)
                 }
                 writer.buffer.appendBoundary(writer.boundary, end: end)
+                needsCRLFBeforeBoundary = true
+                needsEndOfHeaders = !end
             case .headerFields(let fields):
                 writer.buffer.appendHeaders(fields)
+                needsEndOfHeaders = false
             case .bodyChunk(let chunk):
+                if needsEndOfHeaders {
+                    needsEndOfHeaders = false
+                    writer.buffer.append(contentsOf: Array.crlf)
+                }
                 writer.buffer.append(contentsOf: chunk)
-                self.needsCRLFAfterBody = true
             }
 
             return writer.buffer
@@ -162,8 +175,7 @@ where
 
             guard let section else { return nil }
 
-            if case .bodyChunk(let chunk) = section, let chunk = chunk as? OutboundBody {
-                self.needsCRLFAfterBody = true
+            if case .bodyChunk(let chunk) = section, !needsEndOfHeaders, let chunk = chunk as? OutboundBody {
                 return chunk
             }
 

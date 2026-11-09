@@ -49,9 +49,10 @@ extension StreamingMultipartParserAsyncSequence.AsyncIterator {
                     parser.append(buffer: next as? ArraySlice<UInt8> ?? ArraySlice(next))
                 } else {
                     switch parser.stateMachine.state {
-                    case .initial, .finished:
+                    case .finished:
                         return nil
-                    case .parsing:
+                    case .initial, .parsing:
+                        // `.initial` means no bytes arrived at all, which isn't a multipart message either.
                         throw MultipartParserError.unexpectedEndOfFile
                     }
                 }
@@ -82,13 +83,17 @@ extension StreamingMultipartParserAsyncSequence.AsyncIterator {
                 headerFields.append(contentsOf: fields)
             case .bodyChunk(let chunk):
                 self.currentCollatedBody.append(contentsOf: chunk)
-                if !headerFields.isEmpty {
-                    defer { headerFields = .init() }
+                // Every part has a body chunk, even an empty one, so the first one ends the header fields.
+                if !hasPendingCollatedBody {
+                    hasPendingCollatedBody = true
                     return .headerFields(headerFields)
                 }
             case .boundary:
-                if !currentCollatedBody.isEmpty {
-                    defer { currentCollatedBody = .init() }
+                if hasPendingCollatedBody {
+                    defer {
+                        currentCollatedBody = .init()
+                        hasPendingCollatedBody = false
+                    }
                     return .bodyChunk(currentCollatedBody)
                 }
             }

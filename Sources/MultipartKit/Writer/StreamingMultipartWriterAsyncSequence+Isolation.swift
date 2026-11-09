@@ -11,8 +11,7 @@ extension StreamingMultipartWriterAsyncSequence.AsyncIterator {
             return nil
         }
 
-        if case .bodyChunk(let chunk) = section, let chunk = chunk as? OutboundBody {
-            self.needsCRLFAfterBody = true
+        if case .bodyChunk(let chunk) = section, !needsEndOfHeaders, let chunk = chunk as? OutboundBody {
             return chunk
         }
 

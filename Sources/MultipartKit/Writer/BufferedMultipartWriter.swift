@@ -86,9 +86,9 @@ public struct BufferedMultipartWriter<UnderlyingWriter: MultipartWriter>: Multip
     public mutating func write(bytes: some Collection<UInt8> & Sendable) async throws(Failure) {
         // If buffer would overflow, flush it
         if currentBufferCount + bytes.count >= bufferCapacity {
-            try await underlyingWriter.write(bytes: self.buffer)
-            buffer.removeAll(keepingCapacity: true)
-            currentBufferCount = 0
+            if currentBufferCount != 0 {
+                try await flushBuffer()
+            }
             // If the new data is itself too large, write it directly
             if bytes.count >= bufferCapacity {
                 try await underlyingWriter.write(bytes: bytes)
@@ -103,12 +103,15 @@ public struct BufferedMultipartWriter<UnderlyingWriter: MultipartWriter>: Multip
         }
     }
 
-    public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) async throws(UnderlyingWriter.Failure) {
-        self.buffer.reserveCapacity(boundary.utf8.count + 6 + part.headerFields.count * 64 + 2)
-        self.buffer.appendBoundary(boundary, end: false)
-        self.buffer.appendHeaders(part.headerFields)
+    @inlinable
+    public mutating func writePart(_ part: MultipartPart<some MultipartPartBodyElement>) async throws(Failure) {
+        currentBufferCount += buffer.appendBoundary(boundary, end: false)
+        currentBufferCount += buffer.appendHeaders(part.headerFields)
+        if currentBufferCount >= bufferCapacity {
+            try await flushBuffer()
+        }
         try await writeBodyChunk(part.body)
-        self.buffer.append(contentsOf: Array.crlf)
+        try await write(bytes: Array.crlf)
     }
 
     /// If the buffer has not been emptied by the last write,
@@ -121,9 +124,15 @@ public struct BufferedMultipartWriter<UnderlyingWriter: MultipartWriter>: Multip
             try await writeBoundary(end: true)
         }
         if currentBufferCount != 0 {
-            try await underlyingWriter.write(bytes: self.buffer)
-            buffer.removeAll(keepingCapacity: true)
-            currentBufferCount = 0
+            try await flushBuffer()
         }
+    }
+
+    /// Hands everything in the buffer to the underlying writer and empties the buffer.
+    @inlinable
+    mutating func flushBuffer() async throws(Failure) {
+        try await underlyingWriter.write(bytes: self.buffer)
+        buffer.removeAll(keepingCapacity: true)
+        currentBufferCount = 0
     }
 }

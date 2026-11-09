@@ -7,8 +7,8 @@ extension MultipartSection: Equatable where Body: Equatable {
             lhsFields == rhsFields
         case (.bodyChunk(let lhsChunk), .bodyChunk(let rhsChunk)):
             lhsChunk == rhsChunk
-        case (.boundary, .boundary):
-            true
+        case (.boundary(let lhsEnd), .boundary(let rhsEnd)):
+            lhsEnd == rhsEnd
         default:
             false
         }
