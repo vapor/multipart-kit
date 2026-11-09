@@ -15,8 +15,8 @@ let package = Package(
         .library(name: "MultipartKit", targets: ["MultipartKit"])
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-http-types.git", from: "1.3.0"),
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.1.0"),
+        .package(url: "https://github.com/apple/swift-http-types.git", from: "1.8.0"),
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.7.5"),
     ],
     targets: [
         .target(

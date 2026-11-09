@@ -1,3 +1,5 @@
+import HTTPTypes
+
 /// Encodes `Encodable` items to `multipart/form-data` encoded `Data`.
 ///
 /// See [RFC#2388](https://tools.ietf.org/html/rfc2388) for more information about `multipart/form-data` encoding.
@@ -70,6 +72,16 @@ public struct FormDataEncoder: Sendable {
         let encoder = Encoder<Body>(codingPath: [], userInfo: userInfo)
         try encodable.encode(to: encoder)
         let parts: [DeferrableBodyPart<Body>] = encoder.storage.data?.namedParts() ?? []
+
+        // Reserve the exact size up front
+        var capacity = buffer.count + boundary.utf8.count + 6  // `--boundary--\r\n`
+        for part in parts {
+            capacity += boundary.utf8.count + 8 + part.body.count  // `--boundary\r\n`, the blank line, `\r\n` after the body
+            for field in part.headerFields {
+                capacity += field.name.rawName.utf8.count + field.value.utf8.count + 4  // `name: value\r\n`
+            }
+        }
+        buffer.reserveCapacity(capacity)
 
         var writer = MemoryMultipartWriter<Body>(boundary: boundary, buffer: &buffer)
         for part in parts {
