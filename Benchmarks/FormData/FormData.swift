@@ -39,11 +39,11 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "Encoder_\(fileSizeInMiB)MiB_Allocations",
         configuration: .init(
-            metrics: [.mallocCountTotal, .peakMemoryResident],
+            metrics: [.mallocCountTotal, .mallocBytesCount],
             maxIterations: 1,
             thresholds: [
                 /// 1MiB of tolerance, well below the size of the file.
-                .peakMemoryResident: .init(absolute: [.p90: 1 << 20])
+                .mallocBytesCount: .init(absolute: [.p90: 1 << 20])
             ]
         )
     ) { benchmark in
@@ -53,11 +53,11 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "Decoder_\(fileSizeInMiB)MiB_Allocations",
         configuration: .init(
-            metrics: [.mallocCountTotal, .peakMemoryResident],
+            metrics: [.mallocCountTotal, .mallocBytesCount],
             maxIterations: 1,
             thresholds: [
                 /// 1MiB of tolerance, well below the size of the file.
-                .peakMemoryResident: .init(absolute: [.p90: 1 << 20])
+                .mallocBytesCount: .init(absolute: [.p90: 1 << 20])
             ]
         )
     ) { benchmark in

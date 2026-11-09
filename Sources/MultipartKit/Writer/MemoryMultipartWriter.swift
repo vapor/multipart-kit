@@ -83,7 +83,7 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
 
     @usableFromInline
     mutating func _writePart(_ part: MultipartPart<some MultipartPartBodyElement>) {
-        buffer.reserveCapacity(part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
+        buffer.reserveCapacity(buffer.count + part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
         buffer.appendBoundary(boundary, end: false)
         buffer.appendHeaders(part.headerFields)
         buffer.append(contentsOf: part.body)
@@ -91,7 +91,7 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
     }
 
     mutating func _writePart(_ part: DeferrableBodyPart<some MultipartPartBodyElement>) {
-        buffer.reserveCapacity(part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
+        buffer.reserveCapacity(buffer.count + part.headerFields.count * 64 + part.body.count + boundary.utf8.count + 10)
         buffer.appendBoundary(boundary, end: false)
         buffer.appendHeaders(part.headerFields)
         switch part.body {
@@ -109,7 +109,7 @@ public struct MemoryMultipartWriter<OutboundBody: MultipartPartBodyElement>: Mul
 
     @inlinable
     mutating func _finish() {
-        buffer.reserveCapacity(boundary.utf8.count + 10)
+        buffer.reserveCapacity(buffer.count + boundary.utf8.count + 10)
         buffer.appendBoundary(boundary, end: true)
     }
 }
